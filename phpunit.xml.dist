@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<phpunit bootstrap="vendor/autoload.php"
+         colors="true"
+         verbose="true"
+         stopOnFailure="false">
+    <php>
+        <env name="KERNEL_CLASS"
+             value="AE\ConnectBundle\Tests\AppKernel"
+        />
+    </php>
+    <testsuites>
+        <testsuite name="Test Suite">
+            <directory>Tests</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

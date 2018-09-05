@@ -1,0 +1,31 @@
+framework:
+    test: ~
+    secret: test
+    session:
+        storage_id: session.storage.mock_file
+    form: ~
+    csrf_protection: false
+    validation: false
+doctrine:
+    dbal:
+        connections:
+            default:
+                driver: pdo_sqlite
+                memory: true
+                charset: UTF8
+    orm:
+        auto_generate_proxy_classes: '%kernel.debug%'
+        entity_managers:
+            default:
+                naming_strategy: doctrine.orm.naming_strategy.underscore
+                connection: default
+                mappings:
+                    default:
+                        type: annotation
+                        is_bundle: false
+                        prefix: "AE\\ConnectBundle\\Tests\\Entity"
+                        dir: "Tests/Entity"
+fidry_alice_data_fixtures:
+    default_purge_mode: truncate
+    db_drivers:
+        doctrine_orm: true
