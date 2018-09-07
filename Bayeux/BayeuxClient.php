@@ -274,6 +274,8 @@ class BayeuxClient
             );
         }
 
+        $this->state = static::UNCONNECTED;
+
         return false;
     }
 
