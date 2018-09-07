@@ -140,17 +140,52 @@ class BayeuxClient
      *
      * @return ChannelInterface
      */
-    public function getChannel(string $channelId): ChannelInterface
+    public function getChannel(string $channelId): ?ChannelInterface
     {
         if ($this->channels->containsKey($channelId)) {
             return $this->channels->get($channelId);
         }
 
-        $channel = new Channel($this, $channelId);
+        $channel = new Channel($channelId);
 
-        $this->channels->set($channelId, $channel);
+        $message = new Message();
+        $message->setChannel(ChannelInterface::META_SUBSCRIBE);
+        $message->setSubscription($channelId);
 
-        return $channel;
+        // If you wanna listen to meta messages, be my guest but we don't need to subscribe to them
+        if ($message->isMeta()) {
+            $this->channels->set($channelId, $channel);
+
+            return $channel;
+        }
+
+        $messages = $this->sendMessages([$message]);
+
+        if (count($messages) !== 1) {
+            if (null !== $this->logger) {
+                $this->logger->error("Failed to subscribe to channel {channel}", [
+                    'channel' => $channelId
+                ]);
+            }
+
+            return null;
+        }
+
+        if ($messages[0]->isSuccessful()) {
+            $this->channels->set($channelId, $channel);
+
+            return $channel;
+        }
+
+        if (null !== $this->logger) {
+            $error = $messages[0]->getError() ?: "Failed to subscribe to channel";
+
+            $this->logger->error("$error : {channel}", [
+                'channel' => $channelId
+            ]);
+        }
+
+        return null;
     }
 
     /**

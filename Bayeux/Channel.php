@@ -27,14 +27,8 @@ class Channel implements ChannelInterface
      */
     private $subscribers;
 
-    /**
-     * @var BayeuxClient
-     */
-    private $client;
-
-    public function __construct(BayeuxClient $client, string $channelId)
+    public function __construct(string $channelId)
     {
-        $this->client      = $client;
         $this->channelId   = $channelId;
         $this->listeners   = new ArrayCollection();
         $this->subscribers = new ArrayCollection();
