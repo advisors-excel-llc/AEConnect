@@ -34,14 +34,43 @@ class Channel implements ChannelInterface
 
     public function __construct(BayeuxClient $client, string $channelId)
     {
-        $this->client = $client;
-        $this->channelId = $channelId;
-        $this->listeners = new ArrayCollection();
+        $this->client      = $client;
+        $this->channelId   = $channelId;
+        $this->listeners   = new ArrayCollection();
         $this->subscribers = new ArrayCollection();
+    }
+
+    /**
+     * @return string
+     */
+    public function getChannelId(): string
+    {
+        return $this->channelId;
     }
 
     public function notifyMessageListeners(Message $message)
     {
-        // TODO: Implement notifyMessageListeners() method.
+        $this->subscribers->forAll(function ($consumer) use ($message) {
+            call_user_func($consumer, $this, $message->getData());
+        });
+    }
+
+    public function subscribe(callable $consumer)
+    {
+        if (!$this->subscribers->contains($consumer)) {
+            $this->subscribers->add($consumer);
+        }
+    }
+
+    public function unsubscribe(callable $consumer)
+    {
+        if ($this->subscribers->contains($consumer)) {
+            $this->subscribers->removeElement($consumer);
+        }
+    }
+
+    public function unsubscribeAll()
+    {
+        $this->subscribers->clear();
     }
 }

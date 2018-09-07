@@ -11,4 +11,6 @@ namespace AE\ConnectBundle\Bayeux\AuthProvider;
 interface AuthProviderInterface
 {
     public function authorize();
+    public function reauthorize();
+    public function revoke();
 }

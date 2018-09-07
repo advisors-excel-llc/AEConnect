@@ -9,6 +9,7 @@
 namespace AE\ConnectBundle\Bayeux\Transport;
 
 use AE\ConnectBundle\Bayeux\Message;
+use GuzzleHttp\Promise\PromiseInterface;
 use JMS\Serializer\SerializerInterface;
 
 abstract class AbstractClientTransport
@@ -41,10 +42,11 @@ abstract class AbstractClientTransport
 
     /**
      * @param Message[]|array $messages
+     * @param callable|null $customize
      *
      * @return mixed
      */
-    abstract public function send($messages);
+    abstract public function send($messages, ?callable $customize): PromiseInterface;
 
     protected function parseMessages(string $context): array
     {

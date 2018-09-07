@@ -325,7 +325,7 @@ class Message
     /**
      * @return bool|null
      */
-    public function getSuccessful(): ?bool
+    public function isSuccessful(): ?bool
     {
         return $this->successful;
     }
