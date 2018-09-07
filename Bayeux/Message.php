@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Bayeux;
 
+use AE\ConnectBundle\Bayeux\Salesforce\StreamingData;
 use JMS\Serializer\Annotation as JMS;
 use Ramsey\Uuid\Uuid;
 
@@ -34,8 +35,8 @@ class Message
     private $clientId;
 
     /**
-     * @var array|null
-     * @JMS\Type("array")
+     * @var StreamingData|null
+     * @JMS\Type("AE\ConnectBundle\Bayeux\Salesforce\StreamingData")
      */
     private $data;
 
@@ -163,19 +164,19 @@ class Message
     }
 
     /**
-     * @return array|null
+     * @return StreamingData|null
      */
-    public function getData(): ?array
+    public function getData(): ?StreamingData
     {
         return $this->data;
     }
 
     /**
-     * @param array|null $data
+     * @param StreamingData|null $data
      *
      * @return Message
      */
-    public function setData(?array $data): Message
+    public function setData(?StreamingData $data): Message
     {
         $this->data = $data;
 

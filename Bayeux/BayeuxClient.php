@@ -13,6 +13,7 @@ use AE\ConnectBundle\Bayeux\Transport\AbstractClientTransport;
 use AE\ConnectBundle\Bayeux\Transport\HttpClientTransport;
 use Doctrine\Common\Collections\ArrayCollection;
 use GuzzleHttp\Client;
+use GuzzleHttp\Promise\Promise;
 use Psr\Http\Message\RequestInterface;
 use Psr\Log\LoggerInterface;
 use Ramsey\Uuid\Uuid;
@@ -152,21 +153,57 @@ class BayeuxClient
         return $channel;
     }
 
-    public function start()
+    /**
+     * Start the Bayeux Client
+     *
+     * @code <?php
+     *      $client = new BayeuxClient(...);
+     *      $process = $client->start();
+     *      $channel = $client->getChannel('/topic/mytopic');
+     *      $channel->subscribe(function(ChannelInterface $c, StreamingData $data) {
+     *          ///...
+     *      });
+     *      $process->wait();
+     * @return Promise
+     */
+    public function start(): Promise
     {
         if (!$this->isDisconnected()) {
             throw new \RuntimeException("The client must be disconnected before starting.");
         }
 
-        if ($this->handshake()) {
-            pcntl_signal(SIGTERM, [$this, 'terminate']);
-            pcntl_signal(SIGINT, [$this, 'disconnect']);
-            pcntl_signal(SIGHUP, [$this, 'connect']);
-
-            while ($this->connect()) {
-                pcntl_signal_dispatch();
-            }
+        if (!$this->handshake()) {
+            throw new \RuntimeException("Handshake authentication failed with the server.");
         }
+
+        pcntl_signal(SIGTERM, [$this, 'terminate']);
+        pcntl_signal(SIGINT, [$this, 'disconnect']);
+        pcntl_signal(SIGHUP, [$this, 'connect']);
+
+        $promise = new Promise(
+            function () use (&$promise) {
+                try {
+                    while ($this->connect()) {
+                        pcntl_signal_dispatch();
+                    }
+                    /** @var Promise $promise */
+                    $promise->resolve(true);
+                } catch (\Throwable $e) {
+                    if (null !== $this->logger) {
+                        $this->logger->critical(
+                            'An error occurred while consuming the streaming api: {error}',
+                            [
+                                'error' => $e->getMessage(),
+                            ]
+                        );
+                    }
+
+                    $promise->reject($e);
+                }
+            }
+        );
+
+        return $promise;
     }
 
     public function isDisconnected()
