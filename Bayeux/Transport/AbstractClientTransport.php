@@ -41,11 +41,10 @@ abstract class AbstractClientTransport
 
     /**
      * @param Message[]|array $messages
-     * @param callable $callback
      *
      * @return mixed
      */
-    abstract public function send($messages, callable $callback);
+    abstract public function send($messages);
 
     protected function parseMessages(string $context): array
     {

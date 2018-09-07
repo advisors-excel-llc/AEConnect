@@ -436,4 +436,9 @@ class Message
             $this->id = Uuid::uuid4()->toString();
         }
     }
+
+    public function isMeta(): bool
+    {
+        return preg_match('/^meta(\/|$)/', $this->getChannel()) != false;
+    }
 }
