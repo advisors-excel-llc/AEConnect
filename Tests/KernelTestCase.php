@@ -6,7 +6,7 @@
  * Time: 6:05 PM
  */
 
-namespace AE\Connect\Tests;
+namespace AE\ConnectBundle\Tests;
 
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase as TestCase;
 

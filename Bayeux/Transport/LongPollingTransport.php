@@ -8,13 +8,13 @@
 
 namespace AE\ConnectBundle\Bayeux\Transport;
 
+use AE\ConnectBundle\Bayeux\ChannelInterface;
 use AE\ConnectBundle\Bayeux\Message;
 use Doctrine\Common\Collections\ArrayCollection;
 use GuzzleHttp\Promise\Promise;
 use GuzzleHttp\Psr7\Request;
 use JMS\Serializer\SerializerInterface;
 use GuzzleHttp\Promise\PromiseInterface;
-use Psr\Http\Message\ResponseInterface;
 
 class LongPollingTransport extends HttpClientTransport
 {
@@ -39,10 +39,12 @@ class LongPollingTransport extends HttpClientTransport
     {
         $this->aborted = true;
 
-        $this->requests->forAll(function ($request) {
-            /** @var PromiseInterface $request */
-            $request->cancel();
-        });
+        $this->requests->forAll(
+            function ($request) {
+                /** @var PromiseInterface $request */
+                $request->cancel();
+            }
+        );
 
         $this->requests->clear();
     }
@@ -64,50 +66,70 @@ class LongPollingTransport extends HttpClientTransport
     public function send($messages, ?callable $customize = null): PromiseInterface
     {
         $this->aborted = false;
-        $client = $this->getHttpClient();
-        $url = $this->getUrl() ?: '/';
+        $client        = $this->getHttpClient();
+        $url           = $this->getUrl() ?: '';
 
         if (count($messages) == 1 && $messages[0]->isMeta()) {
-            $type = substr($$messages[0]->getChannel(), 4);
-            if (substr($url, -1, 1) != '/') {
-                $url .= '/';
+            $type = substr($messages[0]->getChannel(), strlen(ChannelInterface::META));
+            if (substr($url, -1, 1) == '/') {
+                $url .= substr($url, 0, strlen($url) - 1);
             }
 
             $url .= 'meta'.$type;
         }
 
-        $request = new Request("POST", $url, [
-            'User-Agent' => 'ae-connect-bayeux-client/1.0',
-            'Accept' => 'application/json',
-            'Content-Type' => 'application/json;charset=UTF-8',
-        ], $this->generateJSON($messages));
+        $request = new Request(
+            "POST",
+            $url,
+            [
+                'User-Agent'   => 'ae-connect-bayeux-client/1.0',
+                'Accept'       => 'application/json',
+                'Content-Type' => 'application/json;charset=UTF-8',
+            ],
+            $this->generateJSON($messages)
+        );
 
         if (null !== $customize) {
-            call_user_func($customize, $request);
+            $request = call_user_func($customize, $request);
         }
 
-        $return  = new Promise();
         $promise = $client->sendAsync($request);
+        $return  = new Promise(
+            function () use ($promise, &$return) {
+                try {
+                    $response = $promise->wait();
+                } catch (\Exception $e) {
+                    $this->requests->removeElement($promise);
+                    throw $e;
+                }
+                $body = (string)$response->getBody();
+                if (strlen($body) > 0) {
+                    $return->resolve($this->parseMessages($body));
+                    $this->requests->removeElement($promise);
+                }
+            },
+            function () use ($promise, &$return) {
+                try {
+                    $response = $promise->wait();
+                } catch (\Exception $e) {
+                    $this->requests->removeElement($promise);
+                    throw $e;
+                }
+                $body = (string)$response->getBody();
+                if (strlen($body) == 0) {
+                    $return->reject(204);
+                    $this->requests->removeElement($promise);
+                }
+            }
+        );
+
+        $return->otherwise(
+            function () use ($promise) {
+                $this->requests->removeElement($promise);
+            }
+        );
 
         $this->requests->add($promise);
-
-        $promise->then(function (ResponseInterface $response) use ($promise, $return) {
-            $body = (string) $response->getBody();
-            if (strlen($body) > 0) {
-                $return->resolve($this->parseMessages($body));
-            } else {
-                $return->reject(204);
-            }
-
-            if ($this->requests->contains($promise)) {
-                $this->requests->removeElement($promise);
-            }
-        }, function (ResponseInterface $response) use ($promise, $return) {
-            $return->reject($response->getStatusCode());
-            if ($this->requests->contains($promise)) {
-                $this->requests->removeElement($promise);
-            }
-        });
 
         return $return;
     }

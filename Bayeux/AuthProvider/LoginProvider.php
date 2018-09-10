@@ -73,7 +73,7 @@ class LoginProvider implements AuthProviderInterface
      */
     public function authorize($reauth = false): string
     {
-        if (!$reauth || ($this->isAuthorized && strlen($this->token) > 0)) {
+        if (!$reauth && ($this->isAuthorized && strlen($this->token) > 0)) {
             return "{$this->tokenType} {$this->token}";
         }
 
@@ -84,12 +84,12 @@ class LoginProvider implements AuthProviderInterface
                     'grant_type'      => 'password',
                     'client_id'       => $this->clientId,
                     'client_secret'   => $this->clientSecret,
-                    'client_username' => $this->username,
-                    'client_password' => $this->password,
+                    'username' => $this->username,
+                    'password' => $this->password,
                 ],
                 'headers'     => [
                     'Content-Type' => 'application/x-www-form-urlencoded',
-                    'Accent'       => 'application/json',
+                    'Accept'       => 'application/json',
                 ],
             ]
         );

@@ -50,7 +50,7 @@ abstract class AbstractClientTransport
 
     protected function parseMessages(string $context): array
     {
-        return $this->serializer->deserialize($context, 'Array<AE\\ConnectBundle\\Bayeux\\Message>', 'json');
+        return $this->serializer->deserialize($context, 'array<AE\\ConnectBundle\\Bayeux\\Message>', 'json');
     }
 
     protected function generateJSON($messages): string
@@ -61,7 +61,7 @@ abstract class AbstractClientTransport
     /**
      * @return string
      */
-    public function getUrl(): string
+    public function getUrl(): ?string
     {
         return $this->url;
     }
@@ -71,7 +71,7 @@ abstract class AbstractClientTransport
      *
      * @return AbstractClientTransport
      */
-    public function setUrl(string $url): AbstractClientTransport
+    public function setUrl(?string $url): AbstractClientTransport
     {
         $this->url = $url;
 

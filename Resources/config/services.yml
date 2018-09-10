@@ -1,1 +1,18 @@
 services:
+    AE\ConnectBundle\Bayeux\Transport\LongPollingTransport:
+        autowire: true
+    AE\ConnectBundle\Bayeux\AuthProvider\LoginProvider:
+        autowire: true
+        arguments:
+            $clientId: "%env(SF_CLIENT_ID)%"
+            $clientSecret: "%env(SF_CLIENT_SECRET)%"
+            $username: "%env(SF_USER)%"
+            $password: "%env(SF_PASS)%"
+            $url: "https://login.salesforce.com"
+    AE\ConnectBundle\Bayeux\Transport\AbstractClientTransport: '@AE\ConnectBundle\Bayeux\Transport\LongPollingTransport'
+    AE\ConnectBundle\Bayeux\AuthProvider\AuthProviderInterface: '@AE\ConnectBundle\Bayeux\AuthProvider\LoginProvider'
+    AE\ConnectBundle\Bayeux\BayeuxClient:
+        public: true
+        autowire: true
+        arguments:
+            $url: "%env(SF_URL)%"

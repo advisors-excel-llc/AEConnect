@@ -58,8 +58,8 @@ class BayeuxClient
      */
     public const DISCONNECTED = "DISCONNECTED";
 
-    public const VERSION            = '3.1.0';
-    public const MINIMUM_VERSION    = '3.1.0';
+    public const VERSION            = '1.0';
+    public const MINIMUM_VERSION    = '1.0';
     public const SALESFORCE_VERSION = '43.0';
 
     /**
@@ -126,7 +126,6 @@ class BayeuxClient
                 'cookies'  => true,
             ]
         );
-        $this->clientId     = Uuid::uuid4()->toString();
         $this->channels     = new ArrayCollection();
         $this->logger       = $logger;
 
@@ -163,9 +162,12 @@ class BayeuxClient
 
         if (count($messages) !== 1) {
             if (null !== $this->logger) {
-                $this->logger->error("Failed to subscribe to channel {channel}", [
-                    'channel' => $channelId
-                ]);
+                $this->logger->error(
+                    "Failed to subscribe to channel {channel}",
+                    [
+                        'channel' => $channelId,
+                    ]
+                );
             }
 
             return null;
@@ -180,9 +182,12 @@ class BayeuxClient
         if (null !== $this->logger) {
             $error = $messages[0]->getError() ?: "Failed to subscribe to channel";
 
-            $this->logger->error("$error : {channel}", [
-                'channel' => $channelId
-            ]);
+            $this->logger->error(
+                "$error : {channel}",
+                [
+                    'channel' => $channelId,
+                ]
+            );
         }
 
         return null;
@@ -218,9 +223,10 @@ class BayeuxClient
         $promise = new Promise(
             function () use (&$promise) {
                 try {
-                    while ($this->connect()) {
+                    do {
+                        $this->connect();
                         pcntl_signal_dispatch();
-                    }
+                    } while (!$this->isDisconnected());
                     /** @var Promise $promise */
                     $promise->resolve(true);
                 } catch (\Throwable $e) {
@@ -243,7 +249,10 @@ class BayeuxClient
 
     public function isDisconnected()
     {
-        return in_array($this->state, [static::DISCONNECTED, static::DISCONNECTING, static::UNCONNECTED]);
+        return in_array(
+            $this->state,
+            [static::DISCONNECTED, static::DISCONNECTING, static::UNCONNECTED, static::TERMINATING]
+        );
     }
 
     /**
@@ -270,7 +279,7 @@ class BayeuxClient
 
         $message = new Message();
         $message->setChannel(ChannelInterface::META_HANDSHAKE);
-        $message->setSupportedConnectedTypes([$this->transport->getName()]);
+        $message->setSupportedConnectionTypes([$this->transport->getName()]);
         $message->setVersion(static::VERSION);
         $message->setMinimumVersion(static::MINIMUM_VERSION);
 
@@ -278,6 +287,7 @@ class BayeuxClient
 
         if (count($messages) === 0) {
             $this->state = static::UNCONNECTED;
+            $this->clientId = null;
 
             return false;
         }
@@ -287,13 +297,15 @@ class BayeuxClient
         if ($reply->isSuccessful()) {
             $this->channels->clear();
             $this->state = static::HANDSHAKEN;
+            $this->clientId = $reply->getClientId();
 
             return true;
         }
 
         $advice = $reply->getAdvice();
+        $this->clientId = null;
 
-        if ($advice->getReconnect() == 'retry') {
+        if (null !== $advice && $advice->getReconnect() == 'retry') {
             $this->state = static::REHANDSHAKING;
             sleep($advice->getInterval() ?: 0);
 
@@ -346,10 +358,14 @@ class BayeuxClient
                     $channel->notifyMessageListeners($message);
                 }
             } else {
-                $retry = $message->getAdvice()->getReconnect() === 'retry';
+                $advice = $message->getAdvice();
 
-                if ($retry) {
-                    $interval = $message->getAdvice()->getInterval() ?: 0;
+                if (null !== $advice) {
+                    $retry = $advice->getReconnect() === 'retry';
+
+                    if ($retry) {
+                        $interval = $advice->getInterval() ?: 0;
+                    }
                 }
 
                 if (null !== $this->logger) {
@@ -425,14 +441,16 @@ class BayeuxClient
      */
     public function sendMessages($messages): array
     {
-        foreach ($messages as $message) {
-            $message->setClientId($this->clientId);
+        if (null !== $this->clientId) {
+            foreach ($messages as $message) {
+                $message->setClientId($this->clientId);
+            }
         }
 
         $promise = $this->transport->send(
             $messages,
             function (RequestInterface $request) {
-                $request->withAddedHeader('Authorization', $this->authProvider->authorize());
+                return $request->withAddedHeader('Authorization', $this->authProvider->authorize());
             }
         );
         $return  = [];

@@ -29,3 +29,7 @@ fidry_alice_data_fixtures:
     default_purge_mode: truncate
     db_drivers:
         doctrine_orm: true
+
+jms_serializer:
+    property_naming:
+        id: 'jms_serializer.identical_property_naming_strategy'

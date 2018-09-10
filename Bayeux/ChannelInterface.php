@@ -10,7 +10,7 @@ namespace AE\ConnectBundle\Bayeux;
 
 interface ChannelInterface
 {
-    public const META             = 'meta';
+    public const META             = '/meta';
     public const META_HANDSHAKE   = self::META.'/handshake';
     public const META_CONNECT     = self::META.'/connect';
     public const META_DISCONNECT  = self::META.'/disconnect';

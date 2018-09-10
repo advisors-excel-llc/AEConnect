@@ -23,7 +23,7 @@ class Message
     /**
      * @var string|null
      * @JMS\Type("string")
-     * @JMS\Groups({"handshake", "subscribe" "unsubscribe", "connect", "disconnect"})
+     * @JMS\Groups({"handshake", "subscribe", "unsubscribe", "connect", "disconnect"})
      */
     private $channel;
 
@@ -59,7 +59,7 @@ class Message
      * @JMS\Type("array<string>")
      * @JMS\Groups({"handshake"})
      */
-    private $supportedConnectedTypes;
+    private $supportedConnectionTypes;
 
     /**
      * @var Advice|null
@@ -84,7 +84,7 @@ class Message
 
     /**
      * @var \DateTimeImmutable|null
-     * @JMS\Type("DateTimeImmutable<"Y-m-d\TH:i:s", "GMT">")
+     * @JMS\Type("DateTimeImmutable<'Y-m-d\TH:i:s', 'GMT'>")
      */
     private $timestamp;
 
@@ -226,19 +226,19 @@ class Message
     /**
      * @return array|null
      */
-    public function getSupportedConnectedTypes(): ?array
+    public function getSupportedConnectionTypes(): ?array
     {
-        return $this->supportedConnectedTypes;
+        return $this->supportedConnectionTypes;
     }
 
     /**
-     * @param array|null $supportedConnectedTypes
+     * @param array|null $supportedConnectionTypes
      *
      * @return Message
      */
-    public function setSupportedConnectedTypes(?array $supportedConnectedTypes): Message
+    public function setSupportedConnectionTypes(?array $supportedConnectionTypes): Message
     {
-        $this->supportedConnectedTypes = $supportedConnectedTypes;
+        $this->supportedConnectionTypes = $supportedConnectionTypes;
 
         return $this;
     }
@@ -440,6 +440,6 @@ class Message
 
     public function isMeta(): bool
     {
-        return preg_match('/^meta(\/|$)/', $this->getChannel()) != false;
+        return ChannelInterface::META === substr($this->getChannel(), 0, strlen(ChannelInterface::META));
     }
 }
