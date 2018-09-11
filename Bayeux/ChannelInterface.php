@@ -19,7 +19,8 @@ interface ChannelInterface
 
     public function notifyMessageListeners(Message $message);
     public function getChannelId(): string;
-    public function subscribe(callable $consumer);
-    public function unsubscribe(callable $consumer);
+    public function subscribe(ConsumerInterface $consumer);
+    public function unsubscribe(ConsumerInterface $consumer);
     public function unsubscribeAll();
+    public function isMeta();
 }

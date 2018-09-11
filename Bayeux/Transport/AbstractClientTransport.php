@@ -44,9 +44,9 @@ abstract class AbstractClientTransport
      * @param Message[]|array $messages
      * @param callable|null $customize
      *
-     * @return mixed
+     * @return array|Message[]
      */
-    abstract public function send($messages, ?callable $customize): PromiseInterface;
+    abstract public function send($messages, ?callable $customize): array ;
 
     protected function parseMessages(string $context): array
     {

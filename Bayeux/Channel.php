@@ -18,19 +18,13 @@ class Channel implements ChannelInterface
     private $channelId;
 
     /**
-     * @var ArrayCollection
-     */
-    private $listeners;
-
-    /**
-     * @var ArrayCollection
+     * @var ArrayCollection|ConsumerInterface[]
      */
     private $subscribers;
 
     public function __construct(string $channelId)
     {
         $this->channelId   = $channelId;
-        $this->listeners   = new ArrayCollection();
         $this->subscribers = new ArrayCollection();
     }
 
@@ -44,19 +38,33 @@ class Channel implements ChannelInterface
 
     public function notifyMessageListeners(Message $message)
     {
-        $this->subscribers->forAll(function ($consumer) use ($message) {
-            call_user_func($consumer, $this, $message->getData());
+        /** @var ConsumerInterface[] $subscribers */
+        $subscribers = $this->subscribers->getValues();
+
+        usort($subscribers, function (ConsumerInterface $a, ConsumerInterface $b) use ($subscribers) {
+            $aP = $a->getPriority() ?: count($subscribers);
+            $bP = $b->getPriority() ?: count($subscribers);
+
+            if ($bP === $aP) {
+                return 0;
+            }
+
+            return $aP > $bP ? 1 : -1;
         });
+
+        foreach ($subscribers as $consumer) {
+            $consumer->consume($this, $message);
+        }
     }
 
-    public function subscribe(callable $consumer)
+    public function subscribe(ConsumerInterface $consumer)
     {
         if (!$this->subscribers->contains($consumer)) {
             $this->subscribers->add($consumer);
         }
     }
 
-    public function unsubscribe(callable $consumer)
+    public function unsubscribe(ConsumerInterface $consumer)
     {
         if ($this->subscribers->contains($consumer)) {
             $this->subscribers->removeElement($consumer);
@@ -66,5 +74,10 @@ class Channel implements ChannelInterface
     public function unsubscribeAll()
     {
         $this->subscribers->clear();
+    }
+
+    public function isMeta()
+    {
+        return substr($this->channelId, 0, strlen(self::META)) === self::META;
     }
 }

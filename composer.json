@@ -16,7 +16,8 @@
         "symfony/phpunit-bridge": "~3.4.10|^4.1",
         "theofidry/alice-data-fixtures": "^1.0",
         "symfony/monolog-bundle": "^3.3",
-        "ext-pdo_sqlite": "*"
+        "ext-pdo_sqlite": "*",
+        "matthiasnoback/phpunit-asynchronicity": "^2.0"
     },
     "authors": [
         {

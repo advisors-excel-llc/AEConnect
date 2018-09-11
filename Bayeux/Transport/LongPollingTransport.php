@@ -11,7 +11,7 @@ namespace AE\ConnectBundle\Bayeux\Transport;
 use AE\ConnectBundle\Bayeux\ChannelInterface;
 use AE\ConnectBundle\Bayeux\Message;
 use Doctrine\Common\Collections\ArrayCollection;
-use GuzzleHttp\Promise\Promise;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\Request;
 use JMS\Serializer\SerializerInterface;
 use GuzzleHttp\Promise\PromiseInterface;
@@ -23,30 +23,15 @@ class LongPollingTransport extends HttpClientTransport
      */
     private $aborted = false;
 
-    /**
-     * @var Request[]|ArrayCollection
-     */
-    private $requests;
-
     public function __construct(SerializerInterface $serializer)
     {
         parent::__construct('long-polling');
         $this->setSerializer($serializer);
-        $this->requests = new ArrayCollection();
     }
 
     public function abort()
     {
         $this->aborted = true;
-
-        $this->requests->forAll(
-            function ($request) {
-                /** @var PromiseInterface $request */
-                $request->cancel();
-            }
-        );
-
-        $this->requests->clear();
     }
 
     /**
@@ -61,9 +46,11 @@ class LongPollingTransport extends HttpClientTransport
      * @param Message[]|array $messages
      * @param callable|null $customize
      *
-     * @return PromiseInterface
+     * @throws GuzzleException
+     *
+     * @return array
      */
-    public function send($messages, ?callable $customize = null): PromiseInterface
+    public function send($messages, ?callable $customize = null): array
     {
         $this->aborted = false;
         $client        = $this->getHttpClient();
@@ -71,11 +58,11 @@ class LongPollingTransport extends HttpClientTransport
 
         if (count($messages) == 1 && $messages[0]->isMeta()) {
             $type = substr($messages[0]->getChannel(), strlen(ChannelInterface::META));
-            if (substr($url, -1, 1) == '/') {
-                $url .= substr($url, 0, strlen($url) - 1);
-            }
+            $url  .= 'meta'.$type;
+        }
 
-            $url .= 'meta'.$type;
+        if (substr($url, 0, 1) == '/') {
+            $url .= substr($url, 1, strlen($url));
         }
 
         $request = new Request(
@@ -93,45 +80,26 @@ class LongPollingTransport extends HttpClientTransport
             $request = call_user_func($customize, $request);
         }
 
-        $promise = $client->sendAsync($request);
-        $return  = new Promise(
-            function () use ($promise, &$return) {
-                try {
-                    $response = $promise->wait();
-                } catch (\Exception $e) {
-                    $this->requests->removeElement($promise);
-                    throw $e;
-                }
-                $body = (string)$response->getBody();
-                if (strlen($body) > 0) {
-                    $return->resolve($this->parseMessages($body));
-                    $this->requests->removeElement($promise);
-                }
-            },
-            function () use ($promise, &$return) {
-                try {
-                    $response = $promise->wait();
-                } catch (\Exception $e) {
-                    $this->requests->removeElement($promise);
-                    throw $e;
-                }
-                $body = (string)$response->getBody();
-                if (strlen($body) == 0) {
-                    $return->reject(204);
-                    $this->requests->removeElement($promise);
-                }
+        $response = $client->send($request);
+        $body     = (string)$response->getBody();
+
+        if (strlen($body) > 0) {
+            /** @var Message[] $messages */
+            $messages = $this->parseMessages($body);
+
+            // Need to reorder the messages that will be dispatched in the order they were dispatched, but connect
+            // needs to be last, otherwise the messages won't process
+            if (count($messages) > 0 &&
+                $messages[count($messages) - 1]->getClientId() === ChannelInterface::META_CONNECT) {
+                $reconnect  = array_pop($messages);
+                $messages   = array_reverse($messages);
+                $messages[] = $reconnect;
             }
-        );
 
-        $return->otherwise(
-            function () use ($promise) {
-                $this->requests->removeElement($promise);
-            }
-        );
+            return $messages;
+        }
 
-        $this->requests->add($promise);
-
-        return $return;
+        return [];
     }
 
     public function terminate()

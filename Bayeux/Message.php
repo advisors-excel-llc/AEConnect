@@ -144,9 +144,9 @@ class Message
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getClientId(): string
+    public function getClientId(): ?string
     {
         return $this->clientId;
     }
