@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\DependencyInjection\Configuration;
 
+use AE\ConnectBundle\Bayeux\Extension\ReplayExtension;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
@@ -17,8 +18,111 @@ class Configuration implements ConfigurationInterface
     {
         $tree = new TreeBuilder();
 
-        $tree->root('ae_connect')->end();
+        $tree->root('ae_connect')->append($this->buildConnectionTree());
 
         return $tree;
+    }
+
+    private function buildConnectionTree()
+    {
+        $tree = new TreeBuilder();
+
+        $node = $tree->root('connections')
+                ->prototype('array')
+                    ->children()
+                        ->booleanNode('is_default')->defaultTrue()->end()
+                        ->append($this->buildLoginTree())
+                        ->append($this->buildTopicsTree())
+                        ->append($this->buildTopicConfigTree())
+                    ->end()
+                ->end()
+            ->validate()
+                ->ifTrue(function ($value) {
+                    $count = 0;
+
+                    foreach ($value as $values) {
+                        if ($values['is_default']) {
+                            ++$count;
+                        }
+                    }
+
+                    return count(array_keys($value)) > 0 && $count !== 1;
+                })
+                ->thenInvalid('Only one connection can be default.')
+            ->end()
+        ;
+
+        return $node;
+    }
+
+    private function buildLoginTree()
+    {
+        $tree = new TreeBuilder();
+
+        $node = $tree->root('login')
+                ->children()
+                    ->scalarNode('key')->isRequired()->end()
+                    ->scalarNode('secret')->isRequired()->end()
+                    ->scalarNode('username')->isRequired()->end()
+                    ->scalarNode('password')->isRequired()->end()
+                    ->scalarNode('url')->cannotBeEmpty()->defaultValue('http://login.salesforce.com')->end()
+                ->end()
+        ;
+
+        return $node;
+    }
+
+    private function buildTopicConfigTree()
+    {
+        $tree = new TreeBuilder();
+
+        $node = $tree->root('config')
+                ->addDefaultsIfNotSet()
+                ->children()
+                    ->scalarNode('replay_start_id')
+                        ->cannotBeEmpty()
+                        ->defaultValue(ReplayExtension::REPLAY_SAVED)
+                        ->validate()
+                            ->ifTrue(function ($value) {
+                                return !is_numeric($value) || $value < -2;
+                            })
+                            ->thenInvalid('replay_start_id must be a numeric value no less than -2.')
+                        ->end()
+                    ->end()
+                ->end()
+        ;
+
+        return $node;
+    }
+
+    private function buildTopicsTree()
+    {
+        $tree = new TreeBuilder();
+
+        $node = $tree->root('topics')
+                ->prototype('array')
+                    ->children()
+                        ->scalarNode('query')->isRequired()->end()
+                        ->arrayNode('filter')
+                            ->prototype('scalar')->end()
+                        ->end()
+                        ->scalarNode('api_version')->defaultValue('43.0')->end()
+                        ->booleanNode('create_if_not_exists')->defaultTrue()->end()
+                        ->booleanNode('create')->defaultTrue()->end()
+                        ->booleanNode('update')->defaultTrue()->end()
+                        ->booleanNode('undelete')->defaultTrue()->end()
+                        ->booleanNode('delete')->defaultTrue()->end()
+                        ->scalarNode('notify_for_fields')
+                            ->defaultValue('Referenced')
+                            ->validate()
+                                ->ifNotInArray(['All', 'Referenced', 'Select', 'Where'])
+                                ->thenInvalid('Invalid value for notify for fields.')
+                            ->end()
+                        ->end()
+                    ->end()
+                ->end()
+        ;
+
+        return $node;
     }
 }

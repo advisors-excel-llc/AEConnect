@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "f1306d4c6bfd21a4cd3abf9eec77ec60",
+    "content-hash": "4e8695ad1edff0ab89b5aa9404e8cec6",
     "packages": [
         {
             "name": "doctrine/annotations",
@@ -2588,61 +2588,6 @@
     ],
     "packages-dev": [
         {
-            "name": "beberlei/assert",
-            "version": "v2.9.6",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/beberlei/assert.git",
-                "reference": "ec9e4cf0b63890edce844ee3922e2b95a526e936"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/beberlei/assert/zipball/ec9e4cf0b63890edce844ee3922e2b95a526e936",
-                "reference": "ec9e4cf0b63890edce844ee3922e2b95a526e936",
-                "shasum": ""
-            },
-            "require": {
-                "ext-mbstring": "*",
-                "php": ">=5.3"
-            },
-            "require-dev": {
-                "friendsofphp/php-cs-fixer": "^2.1.1",
-                "phpunit/phpunit": "^4.8.35|^5.7"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Assert\\": "lib/Assert"
-                },
-                "files": [
-                    "lib/Assert/functions.php"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "BSD-2-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Benjamin Eberlei",
-                    "email": "kontakt@beberlei.de",
-                    "role": "Lead Developer"
-                },
-                {
-                    "name": "Richard Quadling",
-                    "email": "rquadling@gmail.com",
-                    "role": "Collaborator"
-                }
-            ],
-            "description": "Thin assertion library for input validation in business models.",
-            "keywords": [
-                "assert",
-                "assertion",
-                "validation"
-            ],
-            "time": "2018-06-11T17:15:25+00:00"
-        },
-        {
             "name": "fzaninotto/faker",
             "version": "v1.8.0",
             "source": {
@@ -2693,31 +2638,38 @@
             "time": "2018-07-12T10:23:15+00:00"
         },
         {
-            "name": "matthiasnoback/phpunit-asynchronicity",
-            "version": "v2.0.0",
+            "name": "matthiasnoback/symfony-config-test",
+            "version": "4.0.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/matthiasnoback/phpunit-asynchronicity.git",
-                "reference": "7766095fc7ee655da1604181ea4077713d1837ed"
+                "url": "https://github.com/SymfonyTest/SymfonyConfigTest.git",
+                "reference": "d69210afc4aca99038d522f59ccf5074aff2f2e1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/matthiasnoback/phpunit-asynchronicity/zipball/7766095fc7ee655da1604181ea4077713d1837ed",
-                "reference": "7766095fc7ee655da1604181ea4077713d1837ed",
+                "url": "https://api.github.com/repos/SymfonyTest/SymfonyConfigTest/zipball/d69210afc4aca99038d522f59ccf5074aff2f2e1",
+                "reference": "d69210afc4aca99038d522f59ccf5074aff2f2e1",
                 "shasum": ""
             },
             "require": {
-                "beberlei/assert": "^2.9",
                 "php": "^7.1",
-                "phpunit/phpunit": "^7.1"
+                "symfony/config": "^2.7 || ^3.4 || ^4.0"
+            },
+            "conflict": {
+                "phpunit/phpunit": "<7.0"
             },
             "require-dev": {
-                "phpstan/phpstan": "^0.9.2"
+                "phpunit/phpunit": "^7.0"
             },
             "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "4.0.x-dev"
+                }
+            },
             "autoload": {
                 "psr-4": {
-                    "Asynchronicity\\": "src/Asynchronicity/"
+                    "Matthias\\SymfonyConfigTest\\": ""
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -2731,14 +2683,14 @@
                     "homepage": "http://php-and-symfony.matthiasnoback.nl"
                 }
             ],
-            "description": "Library for asserting things that happen asynchronously with PHPUnit",
-            "homepage": "http://github.com/matthiasnoback/phpunit-asynchronicity",
+            "description": "Library for testing user classes related to the Symfony Config Component",
+            "homepage": "https://github.com/matthiasnoback/SymfonyConfigTest",
             "keywords": [
-                "assertion",
-                "asynchronicity",
-                "phpunit"
+                "config",
+                "phpunit",
+                "symfony"
             ],
-            "time": "2018-06-11T08:32:39+00:00"
+            "time": "2018-03-05T09:21:43+00:00"
         },
         {
             "name": "monolog/monolog",

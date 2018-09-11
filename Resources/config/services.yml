@@ -1,26 +1,36 @@
 parameters:
-    replay_initial_id: !php/const AE\ConnectBundle\Bayeux\Extension\ReplayExtension::REPLAY_SAVED
+    ae_connect.replay_initial_id: !php/const AE\ConnectBundle\Bayeux\Extension\ReplayExtension::REPLAY_SAVED
+    ae_connect.login.client_id: "%env(SF_CLIENT_ID)%"
+    ae_connect.login.client_secret: "%env(SF_CLIENT_SECRET)%"
+    ae_connect.login.username: "%env(SF_USER)%"
+    ae_connect.login.password: "%env(SF_PASS)%"
+    ae_connect.login.url: "https://login.salesforce.com"
+    ae_connect.streaming.base_url: "%env(SF_URL)%"
 services:
     AE\ConnectBundle\Bayeux\Transport\LongPollingTransport:
         autowire: true
     AE\ConnectBundle\Bayeux\AuthProvider\LoginProvider:
         autowire: true
         arguments:
-            $clientId: "%env(SF_CLIENT_ID)%"
-            $clientSecret: "%env(SF_CLIENT_SECRET)%"
-            $username: "%env(SF_USER)%"
-            $password: "%env(SF_PASS)%"
-            $url: "https://login.salesforce.com"
+            $clientId: "ae_connect.login.client_id%"
+            $clientSecret: "%ae_connect.login.client_secret%"
+            $username: "%ae_connect.login.username%"
+            $password: "%ae_connect.login.password%"
+            $url: "%ae_connect.login.uri%"
     AE\ConnectBundle\Bayeux\Transport\AbstractClientTransport: '@AE\ConnectBundle\Bayeux\Transport\LongPollingTransport'
     AE\ConnectBundle\Bayeux\AuthProvider\AuthProviderInterface: '@AE\ConnectBundle\Bayeux\AuthProvider\LoginProvider'
     AE\ConnectBundle\Bayeux\BayeuxClient:
         public: true
         autowire: true
         arguments:
-            $url: "%env(SF_URL)%"
+            $url: "%ae_connect.streaming.base_url%"
     AE\ConnectBundle\Bayeux\Extension\ReplayExtension:
         autowire: true
         arguments:
-            $replayId: "%replay_initial_id%"
+            $replayId: "%ae_connect.replay_initial_id%"
+        tags:
+            - { name: 'ae_connect.extension' }
+    AE\ConnectBundle\Bayeux\Extension\SfdcExtension:
+        autowire: true
         tags:
             - { name: 'ae_connect.extension' }

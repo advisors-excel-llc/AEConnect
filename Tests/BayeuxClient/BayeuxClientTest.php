@@ -12,12 +12,10 @@ use AE\ConnectBundle\Bayeux\BayeuxClient;
 use AE\ConnectBundle\Bayeux\ChannelInterface;
 use AE\ConnectBundle\Bayeux\Consumer;
 use AE\ConnectBundle\Bayeux\Message;
-use Asynchronicity\PHPUnit\Asynchronicity;
 use GuzzleHttp\Client;
 
 class BayeuxClientTest extends \AE\ConnectBundle\Tests\KernelTestCase
 {
-    use Asynchronicity;
     /**
      * @var BayeuxClient
      */
