@@ -13,7 +13,6 @@ use AE\ConnectBundle\Bayeux\Transport\AbstractClientTransport;
 use AE\ConnectBundle\Bayeux\Transport\HttpClientTransport;
 use Doctrine\Common\Collections\ArrayCollection;
 use GuzzleHttp\Client;
-use GuzzleHttp\Psr7\Request;
 use Psr\Http\Message\RequestInterface;
 use Psr\Log\LoggerInterface;
 
