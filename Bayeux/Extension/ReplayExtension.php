@@ -40,7 +40,7 @@ class ReplayExtension implements ExtensionInterface
      */
     public function prepareSend(Message $message): void
     {
-        if ($message->getClientId() === ChannelInterface::META_CONNECT) {
+        if ($message->getChannel() === ChannelInterface::META_CONNECT) {
             $ext                   = $message->getExt() ?: [];
             $ext[$this->getName()] = $this->replayId;
 

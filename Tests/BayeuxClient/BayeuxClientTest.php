@@ -33,32 +33,26 @@ class BayeuxClientTest extends \AE\ConnectBundle\Tests\KernelTestCase
     {
         $rand = rand(100, 1000);
         $name = 'Test Account '.$rand;
-        $connectCount = 0;
 
         $consumer = Consumer::create(
-            function (ChannelInterface $channel, Message $message) use ($name, &$consumer, &$connectCount) {
+            function (ChannelInterface $channel, Message $message) use ($name, &$consumer) {
                 $this->assertTrue($message->isSuccessful());
                 $this->assertFalse($this->client->isDisconnected());
-                ++$connectCount;
+                $client   = new Client(['base_uri' => getenv('SF_URL')]);
+                $response = $client->post(
+                    'services/data/v43.0/sobjects/Account',
+                    [
+                        'headers' => [
+                            'Content-Type'  => 'application/json',
+                            'Accept'        => 'application/json',
+                            'Authorization' => $this->client->getAuthProvider()->authorize(),
+                        ],
+                        'json'    => ['Name' => $name],
+                    ]
+                );
 
-                // Need to wait until the initial connection is established before initiating
-                if ($connectCount == 2) {
-                    $client   = new Client(['base_uri' => getenv('SF_URL')]);
-                    $response = $client->post(
-                        'services/data/v43.0/sobjects/Account',
-                        [
-                            'headers' => [
-                                'Content-Type'  => 'application/json',
-                                'Accept'        => 'application/json',
-                                'Authorization' => $this->client->getAuthProvider()->authorize(),
-                            ],
-                            'json'    => ['Name' => $name],
-                        ]
-                    );
-
-                    $this->assertEquals(201, $response->getStatusCode());
-                    $channel->unsubscribe($consumer);
-                }
+                $this->assertEquals(201, $response->getStatusCode());
+                $channel->unsubscribe($consumer);
             }
         );
 

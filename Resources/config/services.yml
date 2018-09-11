@@ -1,3 +1,5 @@
+parameters:
+    replay_initial_id: !php/const AE\ConnectBundle\Bayeux\Extension\ReplayExtension::REPLAY_SAVED
 services:
     AE\ConnectBundle\Bayeux\Transport\LongPollingTransport:
         autowire: true
@@ -16,3 +18,9 @@ services:
         autowire: true
         arguments:
             $url: "%env(SF_URL)%"
+    AE\ConnectBundle\Bayeux\Extension\ReplayExtension:
+        autowire: true
+        arguments:
+            $replayId: "%replay_initial_id%"
+        tags:
+            - { name: 'ae_connect.extension' }
