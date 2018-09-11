@@ -9,6 +9,7 @@
 namespace AE\ConnectBundle\Bayeux;
 
 use AE\ConnectBundle\Bayeux\AuthProvider\AuthProviderInterface;
+use AE\ConnectBundle\Bayeux\Extension\ExtensionInterface;
 use AE\ConnectBundle\Bayeux\Transport\AbstractClientTransport;
 use AE\ConnectBundle\Bayeux\Transport\HttpClientTransport;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -106,6 +107,11 @@ class BayeuxClient
     private $requestQueue = [];
 
     /**
+     * @var ArrayCollection|ExtensionInterface[]
+     */
+    private $extensions;
+
+    /**
      * BayeuxClient constructor.
      *
      * @param string $url
@@ -130,6 +136,7 @@ class BayeuxClient
             ]
         );
         $this->channels     = new ArrayCollection();
+        $this->extensions   = new ArrayCollection();
         $this->logger       = $logger;
 
         if ($this->transport instanceof HttpClientTransport) {
@@ -158,22 +165,25 @@ class BayeuxClient
         }
 
         $this->getChannel(ChannelInterface::META_SUBSCRIBE)->subscribe(
-            Consumer::create(function (ChannelInterface $c, Message $message) {
-                if (!$message->isSuccessful()) {
-                    if (null !== $this->logger) {
-                        $this->logger->error(
-                            "Failed to subscribe to channel {channel}",
-                            [
-                                'channel' => $c->getChannelId(),
-                            ]
-                        );
-                    }
+            Consumer::create(
+                function (ChannelInterface $c, Message $message) {
+                    if (!$message->isSuccessful()) {
+                        if (null !== $this->logger) {
+                            $this->logger->error(
+                                "Failed to subscribe to channel {channel}",
+                                [
+                                    'channel' => $c->getChannelId(),
+                                ]
+                            );
+                        }
 
-                    $c->unsubscribeAll();
-                    $this->channels->remove($c->getChannelId());
+                        $c->unsubscribeAll();
+                        $this->channels->remove($c->getChannelId());
+                    }
                 }
-            })
-        );
+            )
+        )
+        ;
 
         $this->channels->set($channelId, $channel);
 
@@ -185,16 +195,19 @@ class BayeuxClient
         } else {
             // If the handshake hasn't taken place, wait for it and connect in bulk
             $this->getChannel(ChannelInterface::META_HANDSHAKE)->subscribe(
-                Consumer::create(function (ChannelInterface $c, Message $m) use ($channel) {
-                    if ($m->isSuccessful() && !$channel->isMeta()) {
-                        $message = new Message();
-                        $message->setChannel(ChannelInterface::META_SUBSCRIBE);
-                        $message->setSubscription($channel->getChannelId());
+                Consumer::create(
+                    function (ChannelInterface $c, Message $m) use ($channel) {
+                        if ($m->isSuccessful() && !$channel->isMeta()) {
+                            $message = new Message();
+                            $message->setChannel(ChannelInterface::META_SUBSCRIBE);
+                            $message->setSubscription($channel->getChannelId());
 
-                        $this->sendMessages([$message]);
+                            $this->sendMessages([$message]);
+                        }
                     }
-                })
-            );
+                )
+            )
+            ;
         }
 
         return $channel;
@@ -217,16 +230,19 @@ class BayeuxClient
         }
 
         $this->getChannel(ChannelInterface::META_HANDSHAKE)->subscribe(
-            Consumer::create(function (
-                ChannelInterface $c,
-                Message $message
-            ) {
-                if ($message->isSuccessful()) {
-                    $this->listen();
-                } else {
-                    throw new \RuntimeException("Handshake authentication failed with the server.");
-                }
-            }, 1000000)
+            Consumer::create(
+                function (
+                    ChannelInterface $c,
+                    Message $message
+                ) {
+                    if ($message->isSuccessful()) {
+                        $this->listen();
+                    } else {
+                        throw new \RuntimeException("Handshake authentication failed with the server.");
+                    }
+                },
+                1000000
+            )
         )
         ;
 
@@ -260,29 +276,32 @@ class BayeuxClient
             $this->state = static::HANDSHAKING;
         }
 
-        $consumer = Consumer::create(function (ChannelInterface $c, Message $message) use (&$consumer) {
-            $c->unsubscribe($consumer);
+        $consumer = Consumer::create(
+            function (ChannelInterface $c, Message $message) use (&$consumer) {
+                $c->unsubscribe($consumer);
 
-            if ($message->isSuccessful()) {
-                $this->state    = static::HANDSHAKEN;
+                if ($message->isSuccessful()) {
+                    $this->state = static::HANDSHAKEN;
 
-                return true;
-            } else {
-                $advice         = $message->getAdvice();
-                $this->clientId = null;
-
-                if (null !== $advice && $advice->getReconnect() === 'retry') {
-                    $this->state = static::REHANDSHAKING;
-                    sleep($advice->getInterval() ?: 0);
-
-                    $this->handshake();
+                    return true;
                 } else {
-                    $this->state = static::UNCONNECTED;
-                }
+                    $advice         = $message->getAdvice();
+                    $this->clientId = null;
 
-                return false;
-            }
-        }, -1000);
+                    if (null !== $advice && $advice->getReconnect() === 'retry') {
+                        $this->state = static::REHANDSHAKING;
+                        sleep($advice->getInterval() ?: 0);
+
+                        $this->handshake();
+                    } else {
+                        $this->state = static::UNCONNECTED;
+                    }
+
+                    return false;
+                }
+            },
+            -1000
+        );
         $this->getChannel(ChannelInterface::META_HANDSHAKE)->subscribe($consumer);
 
         $message = new Message();
@@ -306,39 +325,42 @@ class BayeuxClient
         $message->setChannel(ChannelInterface::META_CONNECT);
         $message->setConnectionType($this->transport->getName());
 
-        $consumer = Consumer::create(function (ChannelInterface $c, Message $message) use (&$consumer) {
-            $c->unsubscribe($consumer);
+        $consumer = Consumer::create(
+            function (ChannelInterface $c, Message $message) use (&$consumer) {
+                $c->unsubscribe($consumer);
 
-            if ($message->isSuccessful()) {
-                $this->state = static::CONNECTED;
-            } else {
-                if (null !== $this->logger) {
-                    $this->logger->critical(
-                        'Failed to connect with Salesforce: {error}',
-                        [
-                            'error' => $message->getError(),
-                        ]
-                    );
-                }
-
-                $advice = $message->getAdvice();
-
-                if (null !== $advice && in_array($advice->getReconnect(), ['retry', 'handshake'])) {
-                    $interval = $advice->getInterval() ?: 0;
-                    sleep($interval);
-
-                    if ($advice->getReconnect() === 'retry') {
-                        $this->connect();
-                    } else {
-                        $this->state = static::REHANDSHAKING;
-                        $this->handshake();
-                    }
+                if ($message->isSuccessful()) {
+                    $this->state = static::CONNECTED;
                 } else {
-                    $this->disconnect();
+                    if (null !== $this->logger) {
+                        $this->logger->critical(
+                            'Failed to connect with Salesforce: {error}',
+                            [
+                                'error' => $message->getError(),
+                            ]
+                        );
+                    }
+
+                    $advice = $message->getAdvice();
+
+                    if (null !== $advice && in_array($advice->getReconnect(), ['retry', 'handshake'])) {
+                        $interval = $advice->getInterval() ?: 0;
+                        sleep($interval);
+
+                        if ($advice->getReconnect() === 'retry') {
+                            $this->connect();
+                        } else {
+                            $this->state = static::REHANDSHAKING;
+                            $this->handshake();
+                        }
+                    } else {
+                        $this->disconnect();
+                    }
                 }
-            }
-        }, -1000);
-        $channel = $this->getChannel(ChannelInterface::META_CONNECT);
+            },
+            -1000
+        );
+        $channel  = $this->getChannel(ChannelInterface::META_CONNECT);
         $channel->subscribe($consumer);
 
         $this->sendMessages([$message]);
@@ -354,16 +376,19 @@ class BayeuxClient
 
         $channel = $this->getChannel(ChannelInterface::META_CONNECT);
         $channel->subscribe(
-            Consumer::create(function (ChannelInterface $c, Message $message) {
-                if ($message->isSuccessful()) {
-                    $advice = $message->getAdvice();
-                    if (null !== $advice && $advice->getInterval() > 0) {
-                        sleep($advice->getInterval());
-                    }
+            Consumer::create(
+                function (ChannelInterface $c, Message $message) {
+                    if ($message->isSuccessful()) {
+                        $advice = $message->getAdvice();
+                        if (null !== $advice && $advice->getInterval() > 0) {
+                            sleep($advice->getInterval());
+                        }
 
-                    $this->connect();
-                }
-            }, 1000000)
+                        $this->connect();
+                    }
+                },
+                1000000
+            )
         );
 
         $this->connect();
@@ -420,17 +445,41 @@ class BayeuxClient
     /**
      * @param Message[]|array $messages
      */
-    public function sendMessages($messages): void
+    public function sendMessages(array $messages): void
     {
+        if (empty($messages)) {
+            return;
+        }
+
         if (null !== $this->clientId) {
             foreach ($messages as $message) {
                 $message->setClientId($this->clientId);
             }
         }
 
+        $this->prepareExtensions($messages);
+
         $this->requestQueue[] = $messages;
 
         $this->processQueue();
+    }
+
+    public function prepareExtensions(array $messages)
+    {
+        foreach ($this->extensions as $extension) {
+            foreach ($messages as $message) {
+                $extension->prepareSend($message);
+            }
+        }
+    }
+
+    public function processExtensions(array $messages): void
+    {
+        foreach ($this->extensions as $extension) {
+            foreach ($messages as $message) {
+                $extension->processReceive($message);
+            }
+        }
     }
 
     public function processQueue(): void
@@ -447,6 +496,8 @@ class BayeuxClient
                 return $request->withAddedHeader('Authorization', $this->authProvider->authorize());
             }
         );
+
+        $this->processExtensions($newMessages);
 
         foreach ($newMessages as $message) {
             $channel = $this->getChannel($message->getChannel());
@@ -541,5 +592,19 @@ class BayeuxClient
     public function getUrl(): string
     {
         return $this->url;
+    }
+
+    /**
+     * @param ExtensionInterface $extension
+     *
+     * @return BayeuxClient
+     */
+    public function addExtension(ExtensionInterface $extension): BayeuxClient
+    {
+        if (!$this->extensions->contains($extension)) {
+            $this->extensions->add($extension);
+        }
+
+        return $this;
     }
 }
