@@ -6,7 +6,7 @@
  * Time: 3:27 PM
  */
 
-namespace AE\ConnectBundle\Bayeux\AuthProvider;
+namespace AE\ConnectBundle\AuthProvider;
 
 use GuzzleHttp\Client;
 

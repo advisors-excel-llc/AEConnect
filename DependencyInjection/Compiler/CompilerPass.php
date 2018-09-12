@@ -8,7 +8,6 @@
 
 namespace AE\ConnectBundle\DependencyInjection\Compiler;
 
-use AE\ConnectBundle\Bayeux\BayeuxClient;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
@@ -19,16 +18,51 @@ class CompilerPass implements CompilerPassInterface
     {
         // TODO: Get Transformer service and register any services with the ae_connect.transformer tag with it
         $this->processBayeuxExtensions($container);
+        $this->processTopicSubscribers($container);
     }
 
     private function processBayeuxExtensions(ContainerBuilder $container)
     {
-        if ($container->hasDefinition(BayeuxClient::class)) {
-            $client = $container->getDefinition(BayeuxClient::class);
-            $tags   = $container->findTaggedServiceIds('ae_connect.extension');
+        $tags = $container->findTaggedServiceIds('ae_connect.extension');
 
-            foreach ($tags as $id => $attributes) {
-                $client->addMethodCall('addExtension', [new Reference($id)]);
+        foreach ($tags as $id => $attributes) {
+            if (array_key_exists('connections', $attributes) && !empty($attributes['connections'])) {
+                $connections = $attributes['connections'];
+            } else {
+                $config      = $container->getExtensionConfig('ae_connect');
+                $connections = array_keys($config['connections']);
+            }
+
+            foreach ($connections as $connection) {
+                if ($container->hasDefinition("ae_connect.connection.$connection.bayeux_client")) {
+                    $service = $container->getDefinition("ae_connect.connection.$connection.bayeux_client");
+                    $service->addMethodCall('addExtension', [new Reference($id)]);
+                }
+            }
+        }
+    }
+
+    private function processTopicSubscribers(ContainerBuilder $container)
+    {
+        $tags = $container->findTaggedServiceIds('ae_connect.subscriber');
+
+        foreach ($tags as $id => $attributes) {
+            if (!array_key_exists('topic', $attributes) || empty($attributes['topic'])) {
+                throw new \RuntimeException("The 'topic' attribute must be set on the consumer's service tag.");
+            }
+
+            if (array_key_exists('connections', $attributes) && !empty($attributes['connections'])) {
+                $connections = $attributes['connections'];
+            } else {
+                $config      = $container->getExtensionConfig('ae_connect');
+                $connections = array_keys($config['connections']);
+            }
+
+            foreach ($connections as $connection) {
+                if ($container->hasDefinition("ae_connect.connection.$connection")) {
+                    $service = $container->getDefinition("ae_connect.connection.$connection");
+                    $service->addMethodCall('subscribe', [$attributes['topic'], new Reference($id)]);
+                }
             }
         }
     }

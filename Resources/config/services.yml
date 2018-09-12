@@ -9,7 +9,7 @@ parameters:
 services:
     AE\ConnectBundle\Bayeux\Transport\LongPollingTransport:
         autowire: true
-    AE\ConnectBundle\Bayeux\AuthProvider\LoginProvider:
+    AE\ConnectBundle\AuthProvider\LoginProvider:
         autowire: true
         arguments:
             $clientId: "ae_connect.login.client_id%"
@@ -18,7 +18,7 @@ services:
             $password: "%ae_connect.login.password%"
             $url: "%ae_connect.login.uri%"
     AE\ConnectBundle\Bayeux\Transport\AbstractClientTransport: '@AE\ConnectBundle\Bayeux\Transport\LongPollingTransport'
-    AE\ConnectBundle\Bayeux\AuthProvider\AuthProviderInterface: '@AE\ConnectBundle\Bayeux\AuthProvider\LoginProvider'
+    AE\ConnectBundle\AuthProvider\AuthProviderInterface: '@AE\ConnectBundle\AuthProvider\LoginProvider'
     AE\ConnectBundle\Bayeux\BayeuxClient:
         public: true
         autowire: true

@@ -8,7 +8,7 @@
 
 namespace AE\ConnectBundle\Bayeux;
 
-use AE\ConnectBundle\Bayeux\AuthProvider\AuthProviderInterface;
+use AE\ConnectBundle\AuthProvider\AuthProviderInterface;
 use AE\ConnectBundle\Bayeux\Extension\ExtensionInterface;
 use AE\ConnectBundle\Bayeux\Transport\AbstractClientTransport;
 use AE\ConnectBundle\Bayeux\Transport\HttpClientTransport;
@@ -222,6 +222,7 @@ class BayeuxClient
      *      $channel->subscribe(function(ChannelInterface $c, StreamingData $data) {
      *          ///...
      *      });
+     *      $client->start();
      */
     public function start(): void
     {

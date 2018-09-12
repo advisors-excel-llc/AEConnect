@@ -31,6 +31,18 @@ class Configuration implements ConfigurationInterface
                 ->prototype('array')
                     ->children()
                         ->booleanNode('is_default')->defaultTrue()->end()
+                        ->scalarNode('url')
+                            ->isRequired()
+                            ->validate()
+                                ->ifTrue(function ($value) {
+                                    return preg_match(
+                                        '/^https:\/\/(.*?).(lightning\.|sales)force.com$/',
+                                        $value
+                                    ) == false;
+                                })
+                                ->thenInvalid('The URL provided is not in a valid format.')
+                            ->end()
+                        ->end()
                         ->append($this->buildLoginTree())
                         ->append($this->buildTopicsTree())
                         ->append($this->buildTopicConfigTree())

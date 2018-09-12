@@ -28,6 +28,7 @@ class ConfigurationTest extends TestCase
                 'ae_connect' => [
                     'connections' => [
                         'default' => [
+                            'url' => 'https://test.my.salesforce.com',
                             'login'  => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
@@ -50,6 +51,7 @@ class ConfigurationTest extends TestCase
                 'connections' => [
                     'default' => [
                         'is_default' => true,
+                        'url' => 'https://test.my.salesforce.com',
                         'login'      => [
                             'key'      => 'client_key',
                             'secret'   => 'client_secret',
@@ -88,6 +90,7 @@ class ConfigurationTest extends TestCase
                 'ae_connect' => [
                     'connections' => [
                         'default'     => [
+                            'url' => 'https://test.my.salesforce.com',
                             'login'  => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
@@ -105,6 +108,7 @@ class ConfigurationTest extends TestCase
                         ],
                         'non_default' => [
                             'is_default' => false,
+                            'url' => 'https://test2.lightning.force.com',
                             'login'      => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
@@ -137,6 +141,7 @@ class ConfigurationTest extends TestCase
                 'connections' => [
                     'default'     => [
                         'is_default' => true,
+                        'url' => 'https://test.my.salesforce.com',
                         'login'      => [
                             'key'      => 'client_key',
                             'secret'   => 'client_secret',
@@ -165,6 +170,7 @@ class ConfigurationTest extends TestCase
                     ],
                     'non_default' => [
                         'is_default' => false,
+                        'url' => 'https://test2.lightning.force.com',
                         'login'      => [
                             'key'      => 'client_key',
                             'secret'   => 'client_secret',
@@ -216,6 +222,7 @@ class ConfigurationTest extends TestCase
                 'ae_connect' => [
                     'connections' => [
                         'default'     => [
+                            'url' => 'https://test.my.salesforce.com',
                             'login'  => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
@@ -232,6 +239,7 @@ class ConfigurationTest extends TestCase
                             ],
                         ],
                         'non_default' => [
+                            'url' => 'https://test2.my.salesforce.com',
                             'login'  => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
@@ -270,6 +278,7 @@ class ConfigurationTest extends TestCase
                 'ae_connect' => [
                     'connections' => [
                         'default'     => [
+                            'url' => 'https://test.my.salesforce.com',
                             'login'  => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
@@ -287,6 +296,7 @@ class ConfigurationTest extends TestCase
                         ],
                         'non_default' => [
                             'is_default' => false,
+                            'url' => 'https://test2.my.salesforce.com',
                             'login'      => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',

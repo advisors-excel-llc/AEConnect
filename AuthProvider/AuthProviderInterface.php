@@ -6,7 +6,7 @@
  * Time: 3:28 PM
  */
 
-namespace AE\ConnectBundle\Bayeux\AuthProvider;
+namespace AE\ConnectBundle\AuthProvider;
 
 interface AuthProviderInterface
 {
