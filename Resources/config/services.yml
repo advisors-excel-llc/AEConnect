@@ -8,3 +8,9 @@ services:
     AE\ConnectBundle\Bayeux\Extension\SfdcExtension:
         autowire: true
         tags: ['ae_connect.extension']
+    AE\ConnectBundle\Composite\Serializer\SObjectSerializeHandler:
+        tags:
+            -
+                name: 'jms_serializer.subscribing_handler'
+                type: 'AE\ConnectBundle\Composite\Model\SObject'
+                format: 'json'

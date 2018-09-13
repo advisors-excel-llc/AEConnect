@@ -1,0 +1,118 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: alex.boyce
+ * Date: 9/13/18
+ * Time: 1:01 PM
+ */
+
+namespace AE\ConnectBundle\Composite\Model;
+
+use JMS\Serializer\Annotation as Serializer;
+
+/**
+ * Class SObject
+ *
+ * @package AE\ConnectBundle\Composite\Model
+ * @Serializer\ExclusionPolicy("NONE")
+ */
+class SObject
+{
+    /**
+     * @var array
+     * @Serializer\Type("array")
+     */
+    private $attributes = ['type' => 'sobject'];
+
+    /**
+     * @var array
+     * @Serializer\Type("array")
+     */
+    private $fields = [];
+
+    public function __construct(string $type = 'sobject')
+    {
+        $this->attributes['type'] = $type;
+    }
+
+    public function getType(): string
+    {
+        return $this->attributes['type'];
+    }
+
+    public function setType(string $type): SObject
+    {
+        $this->attributes['type'] = $type;
+
+        return $this;
+    }
+
+    public function getUrl(): ?string
+    {
+        return array_key_exists('url', $this->attributes) ? $this->attributes['url'] : null;
+    }
+
+    public function setUrl(?string $url): SObject
+    {
+        $this->attributes['url'] = $url;
+
+        return $this;
+    }
+
+    public function setFields(array $fields): SObject
+    {
+        foreach ($fields as $field => $value) {
+            $this->$field = $value;
+        }
+
+        return $this;
+    }
+
+    public function getFields(): array
+    {
+        return $this->fields;
+    }
+
+    public function __set($name, $value)
+    {
+        if ('type' === $name) {
+            $this->setType($value);
+        } elseif ('url' === $name) {
+            $this->setUrl($value);
+        } else {
+            $this->fields[ucwords($name)] = $value;
+        }
+    }
+
+    public function __get($name)
+    {
+        if ('type' === $name) {
+            return $this->getType();
+        }
+
+        if ('url' === $name) {
+            return $this->getUrl();
+        }
+
+        return array_key_exists(ucwords($name), $this->fields) ? $this->fields[ucwords($name)] : null;
+    }
+
+    public function __call($name, $arguments)
+    {
+        $prefix = substr($name, 0, 3);
+
+        if ("get" === $prefix) {
+            $field = substr($name, 3);
+
+            return $this->$field;
+        }
+
+        if ("set" === $prefix) {
+            $field = substr($name, 3);
+
+            $this->$field = array_shift($arguments);
+
+            return $this;
+        }
+    }
+}
