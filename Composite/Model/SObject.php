@@ -35,6 +35,22 @@ class SObject
         $this->attributes['type'] = $type;
     }
 
+    /**
+     * @param $name
+     *
+     * @return string
+     */
+    protected static function normalizeFieldName($name): string
+    {
+        if ($name !== "id") {
+            $name = ucwords($name);
+        } elseif ($name === 'Id') {
+            $name = 'id';
+        }
+
+        return $name;
+    }
+
     public function getType(): string
     {
         return $this->attributes['type'];
@@ -80,7 +96,8 @@ class SObject
         } elseif ('url' === $name) {
             $this->setUrl($value);
         } else {
-            $this->fields[ucwords($name)] = $value;
+            $name = self::normalizeFieldName($name);
+            $this->fields[$name] = $value;
         }
     }
 
@@ -94,7 +111,9 @@ class SObject
             return $this->getUrl();
         }
 
-        return array_key_exists(ucwords($name), $this->fields) ? $this->fields[ucwords($name)] : null;
+        $name = self::normalizeFieldName($name);
+
+        return array_key_exists($name, $this->fields) ? $this->fields[$name] : null;
     }
 
     public function __call($name, $arguments)
