@@ -12,6 +12,7 @@ use AE\ConnectBundle\Bayeux\BayeuxClient;
 use AE\ConnectBundle\Bayeux\ChannelInterface;
 use AE\ConnectBundle\Bayeux\Consumer;
 use AE\ConnectBundle\Bayeux\Message;
+use AE\ConnectBundle\Manager\ConnectionManager;
 use GuzzleHttp\Client;
 
 class BayeuxClientTest extends \AE\ConnectBundle\Tests\KernelTestCase
@@ -24,7 +25,8 @@ class BayeuxClientTest extends \AE\ConnectBundle\Tests\KernelTestCase
     protected function setUp()
     {
         parent::setUp();
-        $this->client = static::$kernel->getContainer()->get(BayeuxClient::class);
+        $manager = static::$kernel->getContainer()->get(ConnectionManager::class);
+        $this->client = $manager->getConnection()->getStreamingClient()->getClient();
     }
 
     public function testStream()

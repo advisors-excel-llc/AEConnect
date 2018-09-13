@@ -10,8 +10,9 @@ namespace AE\ConnectBundle\DependencyInjection;
 
 use AE\ConnectBundle\AuthProvider\LoginProvider;
 use AE\ConnectBundle\Bayeux\BayeuxClient;
+use AE\ConnectBundle\Bayeux\Extension\ReplayExtension;
 use AE\ConnectBundle\Connection\Connection;
-use AE\ConnectBundle\Manager\ConnectionManagerInterface;
+use AE\ConnectBundle\Manager\ConnectionManager;
 use AE\ConnectBundle\Streaming\Client;
 use AE\ConnectBundle\Streaming\Topic;
 use Symfony\Component\Config\FileLocator;
@@ -46,7 +47,7 @@ class AEConnectExtension extends Extension
         $connections = $config['connections'];
 
         if (count($connections) > 0) {
-            $manager = $container->getDefinition(ConnectionManagerInterface::class);
+            $manager = $container->findDefinition(ConnectionManager::class);
 
             foreach ($connections as $name => $connection) {
                 $authProvider = $this->createAuthProviderService($connection['login']);
@@ -64,7 +65,11 @@ class AEConnectExtension extends Extension
                 $container->setDefinition("ae_connect.connection.$name.bayeux_client", $bayeuxClient);
                 $container->setDefinition(
                     "ae_connect.connection.$name.streaming_client",
-                    $this->createStreamingClientService($connection['topics'])
+                    $this->createStreamingClientService($name, $connection['topics'], $container)
+                );
+                $container->setDefinition(
+                    "ae_connect.connection.$name.replay_extension",
+                    $this->createReplayExtension($name, $connection['config']['replay_start_id'])
                 );
 
                 $container->setDefinition(
@@ -106,7 +111,7 @@ class AEConnectExtension extends Extension
         );
     }
 
-    private function createStreamingClientService(array $config): Definition
+    private function createStreamingClientService(string $name, array $config, ContainerBuilder $container): Definition
     {
         $def = new Definition(
             Client::class,
@@ -115,29 +120,46 @@ class AEConnectExtension extends Extension
             ]
         );
 
-        foreach ($config as $name => $topicConfig) {
-            $topicConfig['name'] = $name;
+        foreach ($config as $topicName => $topicConfig) {
+            $topicConfig['name'] = $topicName;
             $topic               = $this->createTopic($topicConfig);
+            $topicId             = "ae_connect.topic.$topicName";
 
-            $def->addMethodCall('addTopic', [$topic]);
+            $container->setDefinition($topicId, $topic);
+
+            $def->addMethodCall('addTopic', [new Reference($topicId)]);
         }
 
         return $def;
     }
 
-    private function createTopic(array $config): Topic
+    private function createReplayExtension(string $name, int $replayId): Definition
     {
-        $topic = new Topic();
+        $def = new Definition(
+            ReplayExtension::class,
+            [
+                $replayId,
+            ]
+        );
 
-        $topic->setName($config['name']);
-        $topic->setFilters($config['filter']);
-        $topic->setApiVersion($config['api_version']);
-        $topic->setAutoCreate($config['create_if_not_exists']);
-        $topic->setNotifyForOperationCreate($config['create']);
-        $topic->setNotifyForOperationUpdate($config['update']);
-        $topic->setNotifyForOperationUndelete($config['undelete']);
-        $topic->setNotifyForOperationDelete($config['delete']);
-        $topic->setNotifyForFields($config['notify_for_fields']);
+        $def->addTag('ae_connect.extension', ['connections' => $name]);
+
+        return $def;
+    }
+
+    private function createTopic(array $config): Definition
+    {
+        $topic = new Definition(Topic::class);
+
+        $topic->addMethodCall('setName', [$config['name']]);
+        $topic->addMethodCall('setFilters', [$config['filter']]);
+        $topic->addMethodCall('setApiVersion', [$config['api_version']]);
+        $topic->addMethodCall('setAutoCreate', [$config['create_if_not_exists']]);
+        $topic->addMethodCall('setNotifyForOperationCreate', [$config['create']]);
+        $topic->addMethodCall('setNotifyForOperationUpdate', [$config['update']]);
+        $topic->addMethodCall('setNotifyForOperationUndelete', [$config['undelete']]);
+        $topic->addMethodCall('setNotifyForOperationDelete', [$config['delete']]);
+        $topic->addMethodCall('setNotifyForFields', [$config['notify_for_fields']]);
 
         return $topic;
     }

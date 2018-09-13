@@ -61,4 +61,9 @@ class Client implements ClientInterface
             $this->streamingClient->disconnect();
         }
     }
+
+    public function getClient() : BayeuxClient
+    {
+        return $this->streamingClient;
+    }
 }

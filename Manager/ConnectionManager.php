@@ -26,7 +26,6 @@ class ConnectionManager implements ConnectionManagerInterface
     /**
      * @param string $name
      * @param ConnectionInterface $connection
-     * @required
      *
      * @return ConnectionManager
      */
@@ -42,7 +41,7 @@ class ConnectionManager implements ConnectionManagerInterface
      *
      * @return ConnectionInterface|null
      */
-    public function getConnection(?string $name): ?ConnectionInterface
+    public function getConnection(?string $name = null): ?ConnectionInterface
     {
         if (null === $name) {
             return $this->connections->get('default');

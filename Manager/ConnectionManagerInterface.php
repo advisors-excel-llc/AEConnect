@@ -13,5 +13,5 @@ use AE\ConnectBundle\Connection\ConnectionInterface;
 interface ConnectionManagerInterface
 {
     public function registerConnection(string $name, ConnectionInterface $connection);
-    public function getConnection(?string $name): ?ConnectionInterface;
+    public function getConnection(?string $name = null): ?ConnectionInterface;
 }

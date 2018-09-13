@@ -16,4 +16,5 @@ interface ClientInterface
     public function subscribe(string $topicName, ConsumerInterface $consumer);
     public function start();
     public function stop();
+    public function getClient();
 }
