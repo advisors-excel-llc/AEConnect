@@ -63,6 +63,12 @@ class AEConnectExtension extends Extension
                 );
                 $bayeuxClient->setAutowired(true);
 
+                $container->setDefinition("ae_connect.connection.$name.bayeux_client", $bayeuxClient);
+                $container->setDefinition(
+                    "ae_connect.connection.$name.streaming_client",
+                    $this->createStreamingClientService($name, $connection['topics'], $container)
+                );
+
                 $compositeClient = new Definition(
                     CompositeClient::class,
                     [
@@ -72,11 +78,6 @@ class AEConnectExtension extends Extension
                 );
                 $compositeClient->setAutowired(true);
 
-                $container->setDefinition("ae_connect.connection.$name.bayeux_client", $bayeuxClient);
-                $container->setDefinition(
-                    "ae_connect.connection.$name.streaming_client",
-                    $this->createStreamingClientService($name, $connection['topics'], $container)
-                );
                 $container->setDefinition(
                     "ae_connect.connection.$name.composite_client",
                     $compositeClient
