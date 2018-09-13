@@ -43,7 +43,7 @@ class Client implements ClientInterface
     public function start()
     {
         foreach ($this->topics as $topic) {
-            $channel = $this->streamingClient->getChannel('/topic/'.$topic->getName());
+            $channel = $this->streamingClient->getChannel($this->getTopicName($topic));
 
             if (null !== $channel) {
                 foreach ($topic->getSubscribers() as $subscriber) {
@@ -60,6 +60,22 @@ class Client implements ClientInterface
         if (!$this->streamingClient->isDisconnected()) {
             $this->streamingClient->disconnect();
         }
+    }
+
+    protected function getTopicName(TopicInterface $topic): string
+    {
+        $name = '/topic/'.$topic->getName();
+
+        $filters = $topic->getFilters();
+
+        if (!empty($filters)) {
+            array_walk($filters, function (&$value, $key) {
+                $value = "$key=$value";
+            });
+            $name .= '?'.implode("&", $filters);
+        }
+
+        return $name;
     }
 
     public function getClient() : BayeuxClient
