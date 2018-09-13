@@ -11,6 +11,7 @@ namespace AE\ConnectBundle\DependencyInjection;
 use AE\ConnectBundle\AuthProvider\LoginProvider;
 use AE\ConnectBundle\Bayeux\BayeuxClient;
 use AE\ConnectBundle\Bayeux\Extension\ReplayExtension;
+use AE\ConnectBundle\Composite\Client\CompositeClient;
 use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Manager\ConnectionManager;
 use AE\ConnectBundle\Streaming\Client;
@@ -62,10 +63,23 @@ class AEConnectExtension extends Extension
                 );
                 $bayeuxClient->setAutowired(true);
 
+                $compositeClient = new Definition(
+                    CompositeClient::class,
+                    [
+                        '$url'          => $connection['url'],
+                        '$authProvider' => new Reference("ae_connect.connection.$name.auth_provider"),
+                    ]
+                );
+                $compositeClient->setAutowired(true);
+
                 $container->setDefinition("ae_connect.connection.$name.bayeux_client", $bayeuxClient);
                 $container->setDefinition(
                     "ae_connect.connection.$name.streaming_client",
                     $this->createStreamingClientService($name, $connection['topics'], $container)
+                );
+                $container->setDefinition(
+                    "ae_connect.connection.$name.composite_client",
+                    $compositeClient
                 );
                 $container->setDefinition(
                     "ae_connect.connection.$name.replay_extension",
@@ -80,6 +94,9 @@ class AEConnectExtension extends Extension
                             new Reference(
                                 "ae_connect.connection.$name.streaming_client"
                             ),
+                            new Reference(
+                                "ae_connect.connection.$name.composite_client"
+                            )
                         ]
                     )
                 );

@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Connection;
 
+use AE\ConnectBundle\Composite\Client\CompositeClient;
 use AE\ConnectBundle\Streaming\ClientInterface;
 
 class Connection implements ConnectionInterface
@@ -17,9 +18,15 @@ class Connection implements ConnectionInterface
      */
     private $streamingClient;
 
-    public function __construct(ClientInterface $streamingClient)
+    /**
+     * @var CompositeClient
+     */
+    private $restClient;
+
+    public function __construct(ClientInterface $streamingClient, CompositeClient $restClient)
     {
         $this->streamingClient = $streamingClient;
+        $this->restClient      = $restClient;
     }
 
     public function getStreamingClient(): ClientInterface
@@ -29,7 +36,7 @@ class Connection implements ConnectionInterface
 
     public function getRestClient()
     {
-        // TODO: Implement getRestClient() method.
+        return $this->restClient;
     }
 
 }
