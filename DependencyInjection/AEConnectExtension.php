@@ -123,7 +123,7 @@ class AEConnectExtension extends Extension
         foreach ($config as $topicName => $topicConfig) {
             $topicConfig['name'] = $topicName;
             $topic               = $this->createTopic($topicConfig);
-            $topicId             = "ae_connect.topic.$topicName";
+            $topicId             = "ae_connect.connection.$name.topic.$topicName";
 
             $container->setDefinition($topicId, $topic);
 
