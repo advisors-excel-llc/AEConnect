@@ -10,7 +10,7 @@ namespace AE\ConnectBundle\Composite\Client;
 
 interface CompositeResponseInterface
 {
-    public function getId(): string;
+    public function getId(): ?string;
     public function isSuccess(): bool;
     public function getErrors(): ?array;
     public function getWarnings(): ?array;

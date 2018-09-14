@@ -80,7 +80,7 @@ class CompositeResponse implements CompositeResponseInterface
     /**
      * @return RequestError[]|array
      */
-    public function getErrors()
+    public function getErrors(): ?array
     {
         return $this->errors;
     }

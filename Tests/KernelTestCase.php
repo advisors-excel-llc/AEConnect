@@ -21,4 +21,9 @@ class KernelTestCase extends TestCase
     {
         static::ensureKernelShutdown();
     }
+
+    protected function get($serviceId)
+    {
+        return static::$kernel->getContainer()->get($serviceId);
+    }
 }

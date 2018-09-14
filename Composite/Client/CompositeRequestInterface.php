@@ -9,15 +9,16 @@
 namespace AE\ConnectBundle\Composite\Client;
 
 use AE\ConnectBundle\Composite\Model\SObject;
+use Doctrine\Common\Collections\Collection;
 
 interface CompositeRequestInterface
 {
     public function setRecords($records);
 
     /**
-     * @return array|SObject[]
+     * @return Collection|SObject[]
      */
-    public function getRecords(): array;
+    public function getRecords(): Collection;
     public function setAllOrNone(bool $allOrNone);
     public function isAllOrNone(): bool;
     public function addRecord(SObject $record);

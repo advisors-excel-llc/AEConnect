@@ -25,7 +25,7 @@ class BayeuxClientTest extends \AE\ConnectBundle\Tests\KernelTestCase
     protected function setUp()
     {
         parent::setUp();
-        $manager = static::$kernel->getContainer()->get(ConnectionManager::class);
+        $manager      = $this->get(ConnectionManager::class);
         $this->client = $manager->getConnection()->getStreamingClient()->getClient();
     }
 

@@ -48,7 +48,13 @@ class CompositeClient
     {
         $stack = new HandlerStack();
         $stack->setHandler(\GuzzleHttp\choose_handler());
-        $stack->push(Middleware::mapRequest([$this, 'authorize']));
+        $stack->push(
+            Middleware::mapRequest(
+                function (RequestInterface $request) {
+                    return $this->authorize($request);
+                }
+            )
+        );
 
         $client = new Client(
             [
@@ -72,24 +78,30 @@ class CompositeClient
     /**
      * @param CompositeRequestInterface $request
      *
-     * @return CompositeResponse
+     * @return CompositeResponse[]
      */
-    public function create(CompositeRequestInterface $request): CompositeResponse
+    public function create(CompositeRequestInterface $request): array
     {
-        $response = $this->client->post(
-            ''.[
-                'body' => $this->serializer->serialize($request, 'json'),
+        $requestBody = $this->serializer->serialize($request, 'json');
+        $response    = $this->client->post(
+            '',
+            [
+                'body' => $requestBody,
             ]
         );
 
-        /** @var CompositeResponse $return */
-        $return = $this->serializer->deserialize(
-            $response->getBody(),
-            CompositeResponse::class,
+        $body = (string)$response->getBody();
+
+        if ($response->getStatusCode() === 400) {
+            $error = $this->serializer->deserialize($body, 'array', 'json');
+            throw new \RuntimeException("{$error['errorCode']}: {$error['message']}");
+        }
+
+        return $this->serializer->deserialize(
+            $body,
+            'array<'.CompositeResponse::class.'>',
             'json'
         );
-
-        return $return;
     }
 
     /**
@@ -97,7 +109,7 @@ class CompositeClient
      * @param array $ids
      * @param array $fields
      *
-     * @return array
+     * @return array|SObject[]
      */
     public function read(string $sObjectType, array $ids, array $fields = ['id']): array
     {
@@ -121,32 +133,38 @@ class CompositeClient
     /**
      * @param CompositeRequestInterface $request
      *
-     * @return CompositeResponse
+     * @return CompositeResponse[]
      */
-    public function update(CompositeRequestInterface $request): CompositeResponse
+    public function update(CompositeRequestInterface $request): array
     {
-        $response = $this->client->patch(
-            ''.[
-                'body' => $this->serializer->serialize($request, 'json'),
+        $requestBody = $this->serializer->serialize($request, 'json');
+        $response  = $this->client->patch(
+            '',
+            [
+                'body' => $requestBody,
             ]
         );
 
-        /** @var CompositeResponse $return */
-        $return = $this->serializer->deserialize(
-            $response->getBody(),
-            CompositeResponse::class,
+        $body = (string) $response->getBody();
+
+        if ($response->getStatusCode() === 400) {
+            $error = $this->serializer->deserialize($body, 'array', 'json');
+            throw new \RuntimeException("{$error['errorCode']}: {$error['message']}");
+        }
+
+        return $this->serializer->deserialize(
+            $body,
+            'array<'.CompositeResponse::class.'>',
             'json'
         );
-
-        return $return;
     }
 
     /**
      * @param CompositeRequestInterface $request
      *
-     * @return CompositeResponse
+     * @return CompositeResponse[]
      */
-    public function delete(CompositeRequestInterface $request): CompositeResponse
+    public function delete(CompositeRequestInterface $request): array
     {
         $ids = [];
 
@@ -166,13 +184,10 @@ class CompositeClient
             ]
         );
 
-        /** @var CompositeResponse $return */
-        $return = $this->serializer->deserialize(
+        return $this->serializer->deserialize(
             $response->getBody(),
-            CompositeResponse::class,
+            'array<'.CompositeResponse::class.'>',
             'json'
         );
-
-        return $return;
     }
 }

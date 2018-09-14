@@ -30,9 +30,15 @@ class SObject
      */
     private $fields = [];
 
-    public function __construct(string $type = 'sobject')
+    public function __construct(string $type = 'sobject', array $fields = [])
     {
         $this->attributes['type'] = $type;
+
+        if (!empty($fields)) {
+            foreach ($fields as $field => $value) {
+                $this->$field = $value;
+            }
+        }
     }
 
     /**

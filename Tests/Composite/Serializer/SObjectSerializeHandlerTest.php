@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Tests\Composite\Serializer;
 
+use AE\ConnectBundle\Composite\Model\CompositeRequest;
 use AE\ConnectBundle\Composite\Model\SObject;
 use AE\ConnectBundle\Tests\KernelTestCase;
 use JMS\Serializer\SerializerInterface;
@@ -22,7 +23,7 @@ class SObjectSerializeHandlerTest extends KernelTestCase
     protected function setUp()
     {
         parent::setUp();
-        $this->serializer = static::$kernel->getContainer()->get("jms_serializer");
+        $this->serializer = $this->get("jms_serializer");
     }
 
     public function testSobjectSerialziationSingle()
@@ -68,5 +69,30 @@ class SObjectSerializeHandlerTest extends KernelTestCase
         $this->assertEquals("/test/url", $sobject->getUrl());
         $this->assertEquals("Test Object", $sobject->Name);
         $this->assertEquals("A10500010129302A10", $sobject->OwnerId);
+    }
+
+    public function testSobjectDeepSerialize()
+    {
+        $account       = new SObject('Account');
+        $account->Name = "Composite Test Account";
+
+        $contact            = new SObject('Contact');
+        $contact->FirstName = "Composite";
+        $contact->LastName  = "Test Contact";
+
+        $request = new CompositeRequest(
+            [
+                $account,
+                $contact,
+            ],
+            true
+        );
+
+        $json = $this->serializer->serialize($request, 'json');
+
+        $this->assertEquals(
+            '{"allOrNone":true,"records":[{"attributes":{"type":"Account"},"Name":"Composite Test Account"},{"attributes":{"type":"Contact"},"FirstName":"Composite","LastName":"Test Contact"}]}',
+            $json
+        );
     }
 }

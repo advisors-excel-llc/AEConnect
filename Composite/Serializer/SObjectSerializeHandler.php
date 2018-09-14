@@ -43,7 +43,7 @@ class SObjectSerializeHandler implements SubscribingHandlerInterface
 
         if (null === $visitor->getRoot()) {
             $visitor->setRoot($object);
-        } else {
+        } elseif (is_array($visitor->getRoot())) {
             $visitor->setData(null, $object);
         }
 
