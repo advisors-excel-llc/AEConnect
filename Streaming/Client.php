@@ -8,8 +8,8 @@
 
 namespace AE\ConnectBundle\Streaming;
 
-use AE\ConnectBundle\Bayeux\BayeuxClient;
-use AE\ConnectBundle\Bayeux\ConsumerInterface;
+use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
+use AE\SalesforceRestSdk\Bayeux\ConsumerInterface;
 use Doctrine\Common\Collections\ArrayCollection;
 
 class Client implements ClientInterface

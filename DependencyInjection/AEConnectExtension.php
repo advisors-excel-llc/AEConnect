@@ -8,10 +8,10 @@
 
 namespace AE\ConnectBundle\DependencyInjection;
 
-use AE\ConnectBundle\AuthProvider\LoginProvider;
-use AE\ConnectBundle\Bayeux\BayeuxClient;
-use AE\ConnectBundle\Bayeux\Extension\ReplayExtension;
-use AE\ConnectBundle\Composite\Client\CompositeClient;
+use AE\SalesforceRestSdk\AuthProvider\LoginProvider;
+use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
+use AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension;
+use AE\SalesforceRestSdk\Rest\Composite\CompositeClient;
 use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Manager\ConnectionManager;
 use AE\ConnectBundle\Streaming\Client;
@@ -57,7 +57,6 @@ class AEConnectExtension extends Extension
                 $bayeuxClient = new Definition(
                     BayeuxClient::class,
                     [
-                        '$url'          => $connection['url'],
                         '$authProvider' => new Reference("ae_connect.connection.$name.auth_provider"),
                     ]
                 );
@@ -69,18 +68,17 @@ class AEConnectExtension extends Extension
                     $this->createStreamingClientService($name, $connection['topics'], $container)
                 );
 
-                $compositeClient = new Definition(
-                    CompositeClient::class,
+                $restClient = new Definition(
+                    \AE\SalesforceRestSdk\Rest\Client::class,
                     [
-                        '$url'          => $connection['url'],
-                        '$authProvider' => new Reference("ae_connect.connection.$name.auth_provider"),
+                        '$provider' => new Reference("ae_connect.connection.$name.auth_provider"),
                     ]
                 );
-                $compositeClient->setAutowired(true);
+                $restClient->setAutowired(true);
 
                 $container->setDefinition(
-                    "ae_connect.connection.$name.composite_client",
-                    $compositeClient
+                    "ae_connect.connection.$name.rest_client",
+                    $restClient
                 );
                 $container->setDefinition(
                     "ae_connect.connection.$name.replay_extension",
@@ -90,13 +88,13 @@ class AEConnectExtension extends Extension
                 $container->setDefinition(
                     "ae_connect.connection.$name",
                     new Definition(
-                        Connection::class,
+                        Client::class,
                         [
                             new Reference(
                                 "ae_connect.connection.$name.streaming_client"
                             ),
                             new Reference(
-                                "ae_connect.connection.$name.composite_client"
+                                "ae_connect.connection.$name.rest_client"
                             )
                         ]
                     )

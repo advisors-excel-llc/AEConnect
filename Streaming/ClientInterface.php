@@ -8,7 +8,7 @@
 
 namespace AE\ConnectBundle\Streaming;
 
-use AE\ConnectBundle\Bayeux\ConsumerInterface;
+use AE\SalesforceRestSdk\Bayeux\ConsumerInterface;
 
 interface ClientInterface
 {

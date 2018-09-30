@@ -4,8 +4,64 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "4e8695ad1edff0ab89b5aa9404e8cec6",
+    "content-hash": "6f7aa828c5cd8909578ffdbb7c107e95",
     "packages": [
+        {
+            "name": "ae/salesforce-rest-sdk",
+            "version": "v1.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/advisors-excel-llc/salesforce-rest-sdk.git",
+                "reference": "d5e9cb831cc23f3b0d2edd5361673996e486e574"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/advisors-excel-llc/salesforce-rest-sdk/zipball/d5e9cb831cc23f3b0d2edd5361673996e486e574",
+                "reference": "d5e9cb831cc23f3b0d2edd5361673996e486e574",
+                "shasum": ""
+            },
+            "require": {
+                "doctrine/collections": "^1.5",
+                "guzzlehttp/guzzle": "^6.3",
+                "jms/serializer": "^1.13",
+                "php": "^7.1",
+                "ramsey/uuid": "^3.8",
+                "symfony/expression-language": "^4.1"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^7.3"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "AE\\SalesforceRestSdk\\": [
+                        "src/"
+                    ]
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "AE\\SalesforceRestSdk\\Tests\\": [
+                        "Tests/"
+                    ]
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Alex Boyce",
+                    "email": "alex.boyce@advisorsexcel.com"
+                }
+            ],
+            "description": "An SDK for the Salesforce Rest API",
+            "support": {
+                "source": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/tree/v1.1.1",
+                "issues": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/issues"
+            },
+            "time": "2018-09-28T16:05:47+00:00"
+        },
         {
             "name": "doctrine/annotations",
             "version": "v1.6.0",

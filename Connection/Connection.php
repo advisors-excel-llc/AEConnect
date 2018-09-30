@@ -8,8 +8,8 @@
 
 namespace AE\ConnectBundle\Connection;
 
-use AE\ConnectBundle\Composite\Client\CompositeClient;
 use AE\ConnectBundle\Streaming\ClientInterface;
+use AE\SalesforceRestSdk\Rest\Client;
 
 class Connection implements ConnectionInterface
 {
@@ -19,11 +19,11 @@ class Connection implements ConnectionInterface
     private $streamingClient;
 
     /**
-     * @var CompositeClient
+     * @var Client
      */
     private $restClient;
 
-    public function __construct(ClientInterface $streamingClient, CompositeClient $restClient)
+    public function __construct(ClientInterface $streamingClient, Client $restClient)
     {
         $this->streamingClient = $streamingClient;
         $this->restClient      = $restClient;
