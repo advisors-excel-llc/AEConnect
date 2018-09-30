@@ -8,7 +8,7 @@
 
 namespace AE\ConnectBundle\DependencyInjection\Configuration;
 
-use AE\ConnectBundle\Bayeux\Extension\ReplayExtension;
+use AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
