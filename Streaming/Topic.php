@@ -18,13 +18,8 @@ use JMS\Serializer\Annotation as JMS;
  * @package AE\ConnectBundle\Streaming
  * @JMS\ExclusionPolicy("NONE")
  */
-class Topic implements TopicInterface
+class Topic extends AbstractSubscriber implements TopicInterface
 {
-    /**
-     * @var ArrayCollection|ConsumerInterface[]
-     * @JMS\Exclude()
-     */
-    private $subscribers;
 
     /**
      * @var string
@@ -93,27 +88,6 @@ class Topic implements TopicInterface
      * @JMS\Exclude()
      */
     private $autoCreate = true;
-
-    public function __construct()
-    {
-        $this->subscribers = new ArrayCollection();
-    }
-
-    public function addSubscriber(ConsumerInterface $consumer)
-    {
-        if (!$this->subscribers->contains($consumer)) {
-            $this->subscribers->add($consumer);
-        }
-    }
-
-    /**
-     * @return ConsumerInterface[]
-     */
-    public function getSubscribers(): array
-    {
-        return $this->subscribers->toArray();
-    }
-
 
     /**
      * @return string
@@ -313,5 +287,21 @@ class Topic implements TopicInterface
         $this->autoCreate = $autoCreate;
 
         return $this;
+    }
+
+    public function getChannelName(): string
+    {
+        $name = '/topic/'.$this->name;
+
+        $filters = $this->filters;
+
+        if (!empty($filters)) {
+            array_walk($filters, function (&$value, $key) {
+                $value = "$key=$value";
+            });
+            $name .= '?'.implode("&", $filters);
+        }
+
+        return $name;
     }
 }

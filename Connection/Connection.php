@@ -9,7 +9,8 @@
 namespace AE\ConnectBundle\Connection;
 
 use AE\ConnectBundle\Streaming\ClientInterface;
-use AE\SalesforceRestSdk\Rest\Client;
+use AE\SalesforceRestSdk\Rest\Client as RestClient;
+use AE\SalesforceRestSdk\Bulk\Client as BulkClient;
 
 class Connection implements ConnectionInterface
 {
@@ -19,14 +20,23 @@ class Connection implements ConnectionInterface
     private $streamingClient;
 
     /**
-     * @var Client
+     * @var RestClient
      */
     private $restClient;
 
-    public function __construct(ClientInterface $streamingClient, Client $restClient)
-    {
+    /**
+     * @var BulkClient
+     */
+    private $bulkClient;
+
+    public function __construct(
+        ClientInterface $streamingClient,
+        RestClient $restClient,
+        BulkClient $bulkClient
+    ) {
         $this->streamingClient = $streamingClient;
         $this->restClient      = $restClient;
+        $this->bulkClient      = $bulkClient;
     }
 
     public function getStreamingClient(): ClientInterface
@@ -39,4 +49,23 @@ class Connection implements ConnectionInterface
         return $this->restClient;
     }
 
+    /**
+     * @return BulkClient
+     */
+    public function getBulkClient(): BulkClient
+    {
+        return $this->bulkClient;
+    }
+
+    /**
+     * @param BulkClient $bulkClient
+     *
+     * @return Connection
+     */
+    public function setBulkClient(BulkClient $bulkClient): Connection
+    {
+        $this->bulkClient = $bulkClient;
+
+        return $this;
+    }
 }

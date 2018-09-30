@@ -12,7 +12,7 @@ use AE\SalesforceRestSdk\Bayeux\ConsumerInterface;
 
 interface ClientInterface
 {
-    public function addTopic(TopicInterface $topic);
+    public function addSubscriber(ChannelSubscriberInterface $topic);
     public function subscribe(string $topicName, ConsumerInterface $consumer);
     public function start();
     public function stop();

@@ -17,16 +17,16 @@ class Client implements ClientInterface
     /** @var BayeuxClient */
     private $streamingClient;
 
-    /** @var ArrayCollection|TopicInterface[] */
+    /** @var ArrayCollection|ChannelSubscriberInterface[] */
     private $topics;
 
     public function __construct(BayeuxClient $client)
     {
         $this->streamingClient = $client;
-        $this->topics = new ArrayCollection();
+        $this->topics          = new ArrayCollection();
     }
 
-    public function addTopic(TopicInterface $topic)
+    public function addSubscriber(ChannelSubscriberInterface $topic)
     {
         if (!$this->topics->contains($topic)) {
             $this->topics->set($topic->getName(), $topic);
@@ -43,7 +43,7 @@ class Client implements ClientInterface
     public function start()
     {
         foreach ($this->topics as $topic) {
-            $channel = $this->streamingClient->getChannel($this->getTopicName($topic));
+            $channel = $this->streamingClient->getChannel($topic->getChannelName());
 
             if (null !== $channel) {
                 foreach ($topic->getSubscribers() as $subscriber) {
@@ -62,23 +62,7 @@ class Client implements ClientInterface
         }
     }
 
-    protected function getTopicName(TopicInterface $topic): string
-    {
-        $name = '/topic/'.$topic->getName();
-
-        $filters = $topic->getFilters();
-
-        if (!empty($filters)) {
-            array_walk($filters, function (&$value, $key) {
-                $value = "$key=$value";
-            });
-            $name .= '?'.implode("&", $filters);
-        }
-
-        return $name;
-    }
-
-    public function getClient() : BayeuxClient
+    public function getClient(): BayeuxClient
     {
         return $this->streamingClient;
     }

@@ -8,12 +8,8 @@
 
 namespace AE\ConnectBundle\Streaming;
 
-use AE\ConnectBundle\Bayeux\ConsumerInterface;
-
-interface TopicInterface
+interface TopicInterface extends ChannelSubscriberInterface
 {
-    public function getName(): string;
-    public function setName(string $name);
     public function getQuery(): string;
     public function setQuery(string $query);
     public function getFilters(): array;
@@ -32,6 +28,4 @@ interface TopicInterface
     public function setNotifyForFields(string $notifyForFields);
     public function isAutoCreate(): bool;
     public function setAutoCreate(bool $autoCreate);
-    public function addSubscriber(ConsumerInterface $consumer);
-    public function getSubscribers(): array;
 }

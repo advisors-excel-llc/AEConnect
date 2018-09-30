@@ -28,20 +28,29 @@ class ConfigurationTest extends TestCase
                 'ae_connect' => [
                     'connections' => [
                         'default' => [
-                            'url' => 'https://test.my.salesforce.com',
-                            'login'  => [
+                            'login'           => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
                                 'username' => 'username',
                                 'password' => 'password',
                             ],
-                            'topics' => [
+                            'topics'          => [
                                 'TestTopic' => [
                                     'query'  => 'Select Id, Name, CustomField__c From Account',
                                     'filter' => [
                                         'CustomField__c' => 'Seattle',
                                     ],
                                 ],
+                            ],
+                            'platform_events' => [
+                                'TestEvent__e',
+                            ],
+                            'objects'         => [
+                                'Account',
+                                'CustomObject__c',
+                            ],
+                            'generic_events'  => [
+                                'TestGenericEvent',
                             ],
                         ],
                     ],
@@ -50,16 +59,15 @@ class ConfigurationTest extends TestCase
             [
                 'connections' => [
                     'default' => [
-                        'is_default' => true,
-                        'url' => 'https://test.my.salesforce.com',
-                        'login'      => [
+                        'is_default'      => true,
+                        'login'           => [
                             'key'      => 'client_key',
                             'secret'   => 'client_secret',
                             'username' => 'username',
                             'password' => 'password',
                             'url'      => 'http://login.salesforce.com',
                         ],
-                        'topics'     => [
+                        'topics'          => [
                             'TestTopic' => [
                                 'query'                => 'Select Id, Name, CustomField__c From Account',
                                 'filter'               => [
@@ -74,8 +82,18 @@ class ConfigurationTest extends TestCase
                                 'notify_for_fields'    => 'Referenced',
                             ],
                         ],
-                        'config'     => [
+                        'config'          => [
                             'replay_start_id' => -2,
+                        ],
+                        'platform_events' => [
+                            'TestEvent__e',
+                        ],
+                        'objects'         => [
+                            'Account',
+                            'CustomObject__c',
+                        ],
+                        'generic_events'  => [
+                            'TestGenericEvent',
                         ],
                     ],
                 ],
@@ -90,7 +108,6 @@ class ConfigurationTest extends TestCase
                 'ae_connect' => [
                     'connections' => [
                         'default'     => [
-                            'url' => 'https://test.my.salesforce.com',
                             'login'  => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
@@ -108,7 +125,6 @@ class ConfigurationTest extends TestCase
                         ],
                         'non_default' => [
                             'is_default' => false,
-                            'url' => 'https://test2.lightning.force.com',
                             'login'      => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
@@ -140,16 +156,15 @@ class ConfigurationTest extends TestCase
             [
                 'connections' => [
                     'default'     => [
-                        'is_default' => true,
-                        'url' => 'https://test.my.salesforce.com',
-                        'login'      => [
+                        'is_default'      => true,
+                        'login'           => [
                             'key'      => 'client_key',
                             'secret'   => 'client_secret',
                             'username' => 'username',
                             'password' => 'password',
                             'url'      => 'http://login.salesforce.com',
                         ],
-                        'topics'     => [
+                        'topics'          => [
                             'TestTopic' => [
                                 'query'                => 'Select Id, Name, CustomField__c From Account',
                                 'filter'               => [
@@ -164,21 +179,23 @@ class ConfigurationTest extends TestCase
                                 'notify_for_fields'    => 'Referenced',
                             ],
                         ],
-                        'config'     => [
+                        'config'          => [
                             'replay_start_id' => -2,
                         ],
+                        'platform_events' => [],
+                        'objects'         => [],
+                        'generic_events'  => [],
                     ],
                     'non_default' => [
-                        'is_default' => false,
-                        'url' => 'https://test2.lightning.force.com',
-                        'login'      => [
+                        'is_default'      => false,
+                        'login'           => [
                             'key'      => 'client_key',
                             'secret'   => 'client_secret',
                             'username' => 'username',
                             'password' => 'password',
                             'url'      => 'http://test.salesforce.com',
                         ],
-                        'topics'     => [
+                        'topics'          => [
                             'TestTopic'  => [
                                 'query'                => 'Select Id, Name, CustomField__c From Account',
                                 'filter'               => [
@@ -206,9 +223,12 @@ class ConfigurationTest extends TestCase
                                 'notify_for_fields'    => 'Referenced',
                             ],
                         ],
-                        'config'     => [
+                        'config'          => [
                             'replay_start_id' => -1,
                         ],
+                        'platform_events' => [],
+                        'objects'         => [],
+                        'generic_events'  => [],
                     ],
                 ],
             ]
@@ -222,7 +242,6 @@ class ConfigurationTest extends TestCase
                 'ae_connect' => [
                     'connections' => [
                         'default'     => [
-                            'url' => 'https://test.my.salesforce.com',
                             'login'  => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
@@ -239,7 +258,6 @@ class ConfigurationTest extends TestCase
                             ],
                         ],
                         'non_default' => [
-                            'url' => 'https://test2.my.salesforce.com',
                             'login'  => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
@@ -278,7 +296,6 @@ class ConfigurationTest extends TestCase
                 'ae_connect' => [
                     'connections' => [
                         'default'     => [
-                            'url' => 'https://test.my.salesforce.com',
                             'login'  => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
@@ -296,7 +313,6 @@ class ConfigurationTest extends TestCase
                         ],
                         'non_default' => [
                             'is_default' => false,
-                            'url' => 'https://test2.my.salesforce.com',
                             'login'      => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',

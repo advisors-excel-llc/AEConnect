@@ -8,11 +8,12 @@
 
 namespace AE\ConnectBundle\DependencyInjection;
 
+use AE\ConnectBundle\Streaming\ChangeEvent;
+use AE\ConnectBundle\Streaming\GenericEvent;
+use AE\ConnectBundle\Streaming\PlatformEvent;
 use AE\SalesforceRestSdk\AuthProvider\LoginProvider;
 use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
 use AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension;
-use AE\SalesforceRestSdk\Rest\Composite\CompositeClient;
-use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Manager\ConnectionManager;
 use AE\ConnectBundle\Streaming\Client;
 use AE\ConnectBundle\Streaming\Topic;
@@ -65,7 +66,7 @@ class AEConnectExtension extends Extension
                 $container->setDefinition("ae_connect.connection.$name.bayeux_client", $bayeuxClient);
                 $container->setDefinition(
                     "ae_connect.connection.$name.streaming_client",
-                    $this->createStreamingClientService($name, $connection['topics'], $container)
+                    $this->createStreamingClientService($name, $connection, $container)
                 );
 
                 $restClient = new Definition(
@@ -80,6 +81,20 @@ class AEConnectExtension extends Extension
                     "ae_connect.connection.$name.rest_client",
                     $restClient
                 );
+
+                $bulkClient = new Definition(
+                    \AE\SalesforceRestSdk\Bulk\Client::class,
+                    [
+                        '$authProvider' => new Reference("ae_connect.connection.$name.auth_provider")
+                    ]
+                );
+                $bulkClient->setAutowired(true);
+
+                $container->setDefinition(
+                    "ae_connect.connection.$name.bulk_client",
+                    $bulkClient
+                );
+
                 $container->setDefinition(
                     "ae_connect.connection.$name.replay_extension",
                     $this->createReplayExtension($name, $connection['config']['replay_start_id'])
@@ -136,14 +151,20 @@ class AEConnectExtension extends Extension
             ]
         );
 
-        foreach ($config as $topicName => $topicConfig) {
-            $topicConfig['name'] = $topicName;
-            $topic               = $this->createTopic($topicConfig);
-            $topicId             = "ae_connect.connection.$name.topic.$topicName";
+        if (!empty($config['topics'])) {
+            $this->buildTopics($name, $config['topics'], $container, $def);
+        }
 
-            $container->setDefinition($topicId, $topic);
+        if (!empty($config['platform_events'])) {
+            $this->buildPlatformEvents($name, $config['platform_events'], $container, $def);
+        }
 
-            $def->addMethodCall('addTopic', [new Reference($topicId)]);
+        if (!empty($config['generic_events'])) {
+            $this->buildGenericEvents($name, $config['generic_events'], $container, $def);
+        }
+
+        if (!empty($config['objects'])) {
+            $this->buildObjects($name, $config['objects'], $container, $def);
         }
 
         return $def;
@@ -178,5 +199,109 @@ class AEConnectExtension extends Extension
         $topic->addMethodCall('setNotifyForFields', [$config['notify_for_fields']]);
 
         return $topic;
+    }
+
+    /**
+     * @param string $name
+     * @param array $config
+     * @param ContainerBuilder $container
+     * @param Definition $def
+     */
+    private function buildTopics(string $name, array $config, ContainerBuilder $container, Definition $def): void
+    {
+        foreach ($config as $topicName => $topicConfig) {
+            $topicConfig['name'] = $topicName;
+            $topic               = $this->createTopic($topicConfig);
+            $topicId             = "ae_connect.connection.$name.topic.$topicName";
+
+            $container->setDefinition($topicId, $topic);
+
+            $def->addMethodCall('addSubscriber', [new Reference($topicId)]);
+        }
+    }
+
+    /**
+     * @param string $name
+     * @param array $config
+     * @param ContainerBuilder $container
+     * @param Definition $def
+     */
+    private function buildPlatformEvents(
+        string $name,
+        array $config,
+        ContainerBuilder $container,
+        Definition $def
+    ): void {
+        foreach ($config as $eventName) {
+            $event = new Definition(PlatformEvent::class, [$eventName]);
+            $eventId = "ae_connect.connection.$name.platform_event.$eventName";
+
+            $container->setDefinition($eventId, $event);
+
+            $def->addMethodCall('addSubscriber', [new Reference([$eventId])]);
+        }
+    }
+
+    /**
+     * @param string $name
+     * @param array $config
+     * @param ContainerBuilder $container
+     * @param Definition $def
+     */
+    private function buildObjects(string $name, array $config, ContainerBuilder $container, Definition $def): void
+    {
+        foreach ($config as $objectName) {
+            if (preg_match('/__(c|C)$/', $objectName) == true
+                || in_array(
+                    $objectName,
+                    [
+                        'Account',
+                        'Asset',
+                        'Campaign',
+                        'Case',
+                        'Contact',
+                        'ContractLineItem',
+                        'Entitlement',
+                        'Lead',
+                        'LiveChatTranscript',
+                        'Opportunity',
+                        'Order',
+                        'OrderItem',
+                        'Product2',
+                        'Quote',
+                        'QuoteLineItem',
+                        'ServiceContract',
+                        'User',
+                    ]
+                )
+            ) {
+                $event   = new Definition(ChangeEvent::class, [$objectName]);
+                $eventId = "ae_connect.connection.$name.change_event.$objectName";
+
+                $container->setDefinition($eventId, $event);
+
+                $def->addMethodCall('addSubscriber', [new Reference($eventId)]);
+            } else {
+                // TODO: add to scheduled polling service
+            }
+        }
+    }
+
+    /**
+     * @param string $name
+     * @param array $config
+     * @param ContainerBuilder $container
+     * @param Definition $def
+     */
+    private function buildGenericEvents(string $name, array $config, ContainerBuilder $container, Definition $def): void
+    {
+        foreach ($config as $eventName) {
+            $event   = new Definition(GenericEvent::class, [$eventName]);
+            $eventId = "ae_connect.connection.$name.generic_event.$eventName";
+
+            $container->setDefinition($eventId, $event);
+
+            $def->addMethodCall('addSubscriber', [new Reference($eventId)]);
+        }
     }
 }

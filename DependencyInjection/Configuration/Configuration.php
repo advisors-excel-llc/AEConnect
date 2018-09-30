@@ -31,20 +31,11 @@ class Configuration implements ConfigurationInterface
                 ->prototype('array')
                     ->children()
                         ->booleanNode('is_default')->defaultTrue()->end()
-                        ->scalarNode('url')
-                            ->isRequired()
-                            ->validate()
-                                ->ifTrue(function ($value) {
-                                    return preg_match(
-                                        '/^https:\/\/(.*?).(lightning\.|sales)force.com$/',
-                                        $value
-                                    ) == false;
-                                })
-                                ->thenInvalid('The URL provided is not in a valid format.')
-                            ->end()
-                        ->end()
                         ->append($this->buildLoginTree())
                         ->append($this->buildTopicsTree())
+                        ->append($this->buildPlatformEventsTree())
+                        ->append($this->buildObjectsTree())
+                        ->append($this->buildGenericEventsTree())
                         ->append($this->buildTopicConfigTree())
                     ->end()
                 ->end()
@@ -134,6 +125,38 @@ class Configuration implements ConfigurationInterface
                     ->end()
                 ->end()
         ;
+
+        return $node;
+    }
+
+    private function buildPlatformEventsTree()
+    {
+        $tree = new TreeBuilder();
+
+        $node = $tree->root('platform_events')
+            ->scalarPrototype()->end()
+            ;
+
+        return $node;
+    }
+
+    private function buildObjectsTree()
+    {
+        $tree = new TreeBuilder();
+
+        $node = $tree->root('objects')
+                     ->scalarPrototype()->end()
+        ;
+
+        return $node;
+    }
+
+    private function buildGenericEventsTree()
+    {
+        $tree = new TreeBuilder();
+
+        $node = $tree->root('generic_events')
+            ->scalarPrototype()->end();
 
         return $node;
     }
