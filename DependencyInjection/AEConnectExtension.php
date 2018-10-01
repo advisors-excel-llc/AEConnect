@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\DependencyInjection;
 
+use AE\ConnectBundle\Driver\AnnotationDriver;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
@@ -41,7 +42,15 @@ class AEConnectExtension extends Extension
 
         $config = $this->processConfiguration(new Configuration\Configuration(), $configs);
 
+        $this->createAnnotationDriver($container, $config);
         $this->processConnections($container, $config);
+    }
+
+    private function createAnnotationDriver(ContainerBuilder $container, array $config)
+    {
+        $definition = new Definition(AnnotationDriver::class, [new Reference("annotation_reader"), $config['paths']]);
+
+        $container->set("ae_connect.annotation_driver", $definition);
     }
 
     private function processConnections(ContainerBuilder $container, array $config)
@@ -85,7 +94,7 @@ class AEConnectExtension extends Extension
                 $bulkClient = new Definition(
                     \AE\SalesforceRestSdk\Bulk\Client::class,
                     [
-                        '$authProvider' => new Reference("ae_connect.connection.$name.auth_provider")
+                        '$authProvider' => new Reference("ae_connect.connection.$name.auth_provider"),
                     ]
                 );
                 $bulkClient->setAutowired(true);
@@ -105,12 +114,17 @@ class AEConnectExtension extends Extension
                     new Definition(
                         Client::class,
                         [
-                            new Reference(
+                            '$name'            => $name,
+                            '$streamingClient' => new Reference(
                                 "ae_connect.connection.$name.streaming_client"
                             ),
-                            new Reference(
+                            '$restClient'      => new Reference(
                                 "ae_connect.connection.$name.rest_client"
-                            )
+                            ),
+                            '$bulkClient'      => new Reference(
+                                "ae_connect.connection.$name.bulk_client"
+                            ),
+                            '$isDefault'       => $connection['is_default'],
                         ]
                     )
                 );
@@ -233,7 +247,7 @@ class AEConnectExtension extends Extension
         Definition $def
     ): void {
         foreach ($config as $eventName) {
-            $event = new Definition(PlatformEvent::class, [$eventName]);
+            $event   = new Definition(PlatformEvent::class, [$eventName]);
             $eventId = "ae_connect.connection.$name.platform_event.$eventName";
 
             $container->setDefinition($eventId, $event);

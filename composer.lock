@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "6f7aa828c5cd8909578ffdbb7c107e95",
+    "content-hash": "fff2ca201346b7e9aa3450c0ef0e464e",
     "packages": [
         {
             "name": "ae/salesforce-rest-sdk",

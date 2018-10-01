@@ -8,12 +8,28 @@
 
 namespace AE\ConnectBundle\Connection;
 
+use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Streaming\ClientInterface;
 use AE\SalesforceRestSdk\Rest\Client as RestClient;
 use AE\SalesforceRestSdk\Bulk\Client as BulkClient;
 
+/**
+ * Class Connection
+ *
+ * @package AE\ConnectBundle\Connection
+ */
 class Connection implements ConnectionInterface
 {
+    /**
+     * @var string
+     */
+    private $name;
+
+    /**
+     * @var bool
+     */
+    private $isDefault = false;
+
     /**
      * @var ClientInterface
      */
@@ -29,22 +45,55 @@ class Connection implements ConnectionInterface
      */
     private $bulkClient;
 
+    /**
+     * @var MetadataRegistry
+     */
+    private $metadataRegistry;
+
+    /**
+     * Connection constructor.
+     *
+     * @param string $name
+     * @param ClientInterface $streamingClient
+     * @param RestClient $restClient
+     * @param BulkClient $bulkClient
+     * @param bool $isDefault
+     */
     public function __construct(
+        string $name,
         ClientInterface $streamingClient,
         RestClient $restClient,
-        BulkClient $bulkClient
+        BulkClient $bulkClient,
+        bool $isDefault = false
     ) {
-        $this->streamingClient = $streamingClient;
-        $this->restClient      = $restClient;
-        $this->bulkClient      = $bulkClient;
+        $this->name             = $name;
+        $this->streamingClient  = $streamingClient;
+        $this->restClient       = $restClient;
+        $this->bulkClient       = $bulkClient;
+        $this->metadataRegistry = new MetadataRegistry();
+        $this->isDefault        = $isDefault;
     }
 
+    /**
+     * @return string
+     */
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    /**
+     * @return ClientInterface
+     */
     public function getStreamingClient(): ClientInterface
     {
         return $this->streamingClient;
     }
 
-    public function getRestClient()
+    /**
+     * @return RestClient
+     */
+    public function getRestClient(): RestClient
     {
         return $this->restClient;
     }
@@ -67,5 +116,21 @@ class Connection implements ConnectionInterface
         $this->bulkClient = $bulkClient;
 
         return $this;
+    }
+
+    /**
+     * @return MetadataRegistry
+     */
+    public function getMetadataRegistry(): MetadataRegistry
+    {
+        return $this->metadataRegistry;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isDefault(): bool
+    {
+        return $this->isDefault;
     }
 }

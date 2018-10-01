@@ -49,4 +49,12 @@ class ConnectionManager implements ConnectionManagerInterface
 
         return $this->connections->get($name);
     }
+
+    /**
+     * @return array
+     */
+    public function getConnections(): array
+    {
+        return $this->connections->toArray();
+    }
 }

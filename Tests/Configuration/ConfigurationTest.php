@@ -26,6 +26,7 @@ class ConfigurationTest extends TestCase
         $this->assertProcessedConfigurationEquals(
             [
                 'ae_connect' => [
+                    'paths' => ['%kernel.project_dir%/src/App/Entity'],
                     'connections' => [
                         'default' => [
                             'login'           => [
@@ -57,6 +58,7 @@ class ConfigurationTest extends TestCase
                 ],
             ],
             [
+                'paths' => ['%kernel.project_dir%/src/App/Entity'],
                 'connections' => [
                     'default' => [
                         'is_default'      => true,
@@ -106,6 +108,7 @@ class ConfigurationTest extends TestCase
         $this->assertProcessedConfigurationEquals(
             [
                 'ae_connect' => [
+                    'paths' => ['%kernel.project_dir%/src/App/Entity'],
                     'connections' => [
                         'default'     => [
                             'login'  => [
@@ -154,6 +157,7 @@ class ConfigurationTest extends TestCase
                 ],
             ],
             [
+                'paths' => ['%kernel.project_dir%/src/App/Entity'],
                 'connections' => [
                     'default'     => [
                         'is_default'      => true,
@@ -240,6 +244,7 @@ class ConfigurationTest extends TestCase
         $this->assertConfigurationIsInvalid(
             [
                 'ae_connect' => [
+                    'paths' => ['%kernel.project_dir%/src/App/Entity'],
                     'connections' => [
                         'default'     => [
                             'login'  => [
@@ -294,6 +299,7 @@ class ConfigurationTest extends TestCase
         $this->assertConfigurationIsInvalid(
             [
                 'ae_connect' => [
+                    'paths' => ['%kernel.project_dir%/src/App/Entity'],
                     'connections' => [
                         'default'     => [
                             'login'  => [

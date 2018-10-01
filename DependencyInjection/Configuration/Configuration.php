@@ -18,7 +18,14 @@ class Configuration implements ConfigurationInterface
     {
         $tree = new TreeBuilder();
 
-        $tree->root('ae_connect')->append($this->buildConnectionTree());
+        $tree->root('ae_connect')
+             ->children()
+                ->arrayNode('paths')
+                    ->isRequired()
+                    ->scalarPrototype()->end()
+              ->end()
+             ->end()
+             ->append($this->buildConnectionTree());
 
         return $tree;
     }

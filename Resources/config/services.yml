@@ -1,16 +1,1 @@
 services:
-    AE\ConnectBundle\Bayeux\Transport\LongPollingTransport:
-        autowire: true
-    AE\ConnectBundle\Bayeux\Transport\AbstractClientTransport: '@AE\ConnectBundle\Bayeux\Transport\LongPollingTransport'
-    AE\ConnectBundle\Manager\ConnectionManager:
-        public: true
-        autowire: true
-    AE\ConnectBundle\Bayeux\Extension\SfdcExtension:
-        autowire: true
-        tags: ['ae_connect.extension']
-    AE\ConnectBundle\Composite\Serializer\SObjectSerializeHandler:
-        tags:
-            -
-                name: 'jms_serializer.subscribing_handler'
-                type: 'AE\ConnectBundle\Composite\Model\SObject'
-                format: 'json'

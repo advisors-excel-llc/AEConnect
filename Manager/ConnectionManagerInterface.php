@@ -14,4 +14,9 @@ interface ConnectionManagerInterface
 {
     public function registerConnection(string $name, ConnectionInterface $connection);
     public function getConnection(?string $name = null): ?ConnectionInterface;
+
+    /**
+     * @return array|ConnectionInterface[]
+     */
+    public function getConnections(): array;
 }

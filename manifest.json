@@ -1,0 +1,26 @@
+{
+    "bundles": {
+        "Doctrine\\Bundle\\DoctrineBundle\\DoctrineBundle": [
+            "all"
+        ],
+        "Doctrine\\Bundle\\DoctrineCacheBundle\\DoctrineCacheBundle": [
+            "all"
+        ],
+        "JMS\\SerializerBundle\\JMSSerializerBundle": [
+            "all"
+        ],
+        "Nelmio\\Alice\\Bridge\\Symfony\\NelmioAliceBundle": [
+            "test"
+        ],
+        "Fidry\\AliceDataFixtures\\Bridge\\Symfony\\FidryAliceDataFixturesBundle": [
+            "test"
+        ],
+        "AE\\ConnectBundle\\AEConnectBundle": [
+            "all"
+        ]
+    },
+    "copy-from-recipe": {
+        "config/": "%CONFIG_DIR%/"
+    },
+    "aliases": ["ae-connect"]
+}
