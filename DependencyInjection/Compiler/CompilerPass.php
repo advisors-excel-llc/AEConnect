@@ -18,7 +18,7 @@ class CompilerPass implements CompilerPassInterface
     {
         // TODO: Get Transformer service and register any services with the ae_connect.transformer tag with it
         $this->processBayeuxExtensions($container);
-        $this->processTopicSubscribers($container);
+        $this->processChannelSubscribers($container);
     }
 
     private function processBayeuxExtensions(ContainerBuilder $container)
@@ -43,13 +43,13 @@ class CompilerPass implements CompilerPassInterface
         }
     }
 
-    private function processTopicSubscribers(ContainerBuilder $container)
+    private function processChannelSubscribers(ContainerBuilder $container)
     {
         $tags = $container->findTaggedServiceIds('ae_connect.subscriber');
 
         foreach ($tags as $id => $attributes) {
-            if (!array_key_exists('topic', $attributes) || empty($attributes['topic'])) {
-                throw new \RuntimeException("The 'topic' attribute must be set on the consumer's service tag.");
+            if (!array_key_exists('channel', $attributes) || empty($attributes['channel'])) {
+                throw new \RuntimeException("The 'channel' attribute must be set on the consumer's service tag.");
             }
 
             if (array_key_exists('connections', $attributes) && strlen($attributes['connections']) > 0) {
@@ -59,11 +59,27 @@ class CompilerPass implements CompilerPassInterface
                 $connections = array_keys($config[0]['connections']);
             }
 
+            $subscriber = $container->getDefinition($id);
+
             foreach ($connections as $connection) {
                 $connection = trim($connection);
                 if ($container->hasDefinition("ae_connect.connection.$connection")) {
                     $service = $container->getDefinition("ae_connect.connection.$connection");
                     $service->addMethodCall('subscribe', [$attributes['topic'], new Reference($id)]);
+
+                    if ($subscriber->hasMethodCall('addConnection')) {
+                        $subscriber->addMethodCall(
+                            'addConnection',
+                            [new Reference("ae_connect.connection.$connection")]
+                        );
+                    }
+
+                    if ($subscriber->hasMethodCall('setConnection')) {
+                        $subscriber->addMethodCall(
+                            'setConnection',
+                            [new Reference("ae_connect.connection.$connection")]
+                        );
+                    }
                 }
             }
         }

@@ -12,8 +12,8 @@ use AE\SalesforceRestSdk\Bayeux\ConsumerInterface;
 
 interface ClientInterface
 {
-    public function addSubscriber(ChannelSubscriberInterface $topic);
-    public function subscribe(string $topicName, ConsumerInterface $consumer);
+    public function addSubscriber(ChannelSubscriberInterface $subscriber);
+    public function subscribe(string $channelName, ConsumerInterface $consumer);
     public function start();
     public function stop();
     public function getClient();

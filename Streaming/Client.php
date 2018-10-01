@@ -18,31 +18,33 @@ class Client implements ClientInterface
     private $streamingClient;
 
     /** @var ArrayCollection|ChannelSubscriberInterface[] */
-    private $topics;
+    private $channelSubscribers;
 
     public function __construct(BayeuxClient $client)
     {
-        $this->streamingClient = $client;
-        $this->topics          = new ArrayCollection();
+        $this->streamingClient    = $client;
+        $this->channelSubscribers = new ArrayCollection();
     }
 
-    public function addSubscriber(ChannelSubscriberInterface $topic)
+    public function addSubscriber(ChannelSubscriberInterface $subscriber)
     {
-        if (!$this->topics->contains($topic)) {
-            $this->topics->set($topic->getName(), $topic);
+        if (!$this->channelSubscribers->contains($subscriber)) {
+            $name  = $subscriber->getChannelName();
+            $parts = explode('?', $name);
+            $this->channelSubscribers->set($parts[0], $subscriber);
         }
     }
 
-    public function subscribe(string $topicName, ConsumerInterface $consumer)
+    public function subscribe(string $channelName, ConsumerInterface $consumer)
     {
-        if (!$this->topics->containsKey($topicName)) {
-            $this->topics->get($topicName)->addSubscriber($consumer);
+        if (!$this->channelSubscribers->containsKey($channelName)) {
+            $this->channelSubscribers->get($channelName)->addSubscriber($consumer);
         }
     }
 
     public function start()
     {
-        foreach ($this->topics as $topic) {
+        foreach ($this->channelSubscribers as $topic) {
             $channel = $this->streamingClient->getChannel($topic->getChannelName());
 
             if (null !== $channel) {

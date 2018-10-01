@@ -6,7 +6,7 @@
  * Time: 6:07 PM
  */
 
-namespace AE\Connect\Tests;
+namespace AE\ConnectBundle\Tests;
 
 use Doctrine\Bundle\DoctrineBundle\Registry;
 use Doctrine\ORM\EntityManager;
