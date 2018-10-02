@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Metadata;
 
+use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Collections\ArrayCollection;
 
 /**
@@ -22,12 +23,18 @@ class MetadataRegistry
      */
     private $metadata;
 
+    /** @var CacheProvider */
+    private $cache;
+
     /**
      * MetadataRegistry constructor.
+     *
+     * @param CacheProvider $cache
      */
-    public function __construct()
+    public function __construct(CacheProvider $cache)
     {
         $this->metadata = new ArrayCollection();
+        $this->cache    = $cache;
     }
 
     /**
@@ -99,5 +106,13 @@ class MetadataRegistry
     public function findMetadataByClass(string $className): ?Metadata
     {
         return $this->metadata->get($className);
+    }
+
+    /**
+     * @return CacheProvider
+     */
+    public function getCache(): CacheProvider
+    {
+        return $this->cache;
     }
 }

@@ -10,6 +10,7 @@ namespace AE\ConnectBundle\Tests;
 
 use AE\ConnectBundle\AEConnectBundle;
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
+use Doctrine\Bundle\DoctrineCacheBundle\DoctrineCacheBundle;
 use Fidry\AliceDataFixtures\Bridge\Symfony\FidryAliceDataFixturesBundle;
 use JMS\SerializerBundle\JMSSerializerBundle;
 use Nelmio\Alice\Bridge\Symfony\NelmioAliceBundle;
@@ -23,6 +24,7 @@ class AppKernel extends Kernel
     {
         return [
             new FrameworkBundle(),
+            new DoctrineCacheBundle(),
             new DoctrineBundle(),
             new JMSSerializerBundle(),
             new NelmioAliceBundle(),

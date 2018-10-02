@@ -60,9 +60,6 @@ class Connection implements ConnectionInterface
      * @param BulkClient $bulkClient
      * @param MetadataRegistry $metadataRegistry
      * @param bool $isDefault
-     *
-     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
-     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function __construct(
         string $name,
@@ -155,12 +152,19 @@ class Connection implements ConnectionInterface
             }
         }
 
-        $response = $this->getRestClient()->getCompositeClient()->sendCompositeRequest($builder->build());
+        $request = $builder->build();
 
-        foreach ($metadataRegistry->getMetadata() as $i => $metadatum) {
-            $result = $response->findResultByReferenceId("{$metadatum->getSObjectType()}_{$i}");
-            if (null !== $result && 200 === $result->getHttpStatusCode()) {
-                $metadatum->setDescribe($result->getBody());
+        // Don't be firing off if ya ain't got no ammo
+        if (count($request->getCompositeRequest()) > 0) {
+            $response = $this->getRestClient()->getCompositeClient()->sendCompositeRequest($request);
+
+            foreach ($metadataRegistry->getMetadata() as $i => $metadatum) {
+                $result = $response->findResultByReferenceId("{$metadatum->getSObjectType()}_{$i}");
+                if (null !== $result && 200 === $result->getHttpStatusCode()) {
+                    $metadatum->setDescribe($result->getBody());
+                    $cacheId = "{$this->name}__{$metadatum->getClassName()}";
+                    $this->metadataRegistry->getCache()->save($cacheId, $metadatum);
+                }
             }
         }
     }

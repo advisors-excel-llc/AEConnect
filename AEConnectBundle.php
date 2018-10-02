@@ -10,6 +10,7 @@ namespace AE\ConnectBundle;
 
 use AE\ConnectBundle\DependencyInjection\Compiler\CompilerPass;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
+use Doctrine\Common\Cache\CacheProvider;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 

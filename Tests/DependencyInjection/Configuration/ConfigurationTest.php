@@ -26,7 +26,7 @@ class ConfigurationTest extends TestCase
         $this->assertProcessedConfigurationEquals(
             [
                 'ae_connect' => [
-                    'paths' => ['%kernel.project_dir%/src/App/Entity'],
+                    'paths'       => ['%kernel.project_dir%/src/App/Entity'],
                     'connections' => [
                         'default' => [
                             'login'           => [
@@ -58,7 +58,7 @@ class ConfigurationTest extends TestCase
                 ],
             ],
             [
-                'paths' => ['%kernel.project_dir%/src/App/Entity'],
+                'paths'       => ['%kernel.project_dir%/src/App/Entity'],
                 'connections' => [
                     'default' => [
                         'is_default'      => true,
@@ -86,6 +86,9 @@ class ConfigurationTest extends TestCase
                         ],
                         'config'          => [
                             'replay_start_id' => -2,
+                            'cache'           => [
+                                'metadata_provider' => 'ae_connect_metadata',
+                            ],
                         ],
                         'platform_events' => [
                             'TestEvent__e',
@@ -108,7 +111,7 @@ class ConfigurationTest extends TestCase
         $this->assertProcessedConfigurationEquals(
             [
                 'ae_connect' => [
-                    'paths' => ['%kernel.project_dir%/src/App/Entity'],
+                    'paths'       => ['%kernel.project_dir%/src/App/Entity'],
                     'connections' => [
                         'default'     => [
                             'login'  => [
@@ -151,13 +154,16 @@ class ConfigurationTest extends TestCase
                             ],
                             'config'     => [
                                 'replay_start_id' => -1,
+                                'cache'           => [
+                                    'metadata_provider' => 'test_metadata',
+                                ],
                             ],
                         ],
                     ],
                 ],
             ],
             [
-                'paths' => ['%kernel.project_dir%/src/App/Entity'],
+                'paths'       => ['%kernel.project_dir%/src/App/Entity'],
                 'connections' => [
                     'default'     => [
                         'is_default'      => true,
@@ -185,6 +191,9 @@ class ConfigurationTest extends TestCase
                         ],
                         'config'          => [
                             'replay_start_id' => -2,
+                            'cache'           => [
+                                'metadata_provider' => 'ae_connect_metadata',
+                            ],
                         ],
                         'platform_events' => [],
                         'objects'         => [],
@@ -229,6 +238,9 @@ class ConfigurationTest extends TestCase
                         ],
                         'config'          => [
                             'replay_start_id' => -1,
+                            'cache'           => [
+                                'metadata_provider' => 'test_metadata',
+                            ],
                         ],
                         'platform_events' => [],
                         'objects'         => [],
@@ -244,7 +256,7 @@ class ConfigurationTest extends TestCase
         $this->assertConfigurationIsInvalid(
             [
                 'ae_connect' => [
-                    'paths' => ['%kernel.project_dir%/src/App/Entity'],
+                    'paths'       => ['%kernel.project_dir%/src/App/Entity'],
                     'connections' => [
                         'default'     => [
                             'login'  => [
@@ -299,7 +311,7 @@ class ConfigurationTest extends TestCase
         $this->assertConfigurationIsInvalid(
             [
                 'ae_connect' => [
-                    'paths' => ['%kernel.project_dir%/src/App/Entity'],
+                    'paths'       => ['%kernel.project_dir%/src/App/Entity'],
                     'connections' => [
                         'default'     => [
                             'login'  => [

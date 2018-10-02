@@ -6,6 +6,10 @@ framework:
     form: ~
     csrf_protection: false
     validation: false
+doctrine_cache:
+    providers:
+        ae_connect_metadata:
+            type: file_system
 doctrine:
     dbal:
         connections:

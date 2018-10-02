@@ -112,9 +112,16 @@ class AEConnectExtension extends Extension
                     $this->createReplayExtension($name, $connection['config']['replay_start_id'])
                 );
 
+                $cacheProviderId = "doctrine_cache.providers.{$connection['config']['cache']['metadata_provider']}";
+                $container->setAlias("ae_connect.connection.$name.cache.metadata_provider", $cacheProviderId);
+
                 $registryDef = new Definition(
                     MetadataRegistry::class,
-                    [new Reference("ae_connect.annotation_driver"), $name]
+                    [
+                        new Reference("ae_connect.annotation_driver"),
+                        new Reference("ae_connect.connection.$name.cache.metadata_provider"),
+                        $name,
+                    ]
                 );
                 $registryDef->setFactory([MetadataRegistryFactory::class, 'generate']);
 
