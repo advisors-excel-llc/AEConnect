@@ -39,11 +39,6 @@ class Metadata
      */
     private $identifiers;
 
-    /**
-     * @var ArrayCollection<string>
-     */
-    private $required;
-
     /** @var DescribeSObject */
     private $describe;
 
@@ -61,7 +56,6 @@ class Metadata
     {
         $this->fieldMap       = new ArrayCollection();
         $this->identifiers    = new ArrayCollection();
-        $this->required       = new ArrayCollection();
         $this->connectionName = $connectionName;
     }
 
@@ -156,6 +150,28 @@ class Metadata
         $this->fieldMap->removeElement($fieldName);
 
         return $this;
+    }
+
+    /**
+     * @param string $propertyName
+     *
+     * @return null|string
+     */
+    public function getFieldByProperty(string $propertyName): ?string
+    {
+        return $this->fieldMap->get($propertyName);
+    }
+
+    /**
+     * @param string $fieldName
+     *
+     * @return null|string
+     */
+    public function getPropertyByField(string $fieldName): ?string
+    {
+        $prop = $this->fieldMap->indexOf($fieldName);
+
+        return false === $prop ? null : $prop;
     }
 
     /**
@@ -268,106 +284,6 @@ class Metadata
         $propertyName = $this->fieldMap->indexOf($fieldName);
 
         return false !== $propertyName && $this->isIdentifier($propertyName);
-    }
-
-    /**
-     * @return ArrayCollection
-     */
-    public function getRequired(): ArrayCollection
-    {
-        return $this->required;
-    }
-
-    /**
-     * @param ArrayCollection $required
-     *
-     * @return Metadata
-     */
-    public function setRequired(ArrayCollection $required): Metadata
-    {
-        $this->required = $required;
-
-        return $this;
-    }
-
-    /**
-     * @param string $propertyName
-     *
-     * @return Metadata
-     */
-    public function addRequired(string $propertyName): Metadata
-    {
-        if (!$this->required->contains($propertyName)) {
-            $this->required->add($propertyName);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param string $propertyName
-     *
-     * @return Metadata
-     */
-    public function removeRequired(string $propertyName): Metadata
-    {
-        $this->required->removeElement($propertyName);
-
-        return $this;
-    }
-
-    /**
-     * @param string $propertyName
-     *
-     * @return bool
-     */
-    public function isRequired(string $propertyName): bool
-    {
-        return $this->required->contains($propertyName);
-    }
-
-    /**
-     * @param string $fieldName
-     *
-     * @return Metadata
-     */
-    public function addRequiredField(string $fieldName): Metadata
-    {
-        $propertyName = $this->fieldMap->indexOf($fieldName);
-
-        if (false !== $propertyName) {
-            $this->addRequired($propertyName);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param string $fieldName
-     *
-     * @return Metadata
-     */
-    public function removeRequiredField(string $fieldName): Metadata
-    {
-        $propertyName = $this->fieldMap->indexOf($fieldName);
-
-        if (false !== $propertyName) {
-            $this->removeRequired($propertyName);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param string $fieldName
-     *
-     * @return bool
-     */
-    public function isFieldRequired(string $fieldName): bool
-    {
-        $propertyName = $this->fieldMap->indexOf($fieldName);
-
-        return false !== $propertyName && $this->isRequired($propertyName);
     }
 
     /**

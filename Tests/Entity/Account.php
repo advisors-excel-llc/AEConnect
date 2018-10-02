@@ -28,17 +28,25 @@ class Account
 
     /**
      * @var string
-     * @AEConnect\Field(value="hcid__c", identifier=true)
+     * @AEConnect\Field(value="hcid__c")
+     * @AEConnect\ExternalId()
      * @ORM\Column(type="guid", length=36, nullable=false)
      */
     private $extId;
 
     /**
      * @var string
-     * @AEConnect\Field(value="name", required=true)
+     * @AEConnect\Field(value="Name", required=true)
      * @ORM\Column(length=80, nullable=false)
      */
     private $name;
+
+    /**
+     * @var string
+     * @AEConnect\SalesforceId()
+     * @ORM\Column(length=18, nullable=true, unique=true)
+     */
+    private $sfid;
 
     /**
      * @return mixed
@@ -96,6 +104,26 @@ class Account
     public function setName(string $name): Account
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSfid(): string
+    {
+        return $this->sfid;
+    }
+
+    /**
+     * @param string $sfid
+     *
+     * @return Account
+     */
+    public function setSfid(string $sfid): Account
+    {
+        $this->sfid = $sfid;
 
         return $this;
     }

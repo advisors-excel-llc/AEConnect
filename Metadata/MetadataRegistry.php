@@ -10,6 +10,11 @@ namespace AE\ConnectBundle\Metadata;
 
 use Doctrine\Common\Collections\ArrayCollection;
 
+/**
+ * Class MetadataRegistry
+ *
+ * @package AE\ConnectBundle\Metadata
+ */
 class MetadataRegistry
 {
     /**
@@ -17,6 +22,9 @@ class MetadataRegistry
      */
     private $metadata;
 
+    /**
+     * MetadataRegistry constructor.
+     */
     public function __construct()
     {
         $this->metadata = new ArrayCollection();
@@ -42,6 +50,11 @@ class MetadataRegistry
         return $this;
     }
 
+    /**
+     * @param Metadata $metadata
+     *
+     * @return MetadataRegistry
+     */
     public function addMetadata(Metadata $metadata): MetadataRegistry
     {
         $this->metadata->set($metadata->getClassName(), $metadata);
@@ -49,6 +62,11 @@ class MetadataRegistry
         return $this;
     }
 
+    /**
+     * @param Metadata $metadata
+     *
+     * @return MetadataRegistry
+     */
     public function removeMetadata(Metadata $metadata): MetadataRegistry
     {
         $this->metadata->removeElement($metadata);
@@ -71,5 +89,15 @@ class MetadataRegistry
         }
 
         return null;
+    }
+
+    /**
+     * @param string $className
+     *
+     * @return Metadata|null
+     */
+    public function findMetadataByClass(string $className): ?Metadata
+    {
+        return $this->metadata->get($className);
     }
 }

@@ -8,7 +8,9 @@
 
 namespace AE\ConnectBundle\Driver;
 
+use AE\ConnectBundle\Annotations\ExternalId;
 use AE\ConnectBundle\Annotations\Field;
+use AE\ConnectBundle\Annotations\SalesforceId;
 use AE\ConnectBundle\Annotations\SObjectType;
 use AE\ConnectBundle\Metadata\Metadata;
 use Doctrine\Common\Annotations\AnnotationReader;
@@ -57,6 +59,8 @@ class AnnotationDriver
         = [
             SObjectType::class,
             Field::class,
+            ExternalId::class,
+            SalesforceId::class
         ];
 
     public function __construct(Reader $reader, $paths = null)
@@ -89,12 +93,19 @@ class AnnotationDriver
             if (in_array($metadata->getConnectionName(), $sourceAnnotation->getConnections())) {
                 $metadata->setClassName($class->getName());
                 $metadata->setSObjectType($sourceAnnotation->getName());
-                $properties = $this->getAnnotatedProperties($class, $metadata->getConnectionName(), [Field::class]);
+                $properties = $this->getAnnotatedProperties($class, $metadata->getConnectionName(), [
+                    Field::class,
+                    SalesforceId::class,
+                ]);
 
                 // Creates a map of properties relating source => target
                 $fieldMap = array_map(
-                    function (Field $item) {
-                        return $item->getName();
+                    function ($item) {
+                        if ($item instanceof Field) {
+                            return $item->getName();
+                        } else {
+                            return 'Id';
+                        }
                     },
                     $properties
                 );
@@ -102,17 +113,14 @@ class AnnotationDriver
                 $metadata->setFieldMap(new ArrayCollection($fieldMap));
                 // Todo: handle transformers
 
-                /**
-                 * @var string $propertyName
-                 * @var Field $property
-                 */
-                foreach ($properties as $propertyName => $property) {
-                    if ($property->isIdentifier()) {
-                        $metadata->addIdentifier($propertyName);
-                    }
+                /** @var ExternalId[] $extIds */
+                $extIds = $this->getAnnotatedProperties($class, $metadata->getConnectionName(), [ExternalId::class]);
 
-                    if ($property->isRequired()) {
-                        $metadata->addRequired($propertyName);
+                if (!empty($extIds)) {
+                    foreach (array_keys($extIds) as $prop) {
+                        if (array_key_exists($prop, $fieldMap)) {
+                            $metadata->addIdentifier($prop);
+                        }
                     }
                 }
             }
@@ -149,6 +157,10 @@ class AnnotationDriver
                 if (null !== $propAnnot) {
                     if ($propAnnot instanceof Field) {
                         if (in_array($connectionName, $propAnnot->getConnections())) {
+                            $properties[$property->getName()] = $propAnnot;
+                        }
+                    } elseif ($propAnnot instanceof SalesforceId) {
+                        if ($propAnnot->getConnection() === $connectionName) {
                             $properties[$property->getName()] = $propAnnot;
                         }
                     } else {

@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Annotations;
 
+use Doctrine\Common\Annotations\Annotation\Required;
 use Doctrine\Common\Annotations\Annotation\Target;
 
 /**
@@ -21,6 +22,7 @@ class Field
 {
     /**
      * @var string
+     * @Required()
      */
     private $name;
 
@@ -28,16 +30,6 @@ class Field
      * @var array
      */
     private $connections = ["default"];
-
-    /**
-     * @var bool
-     */
-    private $identifier = false;
-
-    /**
-     * @var bool
-     */
-    private $required = false;
 
     public function __construct(array $values)
     {
@@ -49,16 +41,6 @@ class Field
                 }
 
                 unset($values['connections']);
-            }
-
-            if (array_key_exists("identifier", $values)) {
-                $this->identifier = $values['identifier'] === true;
-                unset($values['identifier']);
-            }
-
-            if (array_key_exists("required", $values)) {
-                $this->required = $values['required'] === true;
-                unset($values['required']);
             }
 
             if (array_key_exists("name", $values)) {
