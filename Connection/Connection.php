@@ -12,6 +12,7 @@ use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Streaming\ClientInterface;
 use AE\SalesforceRestSdk\Rest\Client as RestClient;
 use AE\SalesforceRestSdk\Bulk\Client as BulkClient;
+use AE\SalesforceRestSdk\Rest\Composite\Builder\CompositeRequestBuilder;
 
 /**
  * Class Connection
@@ -57,20 +58,25 @@ class Connection implements ConnectionInterface
      * @param ClientInterface $streamingClient
      * @param RestClient $restClient
      * @param BulkClient $bulkClient
+     * @param MetadataRegistry $metadataRegistry
      * @param bool $isDefault
+     *
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function __construct(
         string $name,
         ClientInterface $streamingClient,
         RestClient $restClient,
         BulkClient $bulkClient,
+        MetadataRegistry $metadataRegistry,
         bool $isDefault = false
     ) {
         $this->name             = $name;
         $this->streamingClient  = $streamingClient;
         $this->restClient       = $restClient;
         $this->bulkClient       = $bulkClient;
-        $this->metadataRegistry = new MetadataRegistry();
+        $this->metadataRegistry = $metadataRegistry;
         $this->isDefault        = $isDefault;
     }
 
@@ -132,5 +138,30 @@ class Connection implements ConnectionInterface
     public function isDefault(): bool
     {
         return $this->isDefault;
+    }
+
+    /**
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function hydrateMetadataDescribe(): void
+    {
+        $builder          = new CompositeRequestBuilder();
+        $metadataRegistry = $this->getMetadataRegistry();
+
+        foreach ($metadataRegistry->getMetadata() as $i => $metadatum) {
+            if (null === $metadatum->getDescribe()) {
+                $builder->describe("{$metadatum->getSObjectType()}_{$i}", $metadatum->getSObjectType());
+            }
+        }
+
+        $response = $this->getRestClient()->getCompositeClient()->sendCompositeRequest($builder->build());
+
+        foreach ($metadataRegistry->getMetadata() as $i => $metadatum) {
+            $result = $response->findResultByReferenceId("{$metadatum->getSObjectType()}_{$i}");
+            if (null !== $result && 200 === $result->getHttpStatusCode()) {
+                $metadatum->setDescribe($result->getBody());
+            }
+        }
     }
 }

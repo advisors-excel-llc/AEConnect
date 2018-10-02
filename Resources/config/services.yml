@@ -1,1 +1,14 @@
 services:
+    AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport:
+        autowire: true
+    AE\SalesforceRestSdk\Bayeux\Transport\AbstractClientTransport: '@AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport'
+    AE\ConnectBundle\Manager\ConnectionManager:
+        autowire: true
+        public: true
+    AE\ConnectBundle\Manager\ConnectionManagerInterface: '@AE\ConnectBundle\Manager\ConnectionManager'
+    ae_connect.connection_manager:
+        alias: 'AE\ConnectBundle\Manager\ConnectionManager'
+        public: true
+    AE\SalesforceRestSdk\Bayeux\Extension\SfdcExtension:
+        tags:
+            - {name: 'ae_connect.extension'}

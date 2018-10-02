@@ -8,8 +8,6 @@
 
 namespace AE\ConnectBundle\Annotations;
 
-use Doctrine\Common\Annotations\Annotation\Attribute;
-use Doctrine\Common\Annotations\Annotation\Attributes;
 use Doctrine\Common\Annotations\Annotation\Required;
 use Doctrine\Common\Annotations\Annotation\Target;
 
@@ -19,10 +17,6 @@ use Doctrine\Common\Annotations\Annotation\Target;
  * @package AE\ConnectBundle\Annotations
  * @Annotation
  * @Target({"CLASS"})
- * @Attributes({
- *     @Attribute(name="name", type="string", required=true),
- *     @Attribute(name="connections", type="array")
- *     })
  */
 class SObjectType
 {

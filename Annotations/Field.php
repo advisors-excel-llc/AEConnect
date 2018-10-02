@@ -8,8 +8,6 @@
 
 namespace AE\ConnectBundle\Annotations;
 
-use Doctrine\Common\Annotations\Annotation\Attribute;
-use Doctrine\Common\Annotations\Annotation\Attributes;
 use Doctrine\Common\Annotations\Annotation\Target;
 
 /**
@@ -18,12 +16,6 @@ use Doctrine\Common\Annotations\Annotation\Target;
  * @package AE\ConnectBundle\Annotations
  * @Annotation
  * @Target({"PROPERTY"})
- * @Attributes({
- *     @Attribute(name="name", type="string", required=true),
- *     @Attribute(name="connections", type="array"),
- *     @Attribute(name="identifier", type="bool"),
- *     @Attribute(name="required", type="bool")
- *     })
  */
 class Field
 {
@@ -47,7 +39,7 @@ class Field
      */
     private $required = false;
 
-    public function __construct()
+    public function __construct(array $values)
     {
         if (!empty($values)) {
             if (array_key_exists("connections", $values)) {

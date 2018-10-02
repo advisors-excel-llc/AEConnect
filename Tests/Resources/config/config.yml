@@ -34,6 +34,7 @@ jms_serializer:
     property_naming:
         id: 'jms_serializer.identical_property_naming_strategy'
 ae_connect:
+    paths: ["%kernel.project_dir%/Tests/Entity"]
     connections:
         default:
             login:
@@ -45,4 +46,4 @@ ae_connect:
             objects:
                 - Account
             config:
-                replay_start_id: !php/const AE\ConnectBundle\Bayeux\Extension\ReplayExtension::REPLAY_SAVED
+                replay_start_id: !php/const AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension::REPLAY_SAVED

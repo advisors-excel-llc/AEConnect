@@ -8,7 +8,10 @@
 
 namespace AE\ConnectBundle\DependencyInjection;
 
+use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Driver\AnnotationDriver;
+use AE\ConnectBundle\Metadata\MetadataRegistry;
+use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
@@ -50,7 +53,7 @@ class AEConnectExtension extends Extension
     {
         $definition = new Definition(AnnotationDriver::class, [new Reference("annotation_reader"), $config['paths']]);
 
-        $container->set("ae_connect.annotation_driver", $definition);
+        $container->setDefinition("ae_connect.annotation_driver", $definition);
     }
 
     private function processConnections(ContainerBuilder $container, array $config)
@@ -109,24 +112,39 @@ class AEConnectExtension extends Extension
                     $this->createReplayExtension($name, $connection['config']['replay_start_id'])
                 );
 
+                $registryDef = new Definition(
+                    MetadataRegistry::class,
+                    [new Reference("ae_connect.annotation_driver"), $name]
+                );
+                $registryDef->setFactory([MetadataRegistryFactory::class, 'generate']);
+
+                $container->setDefinition("ae_connect.connection.$name.metadata_registry", $registryDef);
+
+                $connectionDef = new Definition(
+                    Connection::class,
+                    [
+                        '$name'             => $name,
+                        '$streamingClient'  => new Reference(
+                            "ae_connect.connection.$name.streaming_client"
+                        ),
+                        '$restClient'       => new Reference(
+                            "ae_connect.connection.$name.rest_client"
+                        ),
+                        '$bulkClient'       => new Reference(
+                            "ae_connect.connection.$name.bulk_client"
+                        ),
+                        '$metadataRegistry' => new Reference(
+                            "ae_connect.connection.$name.metadata_registry"
+                        ),
+                        '$isDefault'        => $connection['is_default'],
+                    ]
+                );
+                $connectionDef->setPublic(true);
+                $connectionDef->setAutowired(true);
+
                 $container->setDefinition(
                     "ae_connect.connection.$name",
-                    new Definition(
-                        Client::class,
-                        [
-                            '$name'            => $name,
-                            '$streamingClient' => new Reference(
-                                "ae_connect.connection.$name.streaming_client"
-                            ),
-                            '$restClient'      => new Reference(
-                                "ae_connect.connection.$name.rest_client"
-                            ),
-                            '$bulkClient'      => new Reference(
-                                "ae_connect.connection.$name.bulk_client"
-                            ),
-                            '$isDefault'       => $connection['is_default'],
-                        ]
-                    )
+                    $connectionDef
                 );
 
                 $manager->addMethodCall('registerConnection', [$name, new Reference("ae_connect.connection.$name")]);

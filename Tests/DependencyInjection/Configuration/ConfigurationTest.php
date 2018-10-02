@@ -6,7 +6,7 @@
  * Time: 3:53 PM
  */
 
-namespace AE\ConnectBundle\Tests\Configuration;
+namespace AE\ConnectBundle\Tests\DependencyInjection\Configuration;
 
 use AE\ConnectBundle\DependencyInjection\Configuration\Configuration;
 use Matthias\SymfonyConfigTest\PhpUnit\ConfigurationTestCaseTrait;

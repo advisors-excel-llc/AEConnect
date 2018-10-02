@@ -48,13 +48,29 @@ class Metadata
     private $describe;
 
     /**
-     * Metadata constructor.
+     * @var string
      */
-    public function __construct()
+    private $connectionName;
+
+    /**
+     * Metadata constructor.
+     *
+     * @param string $connectionName
+     */
+    public function __construct(string $connectionName)
     {
-        $this->fieldMap    = new ArrayCollection();
-        $this->identifiers = new ArrayCollection();
-        $this->required    = new ArrayCollection();
+        $this->fieldMap       = new ArrayCollection();
+        $this->identifiers    = new ArrayCollection();
+        $this->required       = new ArrayCollection();
+        $this->connectionName = $connectionName;
+    }
+
+    /**
+     * @return string
+     */
+    public function getConnectionName(): string
+    {
+        return $this->connectionName;
     }
 
     /**

@@ -10,8 +10,6 @@ namespace AE\ConnectBundle\Driver;
 
 use AE\ConnectBundle\Annotations\Field;
 use AE\ConnectBundle\Annotations\SObjectType;
-use AE\ConnectBundle\Connection\Connection;
-use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Metadata\Metadata;
 use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Annotations\AnnotationRegistry;
@@ -27,10 +25,6 @@ class AnnotationDriver
      */
     protected $reader;
 
-    /**
-     * @var ConnectionManagerInterface
-     */
-    protected $connectionManager;
     /**
      * The paths where to look for mapping files.
      *
@@ -59,15 +53,15 @@ class AnnotationDriver
     /**
      * @var array
      */
-    protected $entityAnnotationClasses = [
-        SObjectType::class,
-        Field::class,
-    ];
+    protected $entityAnnotationClasses
+        = [
+            SObjectType::class,
+            Field::class,
+        ];
 
-    public function __construct(Reader $reader, ConnectionManagerInterface $connectionManager, $paths = null)
+    public function __construct(Reader $reader, $paths = null)
     {
         $this->reader = $reader;
-        $this->connectionManager = $connectionManager;
 
         foreach ($this->entityAnnotationClasses as $class) {
             AnnotationRegistry::loadAnnotationClass($class);
@@ -78,42 +72,24 @@ class AnnotationDriver
         }
     }
 
-    /**
-     * @param ConnectionManagerInterface $connectionManager
-     * @param array|null $paths
-     *
-     * @return AnnotationDriver
-     * @throws \Doctrine\Common\Annotations\AnnotationException
-     */
-    public static function create(ConnectionManagerInterface $connectionManager, array $paths = null): self
-    {
-        return static(new AnnotationReader(), $connectionManager, $paths);
-    }
 
     /**
      * @param string $className
+     * @param Metadata $metadata
      *
      * @throws \ReflectionException
      * @throws \RuntimeException
      */
-    public function loadMetadataForClass($className)
+    public function loadMetadataForClass($className, Metadata $metadata)
     {
-        $class = new \ReflectionClass($className);
+        $class             = new \ReflectionClass($className);
         $sourceAnnotations = $this->getClassAnnotations($class, SObjectType::class);
         /** @var SObjectType $sourceAnnotation */
         foreach ($sourceAnnotations as $sourceAnnotation) {
-            foreach ($sourceAnnotation->getConnections() as $connectionName) {
-                $connection = $this->connectionManager->getConnection($connectionName);
-
-                if (null === $connection) {
-                    continue;
-                }
-
-                $metadata = new Metadata();
-
+            if (in_array($metadata->getConnectionName(), $sourceAnnotation->getConnections())) {
                 $metadata->setClassName($class->getName());
                 $metadata->setSObjectType($sourceAnnotation->getName());
-                $properties   = $this->getAnnotatedProperties($class, $connectionName, [Field::class]);
+                $properties = $this->getAnnotatedProperties($class, $metadata->getConnectionName(), [Field::class]);
 
                 // Creates a map of properties relating source => target
                 $fieldMap = array_map(
@@ -146,7 +122,7 @@ class AnnotationDriver
     private function getClassAnnotations(\ReflectionClass $class, string $annotationName): array
     {
         $annotations = $this->reader->getClassAnnotations($class);
-        $found = [];
+        $found       = [];
 
         foreach ($annotations as $annotation) {
             if (get_class($annotation) === $annotationName) {
@@ -181,8 +157,10 @@ class AnnotationDriver
                 }
             }
         }
+
         return $properties;
     }
+
     /**
      * @param \ReflectionClass $class
      * @param string $connectionName
@@ -207,8 +185,10 @@ class AnnotationDriver
                 }
             }
         }
+
         return $methods;
     }
+
     /**
      * Appends lookup paths to metadata driver.
      *
@@ -220,6 +200,7 @@ class AnnotationDriver
     {
         $this->paths = array_unique(array_merge($this->paths, $paths));
     }
+
     /**
      * Retrieves the defined metadata lookup paths.
      *
@@ -229,6 +210,7 @@ class AnnotationDriver
     {
         return $this->paths;
     }
+
     /**
      * Append exclude lookup paths to metadata driver.
      *
@@ -238,6 +220,7 @@ class AnnotationDriver
     {
         $this->excludePaths = array_unique(array_merge($this->excludePaths, $paths));
     }
+
     /**
      * Retrieve the defined metadata lookup exclude paths.
      *
@@ -247,6 +230,7 @@ class AnnotationDriver
     {
         return $this->excludePaths;
     }
+
     /**
      * Retrieve the current annotation reader
      *
@@ -256,6 +240,7 @@ class AnnotationDriver
     {
         return $this->reader;
     }
+
     /**
      * Gets the file extension used to look for mapping files under.
      *
@@ -265,6 +250,7 @@ class AnnotationDriver
     {
         return $this->fileExtension;
     }
+
     /**
      * Sets the file extension used to look for mapping files under.
      *
@@ -276,6 +262,7 @@ class AnnotationDriver
     {
         $this->fileExtension = $fileExtension;
     }
+
     /**
      * Returns whether the class with the specified name is transient. Only non-transient
      * classes, that is entities and mapped superclasses, should have their metadata loaded.
@@ -293,12 +280,14 @@ class AnnotationDriver
     {
         $classAnnotations = $this->reader->getClassAnnotations(new \ReflectionClass($className));
         foreach ($classAnnotations as $annot) {
-            if (isset($this->entityAnnotationClasses[get_class($annot)])) {
+            if (in_array(get_class($annot), $this->entityAnnotationClasses)) {
                 return false;
             }
         }
+
         return true;
     }
+
     /**
      * @return array|null
      * @throws \ReflectionException
@@ -349,8 +338,10 @@ class AnnotationDriver
             }
         }
         $this->classNames = $classes;
+
         return $classes;
     }
+
     /**
      * @param string $file
      *
@@ -358,11 +349,13 @@ class AnnotationDriver
      */
     private function getClassName(string $file): string
     {
-        $tokens = token_get_all(file_get_contents($file));
+        $tokens    = token_get_all(file_get_contents($file));
         $namespace = $this->parseNamespace($tokens);
         $className = basename($file, '.php');
+
         return "$namespace\\$className";
     }
+
     /**
      * Extracts the namespace from tokenized file
      *
@@ -380,9 +373,11 @@ class AnnotationDriver
             }
             if (T_NAMESPACE === $tokens[$offset][0]) {
                 $offset++; // the next token is a whitespace
+
                 return $this->parseNamespaceString($tokens, $offset);
             }
         }
+
         return $namespace;
     }
 
@@ -419,6 +414,7 @@ class AnnotationDriver
                 break;
             }
         }
+
         return $namespace;
     }
 }
