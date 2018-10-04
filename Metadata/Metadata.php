@@ -11,6 +11,7 @@ namespace AE\ConnectBundle\Metadata;
 use AE\SalesforceRestSdk\Model\Rest\Metadata\DescribeSObject;
 use AE\SalesforceRestSdk\Model\Rest\Metadata\Field;
 use Doctrine\Common\Collections\ArrayCollection;
+use JMS\Serializer\Annotation as Serializer;
 
 /**
  * Class Metadata
@@ -21,29 +22,37 @@ class Metadata
 {
     /**
      * @var string
+     * @Serializer\Type("string")
      */
     private $className;
 
     /**
      * @var string
+     * @Serializer\Type("string")
      */
     private $sObjectType;
 
     /**
      * @var ArrayCollection<string, string>
+     * @Serializer\Type("array")
      */
     private $fieldMap;
 
     /**
      * @var ArrayCollection<string>
+     * @Serializer\Type("array")
      */
     private $identifiers;
 
-    /** @var DescribeSObject */
+    /**
+     * @var DescribeSObject
+     * @Serializer\Type("array")
+     */
     private $describe;
 
     /**
      * @var string
+     * @Serializer\Type("string")
      */
     private $connectionName;
 
@@ -153,6 +162,14 @@ class Metadata
     }
 
     /**
+     * @return null|string
+     */
+    public function getIdFieldProperty(): ?string
+    {
+        return $this->getFieldByProperty('Id');
+    }
+
+    /**
      * @param string $propertyName
      *
      * @return null|string
@@ -240,6 +257,21 @@ class Metadata
     public function isIdentifier(string $propertyName): bool
     {
         return $this->identifiers->contains($propertyName);
+    }
+
+    /**
+     * @return array
+     */
+    public function getIdentifyingFields(): array
+    {
+        $props = $this->getIdentifiers();
+        $fields = [];
+
+        foreach ($props as $prop) {
+            $fields[$prop] = $this->getFieldByProperty($prop);
+        }
+
+        return $fields;
     }
 
     /**

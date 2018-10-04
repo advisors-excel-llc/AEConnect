@@ -84,18 +84,20 @@ class MetadataRegistry
     /**
      * @param string $sObjectType
      *
-     * @return Metadata|null
+     * @return Metadata[]|array
      */
-    public function findMetadataBySObjectType(string $sObjectType): ?Metadata
+    public function findMetadataBySObjectType(string $sObjectType): array
     {
+        $results = [];
+
         /** @var Metadata $metadatum */
         foreach ($this->metadata as $metadatum) {
             if ($metadatum->getSObjectType() === $sObjectType) {
-                return $metadatum;
+                $results[] = $metadatum;
             }
         }
 
-        return null;
+        return $results;
     }
 
     /**
