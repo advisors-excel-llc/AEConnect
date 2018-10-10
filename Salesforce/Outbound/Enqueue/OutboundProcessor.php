@@ -10,11 +10,13 @@ namespace AE\ConnectBundle\Salesforce\Outbound\Enqueue;
 
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Outbound\MessagePayload;
-use AE\ConnectBundle\Salesforce\Outbound\QueueProcessor;
+use AE\ConnectBundle\Salesforce\Outbound\Queue\QueueProcessor;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
+use AE\ConnectBundle\Util\ItemizedCollection;
 use AE\SalesforceRestSdk\Model\Rest\Composite\SubRequestResult;
 use AE\SalesforceRestSdk\Model\Rest\CreateResponse;
 use Doctrine\Common\Cache\CacheProvider;
+use Doctrine\Common\Collections\ArrayCollection;
 use Enqueue\Client\TopicSubscriberInterface;
 use Enqueue\Consumption\Result;
 use Interop\Queue\PsrContext;
@@ -37,11 +39,6 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
      * @var CacheProvider
      */
     private $cache;
-
-    /**
-     * @var QueueProcessor
-     */
-    private $queueProcessor;
 
     /**
      * @var ManagerRegistry
@@ -67,14 +64,14 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
     private $messages = [];
 
     /**
-     * @var array
+     * @var ArrayCollection
      */
-    private $acked = [];
+    private $acked;
 
     /**
-     * @var array
+     * @var ArrayCollection
      */
-    private $rejected = [];
+    private $rejected;
 
     /**
      * @var string
@@ -84,14 +81,12 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
     public function __construct(
         ConnectionManagerInterface $connectionManager,
         CacheProvider $cache,
-        QueueProcessor $queueProcessor,
         ManagerRegistry $registry,
         string $semaphoreLifespan = '30 seconds',
         ?LoggerInterface $logger = null
     ) {
         $this->connectionManager = $connectionManager;
         $this->cache             = $cache;
-        $this->queueProcessor    = $queueProcessor;
         $this->registry          = $registry;
         $this->logger            = $logger;
         $this->semaphore         = $this->cache->contains(self::CACHE_ID_SEMAPHORE)
@@ -103,6 +98,8 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
         }
 
         $this->semaphoreLifespan = $semaphoreLifespan;
+        $this->acked             = new ArrayCollection();
+        $this->rejected          = new ArrayCollection();
     }
 
     /**
@@ -119,11 +116,15 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
             return Result::REJECT;
         }
 
-        if (array_key_exists($refId, $this->acked)) {
+        if ($this->acked->contains($refId)) {
+            $this->acked->remove($refId);
+
             return Result::ACK;
         }
 
-        if (array_key_exists($refId, $this->rejected)) {
+        if ($this->rejected->contains($refId)) {
+            $this->rejected->remove($refId);
+
             return Result::REJECT;
         }
 
@@ -144,21 +145,30 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
         $sObject = $payload->getSobject();
 
         if (!array_key_exists($connectionName, $this->messages)) {
-            $this->messages[$connectionName] = [$intent => [$sObject->Type => []]];
+            $this->messages[$connectionName] = new ArrayCollection([$intent => new ItemizedCollection()]);
+        } elseif (!array_key_exists($intent, $this->messages[$connectionName])) {
+            $this->messages[$connectionName]->set($intent, new ArrayCollection());
         }
 
-        $this->messages[$connectionName][$intent][$sObject->Type][$refId] = $payload;
+        /** @var ItemizedCollection $payloadCollection */
+        $payloadCollection = $this->messages[$connectionName][$intent];
+        $payloadCollection->set($refId, $payload, $sObject->getType());
 
         if ($this->shouldFlush()) {
             $this->semaphore = new \DateTime();
 
             $client   = $connection->getRestClient()->getCompositeClient();
-            $requests = $this->queueProcessor->buildQueue($this->messages[$connectionName]);
+            $queue    = QueueProcessor::buildQueue($this->messages[$connectionName]);
+            $requests = QueueProcessor::buildCompositeRequests($queue);
 
             try {
-                foreach ($requests as $request) {
+                foreach ($requests as $index => $request) {
                     $response = $client->sendCompositeRequest($request);
-                    foreach ($this->messages[$connectionName] as $intent => $types) {
+                    /**
+                     * @var string $intent
+                     * @var ItemizedCollection $types
+                     */
+                    foreach ($queue[$index] as $intent => $types) {
                         foreach ($types as $type => $objects) {
                             /**
                              * @var string $refId
@@ -167,16 +177,16 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
                             foreach ($objects as $refId => $payload) {
                                 $result = $response->findResultByReferenceId($refId);
                                 if (null !== $result) {
-                                    unset($this->messages[$connectionName][$intent][$type][$refId]);
+                                    $this->messages[$connectionName][$intent]->remove($refId, $type);
 
                                     if (300 > $result->getHttpStatusCode()) {
-                                        $this->acked[$refId] = $payload;
+                                        $this->acked->add($refId);
 
                                         if (SalesforceConnector::INTENT_INSERT === $intent) {
                                             $this->updateCreatedEntity($payload, $result);
                                         }
                                     } else {
-                                        $this->rejected[$refId] = $payload;
+                                        $this->rejected->add($refId);
 
                                         // TODO: log error
                                     }

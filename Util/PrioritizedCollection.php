@@ -398,19 +398,19 @@ class PrioritizedCollection implements Collection, Prioritize
     /**
      * @inheritDoc
      */
-    public function slice($offset, $length = null, ?int $priority = null)
+    public function slice($offset, $length = null, ?int $item = null)
     {
-        if (null === $priority) {
+        if (null === $item) {
             $array = $this->toArray();
 
             return array_slice($array, $offset, $length, true);
         }
 
-        if (!array_key_exists($priority, $this->elements)) {
+        if (!array_key_exists($item, $this->elements)) {
             return [];
         }
 
-        return array_slice($this->elements[$priority], $offset, $length, true);
+        return array_slice($this->elements[$item], $offset, $length, true);
     }
 
     /**

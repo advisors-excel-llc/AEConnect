@@ -28,8 +28,8 @@ class ItemizedCollection implements Collection, SortableInterface
     public function __construct(?array $elements = null)
     {
         if (null !== $elements) {
-            foreach ($elements as $priority => $element) {
-                $this->add($element, $priority);
+            foreach ($elements as $item => $element) {
+                $this->add($element, $item);
             }
         }
     }
@@ -115,14 +115,14 @@ class ItemizedCollection implements Collection, SortableInterface
      */
     public function removeElement($element)
     {
-        foreach ($this->elements as $priority => &$set) {
+        foreach ($this->elements as $item => &$set) {
             $index = array_search($element, $set, true);
 
             if (false !== $index) {
                 unset($set[$index]);
 
                 if (empty($set)) {
-                    unset($this->elements[$priority]);
+                    unset($this->elements[$item]);
                 }
 
                 return true;
@@ -312,15 +312,15 @@ class ItemizedCollection implements Collection, SortableInterface
     /**
      * @inheritDoc
      */
-    public function filter(Closure $p)
+    public function filter(Closure $p, $flags = 0)
     {
         $filtered = [];
 
-        foreach ($this->elements as $priority => $set) {
-            $fset = array_filter($set, $p);
+        foreach ($this->elements as $item => $set) {
+            $fset = array_filter($set, $p, $flags);
 
             if (!empty($fset)) {
-                $filtered[$priority] = $fset;
+                $filtered[$item] = $fset;
             }
         }
 
@@ -363,18 +363,18 @@ class ItemizedCollection implements Collection, SortableInterface
         $matches   = [];
         $noMatches = [];
 
-        foreach ($this->elements as $priority => $set) {
+        foreach ($this->elements as $item => $set) {
             foreach ($set as $key => $element) {
                 if ($p($key, $element)) {
-                    if (!array_key_exists($priority, $matches)) {
-                        $matches[$priority] = [];
+                    if (!array_key_exists($item, $matches)) {
+                        $matches[$item] = [];
                     }
-                    $matches[$priority][$key] = $element;
+                    $matches[$item][$key] = $element;
                 } else {
-                    if (!array_key_exists($priority, $noMatches)) {
-                        $noMatches[$priority] = [];
+                    if (!array_key_exists($item, $noMatches)) {
+                        $noMatches[$item] = [];
                     }
-                    $noMatches[$priority][$key] = $element;
+                    $noMatches[$item][$key] = $element;
                 }
             }
         }
@@ -401,19 +401,72 @@ class ItemizedCollection implements Collection, SortableInterface
     /**
      * @inheritDoc
      */
-    public function slice($offset, $length = null, ?int $priority = null)
+    public function slice($offset, $length = null, ?string $item = null)
     {
-        if (null === $priority) {
+        if (null === $item) {
             $array = $this->toArray();
-
             return array_slice($array, $offset, $length, true);
         }
 
-        if (!array_key_exists($priority, $this->elements)) {
+        if (!array_key_exists($item, $this->elements)) {
             return [];
         }
 
-        return array_slice($this->elements[$priority], $offset, $length, true);
+        return array_slice($this->elements[$item], $offset, $length, true);
+    }
+
+    public function splice(int $offset, $length = null): self
+    {
+        $index = 0;
+        $count = 0;
+        $collection = new static();
+
+        if ($offset >= $this->count()) {
+            return $collection;
+        }
+
+        foreach ($this->elements as $item => $set) {
+            foreach ($set as $key => $value) {
+                if ($index >= $offset && (null === $length || $count < $length)) {
+                    $collection->set($key, $value, $item);
+                    ++$count;
+                } elseif (null !== $length && $count === $length) {
+                    break;
+                }
+                ++$index;
+            }
+
+            if (null !== $length && $count === $length) {
+                break;
+            }
+        }
+
+        return $collection;
+    }
+
+    public function reduce(Closure $closure, $initial = null)
+    {
+        $elements = $this->toArray();
+
+        return array_reduce($elements, $closure, $initial);
+    }
+
+    public function reduceItems(Closure $closure, $initial = null)
+    {
+        $keys = $this->getKeys();
+
+        return array_reduce($keys, $closure, $initial);
+    }
+
+    public function distinctItems(): array
+    {
+        return $this->reduceItems(function ($carry, $item) {
+            if (!in_array($item, $carry)) {
+                return $carry[] = $item;
+            }
+
+            return $carry;
+        }, []);
     }
 
     /**
