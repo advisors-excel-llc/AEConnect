@@ -44,6 +44,7 @@ class ItemizedCollection implements Collection, SortableInterface
         if (null === $this->currentItem) {
             reset($this->elements);
             $this->currentItem = key($this->elements);
+            reset($this->elements[$this->currentItem]);
         }
 
         return $this->currentItem;
@@ -62,7 +63,7 @@ class ItemizedCollection implements Collection, SortableInterface
             $this->elements[$item] = [];
         }
 
-        $this->elements[$item][] = $element;
+        $this->elements[$item] = array_merge($this->elements[$item], is_array($element) ? $element : [$element]);
 
         return $this;
     }
@@ -100,6 +101,13 @@ class ItemizedCollection implements Collection, SortableInterface
         if (null === $item) {
             if (array_key_exists($key, $this->elements)) {
                 unset($this->elements[$key]);
+            } else {
+                foreach ($this->elements as &$items) {
+                    if (array_key_exists($key, $items)) {
+                        unset($items[$key]);
+                        break;
+                    }
+                }
             }
         } elseif (array_key_exists($item, $this->elements) && array_key_exists($key, $this->elements[$item])) {
             unset($this->elements[$item][$key]);
@@ -137,6 +145,20 @@ class ItemizedCollection implements Collection, SortableInterface
      */
     public function containsKey($key, ?string $item = null)
     {
+        if (null === $item) {
+            if (array_key_exists($key, $this->elements)) {
+                return true;
+            }
+
+            foreach ($this->elements as $items) {
+                if (array_key_exists($key, $items)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         return array_key_exists($key, null === $item ? $this->elements : $this->elements[$item]);
     }
 
@@ -145,8 +167,24 @@ class ItemizedCollection implements Collection, SortableInterface
      */
     public function get($key, ?string $item = null)
     {
-        return $this->containsKey($key, $item)
-            ? (null === $item ? $this->elements[$key] : $this->elements[$item][$key])
+        if (!$this->containsKey($key, $item)) {
+            return null;
+        }
+
+        if (null === $item) {
+            if (array_key_exists($key, $this->elements)) {
+                return $this->elements[$key];
+            }
+
+            foreach ($this->elements as $items) {
+                if (array_key_exists($key, $items)) {
+                    return $items[$key];
+                }
+            }
+        }
+
+        return array_key_exists($item, $this->elements) && array_key_exists($key, $this->elements[$item])
+            ? $this->elements[$item][$key]
             : null;
     }
 
@@ -170,7 +208,7 @@ class ItemizedCollection implements Collection, SortableInterface
         $values = [];
 
         foreach ($this->elements as $set) {
-            $values = array_merge($values, $set);
+            $values = array_merge($values, array_values($set));
         }
 
         return $values;
@@ -208,19 +246,21 @@ class ItemizedCollection implements Collection, SortableInterface
     public function first(?string $item = null)
     {
         if (null === $item) {
-            $values = &reset($this->elements);
+            $values = reset($this->elements);
             if (false === $values) {
                 return false;
             }
             $this->currentItem = key($this->elements);
-        } else {
-            if (!array_key_exists($item, $this->elements) || empty($this->elements[$item])) {
-                return false;
-            }
 
-            $values            = &$this->elements[$item];
-            $this->currentItem = $item;
+            return reset($this->elements[$this->currentItem]);
         }
+
+        if (!array_key_exists($item, $this->elements) || empty($this->elements[$item])) {
+            return false;
+        }
+
+        $values            = &$this->elements[$item];
+        $this->currentItem = $item;
 
         return reset($values);
     }
@@ -231,21 +271,23 @@ class ItemizedCollection implements Collection, SortableInterface
     public function last(?string $item = null)
     {
         if (null === $item) {
-            $values = &end($this->elements);
+            $values = end($this->elements);
 
             if (false === $values) {
                 return false;
             }
 
             $this->currentItem = key($this->elements);
-        } else {
-            if (!array_key_exists($item, $this->elements) || empty($this->elements[$item])) {
-                return false;
-            }
 
-            $values            = &$this->elements[$item];
-            $this->currentItem = $item;
+            return end($this->elements[$this->currentItem]);
         }
+
+        if (!array_key_exists($item, $this->elements) || empty($this->elements[$item])) {
+            return false;
+        }
+
+        $values            = &$this->elements[$item];
+        $this->currentItem = $item;
 
         return end($values);
     }
@@ -258,6 +300,7 @@ class ItemizedCollection implements Collection, SortableInterface
         if (null === $this->determineCurrentItem()) {
             return null;
         }
+
         return key($this->elements[$this->currentItem]);
     }
 
@@ -269,6 +312,7 @@ class ItemizedCollection implements Collection, SortableInterface
         if (null === $this->determineCurrentItem()) {
             return null;
         }
+
         return current($this->elements[$this->currentItem]);
     }
 
@@ -286,7 +330,7 @@ class ItemizedCollection implements Collection, SortableInterface
             $vNext = next($this->elements);
             if (false !== $vNext) {
                 $this->currentItem = key($this->elements);
-                $next              = rewind($this->elements[$this->currentItem]);
+                $next              = reset($this->elements[$this->currentItem]);
             }
         }
 
@@ -317,7 +361,11 @@ class ItemizedCollection implements Collection, SortableInterface
         $filtered = [];
 
         foreach ($this->elements as $item => $set) {
-            $fset = array_filter($set, $p, $flags);
+            $fset = array_filter($set, function () use ($p, $item) {
+                $args = func_get_args();
+                $args[] = $item;
+                return call_user_func_array($p, $args);
+            }, $flags);
 
             if (!empty($fset)) {
                 $filtered[$item] = $fset;
@@ -332,9 +380,11 @@ class ItemizedCollection implements Collection, SortableInterface
      */
     public function forAll(Closure $p)
     {
-        foreach ($this->toArray() as $key => $element) {
-            if (!$p($key, $element)) {
-                return false;
+        foreach ($this->elements as $item => $items) {
+            foreach ($items as $key => $element) {
+                if (false === $p($key, $element, $item)) {
+                    return false;
+                }
             }
         }
 
@@ -348,15 +398,22 @@ class ItemizedCollection implements Collection, SortableInterface
     {
         $elements = [];
 
-        foreach ($this->elements as $priority => $set) {
-            $elements[$priority] = array_map($func, $set);
+        foreach ($this->elements as $item => $set) {
+            $elements[$item] = array_map(
+                function ($element) use ($item, $func) {
+                    $func($element, $item);
+                },
+                $set
+            );
         }
 
         return $this->createFrom($elements);
     }
 
     /**
-     * @inheritDoc
+     * @param Closure $p
+     *
+     * @return array|ItemizedCollection[]
      */
     public function partition(Closure $p)
     {
@@ -365,7 +422,7 @@ class ItemizedCollection implements Collection, SortableInterface
 
         foreach ($this->elements as $item => $set) {
             foreach ($set as $key => $element) {
-                if ($p($key, $element)) {
+                if ($p($key, $element, $item)) {
                     if (!array_key_exists($item, $matches)) {
                         $matches[$item] = [];
                     }
@@ -399,33 +456,35 @@ class ItemizedCollection implements Collection, SortableInterface
     }
 
     /**
-     * @inheritDoc
+     * @param int $offset
+     * @param null $length
+     * @param null $item
+     *
+     * @return ItemizedCollection
      */
-    public function slice($offset, $length = null, ?string $item = null)
+    public function slice($offset, $length = null, $item = null): self
     {
-        if (null === $item) {
-            $array = $this->toArray();
-            return array_slice($array, $offset, $length, true);
-        }
-
-        if (!array_key_exists($item, $this->elements)) {
-            return [];
-        }
-
-        return array_slice($this->elements[$item], $offset, $length, true);
-    }
-
-    public function splice(int $offset, $length = null): self
-    {
-        $index = 0;
-        $count = 0;
+        $index      = 0;
+        $count      = 0;
         $collection = new static();
 
-        if ($offset >= $this->count()) {
+        if (null === $item
+            ? $offset >= $this->count()
+            : (!array_key_exists($item, $this->elements) || $offset >= count($this->elements[$item]))) {
             return $collection;
         }
 
-        foreach ($this->elements as $item => $set) {
+        $elements = null === $item ? $this->elements : [$item => $this->elements[$item]];
+
+        if ($offset < 0) {
+            $offset = max(0, (null === $item ? $this->count() : count($this->elements[$item])) - 1 + $offset);
+        }
+
+        if ($length < 0) {
+            $length = max(1, (null === $item ? $this->count() : count($this->elements[$item])) + $length);
+        }
+
+        foreach ($elements as $item => $set) {
             foreach ($set as $key => $value) {
                 if ($index >= $offset && (null === $length || $count < $length)) {
                     $collection->set($key, $value, $item);
@@ -444,29 +503,23 @@ class ItemizedCollection implements Collection, SortableInterface
         return $collection;
     }
 
+    public function splice($offset, $length = null, $item = null): self
+    {
+        $slice = $this->slice($offset, $length, $item);
+
+        while (($element = $slice->current())) {
+            $this->removeElement($element);
+            $slice->next();
+        }
+
+        return $slice;
+    }
+
     public function reduce(Closure $closure, $initial = null)
     {
         $elements = $this->toArray();
 
         return array_reduce($elements, $closure, $initial);
-    }
-
-    public function reduceItems(Closure $closure, $initial = null)
-    {
-        $keys = $this->getKeys();
-
-        return array_reduce($keys, $closure, $initial);
-    }
-
-    public function distinctItems(): array
-    {
-        return $this->reduceItems(function ($carry, $item) {
-            if (!in_array($item, $carry)) {
-                return $carry[] = $item;
-            }
-
-            return $carry;
-        }, []);
     }
 
     /**

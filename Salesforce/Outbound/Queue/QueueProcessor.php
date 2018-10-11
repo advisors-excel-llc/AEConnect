@@ -13,8 +13,8 @@ use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use AE\ConnectBundle\Util\ItemizedCollection;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CollectionRequest;
-use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeRequest;
 use AE\SalesforceRestSdk\Rest\Composite\Builder\CompositeRequestBuilder;
+use AE\SalesforceRestSdk\Rest\Composite\Builder\Reference;
 use Doctrine\Common\Collections\ArrayCollection;
 
 /*
@@ -43,7 +43,7 @@ use Doctrine\Common\Collections\ArrayCollection;
     RULES
     -- No more than 25 total subrequests per master request
     -- Attempt to destribute Independent Update SubRequest records across Dependent Update SubRequests of the same type that don't have 200 records in them yet
-    -- Attempt to append Independent Delete SubRequets onto master requets that don't yet have 25 subrequests
+    -- Attempt to append Independent SubRequets onto master requets that don't yet have 25 subrequests
  */
 
 class QueueProcessor
@@ -51,35 +51,30 @@ class QueueProcessor
     /**
      * @param ArrayCollection $messages
      *
-     * @return array
+     * @return ItemizedCollection
      */
-    public static function buildQueue(ArrayCollection $messages): array
+    public static function buildQueue(array $inserts, array $updates, array $deletes): ItemizedCollection
     {
-        $inserts = new ItemizedCollection($messages->get(SalesforceConnector::INTENT_INSERT) ?: []);
-        $updates = new ItemizedCollection($messages->get(SalesforceConnector::INTENT_UPDATE) ?: []);
-        $deletes = new ItemizedCollection($messages->get(SalesforceConnector::INTENT_DELETE) ?: []);
+        $inserts = new ItemizedCollection($inserts);
+        $updates = new ItemizedCollection($updates);
+        $deletes = new ItemizedCollection($deletes);
 
-        $independent = new ItemizedCollection();
-        $dependent   = new ItemizedCollection();
-
-        /**
-         * @var string $refId
-         * @var MessagePayload $payload
-         */
-        foreach ($inserts as $type => $message) {
-            foreach ($message as $refId => $payload) {
-                $object = $payload->getSobject();
+        $partitions = $inserts->partition(
+            function ($key, MessagePayload $element) {
+                $object = $element->getSobject();
                 foreach ($object->getFields() as $value) {
                     // If the object has a reference to another object, it's dependent
                     if ($value instanceof ReferencePlaceholder) {
-                        $dependent->set($refId, $object, $type);
-                        break;
+                        return true;
                     }
                 }
-                // If the object doesn't have a reference, it's independent
-                $independent->set($refId, $object, $type);
+
+                return false;
             }
-        }
+        );
+
+        $dependent   = $partitions[0];
+        $independent = $partitions[1];
 
         $queueGroups = self::buildQueueGroups(
             $independent,
@@ -87,136 +82,41 @@ class QueueProcessor
             $updates
         );
 
-        $groups = self::flattenQueueGroups($queueGroups);
+        $group = self::flattenQueueGroups($queueGroups);
 
-        self::distribute($groups, $independent, $updates, $deletes);
+        self::distribute($group, $independent, $updates, $deletes);
 
-        return $groups;
+        return $group;
     }
 
     /**
-     * @param array|ItemizedCollection[] $groups
+     * @param ItemizedCollection $queueGroup
      *
-     * @return array|CompositeRequest[]
+     * @return CompositeRequestBuilder
      */
-    public static function buildCompositeRequests(array $groups): array
+    public static function generateCompositeRequestBuilder(ItemizedCollection $queueGroup): CompositeRequestBuilder
     {
-        $builders = self::generateCompositeRequestBuilders($groups);
-        $requests = [];
+        $builder = new CompositeRequestBuilder();
 
-        /** @var CompositeRequestBuilder $builder */
-        foreach ($builders as $builder) {
-            $requests[] = $builder->build();
-        }
+        $queueGroup->forAll(
+            function ($refId, ItemizedCollection $collection, $intent) use ($builder) {
+                $records = [];
+                /** @var MessagePayload $payload */
+                foreach ($collection as $payload) {
+                    $records[] = $payload->getSobject();
+                }
 
-        return $requests;
-    }
-
-    /**
-     * @param array|ItemizedCollection[] $groups
-     * @param ItemizedCollection $inserts
-     * @param ItemizedCollection $updates
-     * @param ItemizedCollection $deletes
-     */
-    private static function distribute(
-        array &$groups,
-        ItemizedCollection $inserts,
-        ItemizedCollection $updates,
-        ItemizedCollection $deletes
-    ) {
-        foreach ($groups as $group) {
-            /**
-             * @var string $item
-             * @var ItemizedCollection $subset
-             */
-            foreach ($group as $item => $subset) {
-                switch ($item) {
-                    case SalesforceConnector::INTENT_INSERT:
-                        self::distributeInserts($inserts, $subset);
-                        break;
-                    case SalesforceConnector::INTENT_UPDATE:
-                        self::distributeCollection($updates, $subset);
-                        break;
-                    case SalesforceConnector::INTENT_DELETE:
-                        self::distributeCollection($deletes, $subset);
-                        break;
+                if (SalesforceConnector::INTENT_INSERT === $intent) {
+                    $builder->createSObjectCollection($refId, new CollectionRequest($records));
+                } elseif (SalesforceConnector::INTENT_UPDATE === $intent) {
+                    $builder->updateSObjectCollection($refId, new CollectionRequest($records));
+                } elseif (SalesforceConnector::INTENT_DELETE === $intent) {
+                    $builder->deleteSObjectCollection($refId, new CollectionRequest($records));
                 }
             }
+        );
 
-            // TODO: Process leftovers
-        }
-    }
-
-    /**
-     * @param ArrayCollection $queueGroups
-     *
-     * @return array|ItemizedCollection[]
-     */
-    private static function flattenQueueGroups(ArrayCollection $queueGroups): array
-    {
-        $groups = [new ItemizedCollection()];
-
-        /** @var QueueGroup $queueGroup */
-        foreach ($queueGroups as $queueGroup) {
-            /** @var ItemizedCollection $group */
-            $group = end($groups);
-
-            if (!self::flattenQueueGroup($group, $queueGroup)) {
-                $groups[] = $group = new ItemizedCollection();
-                self::flattenQueueGroup($group, $queueGroup);
-            }
-        }
-
-        return $groups;
-    }
-
-    public static function flattenQueueGroup(ItemizedCollection $group, QueueGroup $queueGroup)
-    {
-        if ($group->count() + $queueGroup->count() <= 25) {
-            $group->add($queueGroup->getItems(), SalesforceConnector::INTENT_INSERT);
-            $group->add($queueGroup->getDependentUpdates(), SalesforceConnector::INTENT_UPDATE);
-
-            foreach ($queueGroup->getDependentGroups() as $dependentGroup) {
-                self::flattenQueueGroup($group, $dependentGroup);
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * @param array|CompositeRequestBuilder[] $groups
-     *
-     * @return array
-     */
-    private static function generateCompositeRequestBuilders(array $groups): array
-    {
-        $builders = [];
-
-        /** @var ItemizedCollection $queueGroup */
-        foreach ($groups as $queueGroup) {
-            $builder = new CompositeRequestBuilder();
-            foreach ($queueGroup as $intent => $group) {
-                /**
-                 * @var string $refId
-                 * @var ItemizedCollection $set
-                 */
-                foreach ($group as $refId => $set) {
-                    if (SalesforceConnector::INTENT_INSERT === $intent) {
-                        $builder->createSObjectCollection($refId, new CollectionRequest($set->toArray()));
-                    } elseif (SalesforceConnector::INTENT_UPDATE === $intent) {
-                        $builder->updateSObjectCollection($refId, new CollectionRequest($set->toArray()));
-                    } elseif (SalesforceConnector::INTENT_DELETE === $intent) {
-                        $builder->deleteSObjectCollection($refId, new CollectionRequest($set->toArray()));
-                    }
-                }
-            }
-            $builders[] = $builder;
-        }
-
-        return $builders;
+        return $builder;
     }
 
     /**
@@ -268,11 +168,10 @@ class QueueProcessor
     private static function groupSubrequest(ItemizedCollection $subrequest, $size = 5): array
     {
         $completed = [];
+        $types     = $subrequest->getKeys();
 
-        $completed[] = $subrequest;
-        $types       = $subrequest->distinctItems();
         if ($size < count($types)) {
-            $types      = array_slice($types, 5);
+            $types      = array_slice($types, $size);
             $newRequest = new ItemizedCollection();
 
             foreach ($types as $type) {
@@ -280,12 +179,22 @@ class QueueProcessor
                 $subrequest->remove($type);
             }
 
-            $completed = array_merge($completed, self::groupSubrequest($newRequest, $size));
+            $completed[] = $newRequest;
+            $completed   = array_merge($completed, self::groupSubrequest($subrequest, $size));
+        } else {
+            $completed[] = $subrequest;
         }
 
         return $completed;
     }
 
+    /**
+     * @param ItemizedCollection $collection
+     * @param ItemizedCollection $inserts
+     * @param ItemizedCollection $updates
+     *
+     * @return ArrayCollection
+     */
     private static function buildQueueGroups(
         ItemizedCollection $collection,
         ItemizedCollection $inserts,
@@ -297,89 +206,168 @@ class QueueProcessor
         /** @var ItemizedCollection[] $groups */
         $groups = self::groupSubrequests(self::partitionSubrequests($collection));
         foreach ($groups as $set) {
-            foreach ($set->getKeys() as $group) {
-                $refIds     = $set->getKeys($group);
-                $queueGroup = new QueueGroup();
+            $set->forAll(
+                function ($key, ItemizedCollection $group, $type) use ($queueGroups, $inserts, $updates) {
+                    $refIds     = $group->getKeys($type);
+                    $queueGroup = new QueueGroup();
 
-                $insert = $inserts->filter(
-                    function ($value) use ($refIds) {
-                        /** @var MessagePayload $value */
+                    $insert = $inserts->filter(
+                        function ($value) use ($refIds) {
+                            /** @var MessagePayload $value */
 
-                        foreach ($value->getSobject()->getFields() as $field) {
-                            if ($field instanceof ReferencePlaceholder) {
-                                if (in_array($field->getEntityRefId(), $refIds)) {
-                                    return true;
+                            foreach ($value->getSobject()->getFields() as $field) {
+                                if ($field instanceof ReferencePlaceholder) {
+                                    if (in_array($field->getEntityRefId(), $refIds)) {
+                                        return true;
+                                    }
                                 }
                             }
+
+                            return false;
                         }
+                    );
 
-                        return false;
+                    // Remove matched dependent inserts from the root collection to speed up future searches
+                    foreach ($insert as $remove) {
+                        $inserts->removeElement($remove);
                     }
-                );
 
-                // Remove matched dependent inserts from the root collection to speed up future searches
-                foreach ($insert as $remove) {
-                    $inserts->removeElement($remove);
-                }
+                    $dependentUpdates = $updates->filter(
+                        function ($value) use ($refIds) {
+                            /** @var MessagePayload $value */
 
-                $dependentUpdates = $updates->filter(
-                    function ($value) use ($refIds) {
-                        /** @var MessagePayload $value */
-
-                        foreach ($value->getSobject()->getFields() as $field) {
-                            if ($field instanceof ReferencePlaceholder) {
-                                if (in_array($field->getEntityRefId(), $refIds)) {
-                                    return true;
+                            foreach ($value->getSobject()->getFields() as $field) {
+                                if ($field instanceof ReferencePlaceholder) {
+                                    if (in_array($field->getEntityRefId(), $refIds)) {
+                                        return true;
+                                    }
                                 }
                             }
+
+                            return false;
                         }
+                    );
 
-                        return false;
+                    /** @var MessagePayload $payload */
+                    foreach ($dependentUpdates as $payload) {
+                        // remove the payload from the update group to allow for faster searching
+                        $updates->removeElement($payload);
                     }
-                );
 
-                /** @var MessagePayload $payload */
-                foreach ($dependentUpdates as $payload) {
-                    // remove the payload from the update group to allow for faster searching
-                    $updates->removeElement($payload);
+                    $queueGroup->setItems($insert);
+                    $queueGroup->setDependentUpdates($dependentUpdates);
+
+                    // Process and normalize sub-requests to ensure limits are met
+                    $queueGroup->setDependentGroups(
+                        self::buildQueueGroups($insert, $inserts, $updates)
+                    );
+
+                    $queueGroups->add($queueGroup);
                 }
-
-                $queueGroup->setItems($insert);
-                $queueGroup->setDependentUpdates($dependentUpdates);
-
-                // Process and normalize sub-requests to ensure limits are met
-                $queueGroup->setDependentGroups(
-                    self::buildQueueGroups($insert, $inserts, $updates)
-                );
-
-                $queueGroups->add($queueGroup);
-            }
+            );
         }
 
         return $queueGroups;
     }
 
     /**
+     * @param ArrayCollection $queueGroups
+     *
+     * @return ItemizedCollection
+     */
+    private static function flattenQueueGroups(ArrayCollection $queueGroups): ItemizedCollection
+    {
+        $group = new ItemizedCollection();
+
+        /** @var QueueGroup $queueGroup */
+        foreach ($queueGroups as $queueGroup) {
+            self::flattenQueueGroup($group, $queueGroup);
+        }
+
+        return $group;
+    }
+
+    public static function flattenQueueGroup(ItemizedCollection $group, QueueGroup $queueGroup)
+    {
+        if ($group->count() + $queueGroup->count() <= 25) {
+            $insertRefId = uniqid('insert_');
+            $updateRefId = uniqid('update_');
+            $group->set($insertRefId, $queueGroup->getItems(), SalesforceConnector::INTENT_INSERT);
+            $group->set($updateRefId, $queueGroup->getDependentUpdates(), SalesforceConnector::INTENT_UPDATE);
+
+            // Resolve the Reference Placeholders
+            self::hydrateReferences($group, $queueGroup->getItems());
+            self::hydrateReferences($group, $queueGroup->getDependentUpdates());
+
+            foreach ($queueGroup->getDependentGroups() as $dependentGroup) {
+                self::flattenQueueGroup($group, $dependentGroup);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param ItemizedCollection $group
      * @param ItemizedCollection $inserts
-     * @param ItemizedCollection $subrequest
+     * @param ItemizedCollection $updates
+     * @param ItemizedCollection $deletes
+     */
+    private static function distribute(
+        ItemizedCollection $group,
+        ItemizedCollection $inserts,
+        ItemizedCollection $updates,
+        ItemizedCollection $deletes
+    ) {
+        // Try and get the composite request to 25 sub-requests
+        self::appendInsertSubRequests($group, $inserts);
+        self::appendCollection($group, $updates);
+        self::appendCollection($group, $deletes, SalesforceConnector::INTENT_DELETE);
+
+        // Add any remaining records to any sub-requests that have room for more
+        /**
+         * @var string $item
+         * @var ItemizedCollection $subset
+         */
+        foreach ($group as $item => $subset) {
+            switch ($item) {
+                case SalesforceConnector::INTENT_INSERT:
+                    self::distributeInserts($inserts, $subset);
+                    break;
+                case SalesforceConnector::INTENT_UPDATE:
+                    self::distributeCollection($updates, $subset);
+                    break;
+                case SalesforceConnector::INTENT_DELETE:
+                    self::distributeCollection($deletes, $subset);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * @param ItemizedCollection $inserts
+     * @param ItemizedCollection $subset
      */
     private static function spreadInsertsOverLikeTypes(
         ItemizedCollection $inserts,
-        ItemizedCollection $subrequest
+        ItemizedCollection $subset
     ): void {
-        $diff  = 200 - count($subrequest);
-        $types = $subrequest->distinctItems();
+        $diff  = 200 - count($subset);
+        $types = $subset->getKeys();
         while ($diff > 0 && ($type = current($types))) {
-            if (!$subrequest->containsKey($type)) {
+            $typeSet = new ItemizedCollection($subset->slice(0, $diff, $type));
+
+            if ($typeSet->isEmpty()) {
                 continue;
             }
 
-            $typeSet = new ItemizedCollection($subrequest->slice(0, $diff, $type));
-            $diff    -= count($typeSet);
+            $diff -= count($typeSet);
 
             foreach ($typeSet as $type => $set) {
                 foreach ($set as $item) {
-                    $subrequest->add($item, $type);
+                    $subset->add($item, $type);
                     $inserts->removeElement($item);
                 }
             }
@@ -389,13 +377,11 @@ class QueueProcessor
     /**
      * @param ItemizedCollection $inserts
      * @param ItemizedCollection $subset
-     *
-     * @return mixed
      */
     private static function appendInsertsToExistingSubRequest(ItemizedCollection $inserts, ItemizedCollection $subset)
     {
         $diff     = 200 - count($subset);
-        $typeDiff = 5 - count($subset->distinctItems());
+        $typeDiff = 5 - count($subset->getKeys());
         $types    = $inserts->getKeys();
         while ($diff > 0 && $typeDiff > 5 && ($type = current($types))) {
             $set = new ItemizedCollection($subset->slice(0, $diff, $type));
@@ -425,9 +411,9 @@ class QueueProcessor
         self::spreadInsertsOverLikeTypes($inserts, $group);
         self::appendInsertsToExistingSubRequest($inserts, $group);
 
-        $diff = 25 - count($group);
-
+        $diff = 25 - count($group->getKeys());
         $sets = self::groupSubrequests(self::partitionSubrequests($inserts));
+
         while ($diff > 0 && ($set = current($sets))) {
             $group->add($set, SalesforceConnector::INTENT_INSERT);
 
@@ -456,20 +442,93 @@ class QueueProcessor
                 next($items);
             }
         }
+    }
 
-        $diff  = 25 - count($group);
-        $types = $collection->getKeys();
+    /**
+     * @param ItemizedCollection $group
+     * @param ItemizedCollection $inserts
+     */
+    private static function appendInsertSubRequests(ItemizedCollection $group, ItemizedCollection $inserts): void
+    {
+        $diff = 25 - count($group->getKeys());
+        while ($diff > 0 && ($insert = $inserts->current())) {
+            $partitions = self::groupSubrequests(self::partitionSubrequests($insert));
+            while ($diff > 0 && ($partition = current($partitions))) {
+                $group->add($partition, SalesforceConnector::INTENT_INSERT);
 
-        while ($diff > 0 && ($type = current($types))) {
-            $partition = $collection->slice(0, 200, $type);
-            $group->add($partition, $type);
+                foreach ($partition as $item) {
+                    $inserts->removeElement($item);
+                }
 
-            foreach ($partition as $item) {
-                $collection->removeElement($item);
+                $diff -= 1;
+            }
+            $inserts->next();
+        }
+    }
+
+    /**
+     * @param ItemizedCollection $group
+     * @param ItemizedCollection $collection
+     * @param string $grouping
+     */
+    private static function appendCollection(
+        ItemizedCollection $group,
+        ItemizedCollection $collection,
+        string $grouping = SalesforceConnector::INTENT_UPDATE
+    ): void {
+        $diff = 25 - count($group->getKeys());
+
+        while ($diff > 0 && ($set = $collection->current())) {
+            $types = $set->getKeys();
+
+            while ($diff > 0 && ($type = current($types))) {
+                /** @var ItemizedCollection $partitions */
+                $partitions = self::partitionSubrequests($collection->get($type));
+                while ($diff > 0 && ($partition = $partitions->current())) {
+                    $group->add($partition, $grouping);
+
+                    foreach ($partition as $item) {
+                        $collection->removeElement($item);
+                    }
+
+                    $diff -= 1;
+                    $partitions->next();
+                }
+                next($types);
             }
 
-            $diff -= 1;
-            next($types);
+            next($collection);
+        }
+    }
+
+    /**
+     * @param ItemizedCollection $group
+     * @param ItemizedCollection|MessagePayload[] $payloads
+     */
+    private static function hydrateReferences(ItemizedCollection $group, ItemizedCollection $payloads): void
+    {
+        /** @var MessagePayload $payload */
+        foreach ($payloads as $payload) {
+            $object = $payload->getSobject();
+            foreach ($object->getFields() as $value) {
+                if ($value instanceof ReferencePlaceholder) {
+                    $eRefId = $value->getEntityRefId();
+                    /**
+                     * @var string $refId
+                     * @var ItemizedCollection $collection
+                     */
+                    foreach ($group->get(SalesforceConnector::INTENT_INSERT) as $refId => $collection) {
+                        $items = $collection->toArray();
+                        $index = array_search($eRefId, array_keys($items), true);
+                        if (false !== $index) {
+                            $value->setReference(
+                                new Reference($refId)
+                            );
+                            $value->setField('records['.$index.'].id');
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -8,13 +8,13 @@
 
 namespace AE\ConnectBundle\Salesforce\Outbound\Enqueue;
 
+use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Outbound\MessagePayload;
 use AE\ConnectBundle\Salesforce\Outbound\Queue\QueueProcessor;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use AE\ConnectBundle\Util\ItemizedCollection;
-use AE\SalesforceRestSdk\Model\Rest\Composite\SubRequestResult;
-use AE\SalesforceRestSdk\Model\Rest\CreateResponse;
+use AE\SalesforceRestSdk\Model\Rest\Composite\CollectionResponse;
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Collections\ArrayCollection;
 use Enqueue\Client\TopicSubscriberInterface;
@@ -27,7 +27,6 @@ use Symfony\Bridge\Doctrine\ManagerRegistry;
 
 class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
 {
-    public const CACHE_ID_SEMAPHORE = '__sobject_semaphore';
     public const CACHE_ID_MESSAGES  = '__sobject_messages';
 
     /**
@@ -89,9 +88,7 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
         $this->cache             = $cache;
         $this->registry          = $registry;
         $this->logger            = $logger;
-        $this->semaphore         = $this->cache->contains(self::CACHE_ID_SEMAPHORE)
-            ? $this->cache->fetch(self::CACHE_ID_SEMAPHORE)
-            : null;
+        $this->semaphore         = new \DateTime();
 
         if ($this->cache->contains(self::CACHE_ID_MESSAGES)) {
             $this->messages = $this->cache->fetch(self::CACHE_ID_MESSAGES);
@@ -142,68 +139,26 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
         )
         ;
 
-        $sObject = $payload->getSobject();
+        if (!$message->isRedelivered()) {
+            $sObject = $payload->getSobject();
 
-        if (!array_key_exists($connectionName, $this->messages)) {
-            $this->messages[$connectionName] = new ArrayCollection([$intent => new ItemizedCollection()]);
-        } elseif (!array_key_exists($intent, $this->messages[$connectionName])) {
-            $this->messages[$connectionName]->set($intent, new ArrayCollection());
+            if (!array_key_exists($connectionName, $this->messages)) {
+                $this->messages[$connectionName] = new ArrayCollection([$intent => new ItemizedCollection()]);
+            } elseif (!array_key_exists($intent, $this->messages[$connectionName])) {
+                $this->messages[$connectionName]->set($intent, new ArrayCollection());
+            }
+
+            /** @var ItemizedCollection $payloadCollection */
+            $payloadCollection = $this->messages[$connectionName][$intent];
+            $payloadCollection->set($refId, $payload, $sObject->getType());
+
+            $this->semaphore = new \DateTime();
         }
 
-        /** @var ItemizedCollection $payloadCollection */
-        $payloadCollection = $this->messages[$connectionName][$intent];
-        $payloadCollection->set($refId, $payload, $sObject->getType());
-
-        if ($this->shouldFlush()) {
+        if ($this->shouldFlush($connection)) {
+            $this->send($connection);
             $this->semaphore = new \DateTime();
-
-            $client   = $connection->getRestClient()->getCompositeClient();
-            $queue    = QueueProcessor::buildQueue($this->messages[$connectionName]);
-            $requests = QueueProcessor::buildCompositeRequests($queue);
-
-            try {
-                foreach ($requests as $index => $request) {
-                    $response = $client->sendCompositeRequest($request);
-                    /**
-                     * @var string $intent
-                     * @var ItemizedCollection $types
-                     */
-                    foreach ($queue[$index] as $intent => $types) {
-                        foreach ($types as $type => $objects) {
-                            /**
-                             * @var string $refId
-                             * @var MessagePayload $payload
-                             */
-                            foreach ($objects as $refId => $payload) {
-                                $result = $response->findResultByReferenceId($refId);
-                                if (null !== $result) {
-                                    $this->messages[$connectionName][$intent]->remove($refId, $type);
-
-                                    if (300 > $result->getHttpStatusCode()) {
-                                        $this->acked->add($refId);
-
-                                        if (SalesforceConnector::INTENT_INSERT === $intent) {
-                                            $this->updateCreatedEntity($payload, $result);
-                                        }
-                                    } else {
-                                        $this->rejected->add($refId);
-
-                                        // TODO: log error
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                $this->cache->save(self::CACHE_ID_MESSAGES, $this->messages);
-                $this->cache->save(self::CACHE_ID_SEMAPHORE, $this->semaphore);
-            } catch (\GuzzleHttp\Exception\GuzzleException $e) {
-                // TODO: log guzzle exception
-            } catch (\Exception $e) {
-                // TODO: log exception
-            }
-        } else {
+        } elseif (!$message->isRedelivered()) {
             // Hold onto these until we should flush
             $this->cache->save(self::CACHE_ID_MESSAGES, $this->messages);
         }
@@ -224,21 +179,29 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
         self::$topic = $topic;
     }
 
-    private function shouldFlush(): bool
+    private function shouldFlush(ConnectionInterface $connection): bool
     {
-        if (null !== $this->semaphore) {
-            $now  = new \DateTime();
-            $then = (clone($this->semaphore))->add(\DateInterval::createFromDateString($this->semaphoreLifespan));
+        $now  = new \DateTime();
+        $then = (clone($this->semaphore))->add(\DateInterval::createFromDateString($this->semaphoreLifespan));
 
-            return $now < $then;
+        if ($now < $then) {
+            return true;
         }
+
+        $count = 0;
+
+        foreach ($this->messages[$connection->getName()] as $types) {
+            $count += count($types);
+        }
+
+        return 5000 <= $count;
     }
 
     /**
      * @param MessagePayload $payload
-     * @param SubRequestResult $result
+     * @param CollectionResponse $result
      */
-    private function updateCreatedEntity(MessagePayload $payload, SubRequestResult $result): void
+    private function updateCreatedEntity(MessagePayload $payload, CollectionResponse $result): void
     {
         $object = $payload->getSobject();
         $idProp = $payload->getMetadata()->getPropertyByField('Id');
@@ -247,13 +210,11 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
             return;
         }
 
-        $idMethod = "set".ucwords($idProp);
-
-        /** @var CreateResponse $body */
-        $body              = $result->getBody();
-        $id                = $body->getId();
+        $idMethod          = "set".ucwords($idProp);
+        $id                = $result->getId();
         $idMap             = [];
         $identifyingFields = $payload->getMetadata()->getIdentifyingFields();
+
         foreach ($identifyingFields as $prop => $idProp) {
             $idMap[$prop] = $object->$idProp;
         }
@@ -266,8 +227,101 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
 
         if (null !== $entity) {
             $entity->$idMethod($id);
+            $manager->flush();
         }
+    }
 
-        $manager->flush();
+    /**
+     * @param ConnectionInterface $connection
+     */
+    private function send(ConnectionInterface $connection): void
+    {
+        $client  = $connection->getRestClient()->getCompositeClient();
+        $queue   = QueueProcessor::buildQueue(
+            $this->messages[$connection->getName()][SalesforceConnector::INTENT_INSERT]->toArray(),
+            $this->messages[$connection->getName()][SalesforceConnector::INTENT_UPDATE]->toArray(),
+            $this->messages[$connection->getName()][SalesforceConnector::INTENT_DELETE]->toArray()
+        );
+        $builder = QueueProcessor::generateCompositeRequestBuilder($queue);
+
+        try {
+            $request   = $builder->build();
+            $responses = $client->sendCompositeRequest($request);
+
+            /**
+             * @var string $refId
+             * @var ItemizedCollection $requests
+             */
+            foreach ($queue->toArray() as $refId => $requests) {
+                $result = $responses->findResultByReferenceId($refId);
+                if (200 !== $result->getHttpStatusCode()) {
+                    foreach (array_keys($requests->toArray()) as $refId) {
+                        /** @var ItemizedCollection $types */
+                        foreach ($this->messages[$connection->getName()] as $types) {
+                            $types->remove($refId);
+                            $this->rejected[] = $refId;
+                        }
+                    }
+
+                    if (null !== $this->logger) {
+                        /** @var CollectionResponse[] $errors */
+                        $errors = $result->getBody();
+                        foreach ($errors as $error) {
+                            $this->logger->error(
+                                'AE_CONNECT error from SalesForce: ({code}) {msg}',
+                                [
+                                    'code' => $error->getErrorCode(),
+                                    'msg'  => $error->getMessage(),
+                                ]
+                            );
+                        }
+                    }
+                } else {
+                    /** @var CollectionResponse[] $messages */
+                    $messages = $result->getBody();
+                    $payloads = $requests->toArray();
+                    $refIds   = array_keys($payloads);
+                    foreach ($messages as $i => $res) {
+                        $refId = $refIds[$i];
+                        if ($res->isSuccess()) {
+                            $this->acked[] = $refId;
+                        } else {
+                            $this->rejected[] = $refId;
+                        }
+
+                        /** @var ItemizedCollection $types */
+                        foreach ($this->messages[$connection->getName()] as $intent => $types) {
+                            if ($types->containsKey($refId)) {
+                                $types->remove($refId);
+
+                                if ($res->isSuccess() && SalesforceConnector::INTENT_INSERT === $intent) {
+                                    $this->updateCreatedEntity($payloads[$refId], $res);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            $this->cache->save(self::CACHE_ID_MESSAGES, $this->messages);
+        } catch (\GuzzleHttp\Exception\GuzzleException $e) {
+            if (null !== $this->logger) {
+                $this->logger->critical(
+                    'An exception occurred while trying to send queue:\n{msg}',
+                    [
+                        'msg' => $e->getTraceAsString(),
+                    ]
+                );
+            }
+        } catch (\Exception $e) {
+            if (null !== $this->logger) {
+                $this->logger->critical(
+                    'An exception occurred while trying to send queue:\n{msg}',
+                    [
+                        'msg' => $e->getTraceAsString(),
+                    ]
+                );
+            }
+        }
     }
 }
