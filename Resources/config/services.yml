@@ -12,3 +12,15 @@ services:
     AE\SalesforceRestSdk\Bayeux\Extension\SfdcExtension:
         tags:
             - {name: 'ae_connect.extension'}
+    AE\ConnectBundle\Serializer\CompositeSObjectSubscriber:
+        tags:
+            -
+                name: 'jms_serializer.subscribing_handler'
+                format: 'json'
+                type: 'AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject'
+    AE\SalesforceRestSdk\Serializer\SObjectHandler:
+        tags:
+            -
+                name: 'jms_serializer.subscribing_handler'
+                format: 'json'
+                type: 'AE\SalesforceRestSdk\Model\SObject'
