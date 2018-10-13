@@ -111,7 +111,6 @@ class AnnotationDriver
                 );
 
                 $metadata->setFieldMap(new ArrayCollection($fieldMap));
-                // Todo: handle transformers
 
                 /** @var ExternalId[] $extIds */
                 $extIds = $this->getAnnotatedProperties($class, $metadata->getConnectionName(), [ExternalId::class]);

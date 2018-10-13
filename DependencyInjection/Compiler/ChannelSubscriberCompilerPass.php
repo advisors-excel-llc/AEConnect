@@ -12,38 +12,9 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 
-class CompilerPass implements CompilerPassInterface
+class ChannelSubscriberCompilerPass implements CompilerPassInterface
 {
     public function process(ContainerBuilder $container)
-    {
-        // TODO: Get Transformer service and register any services with the ae_connect.transformer tag with it
-        $this->processBayeuxExtensions($container);
-        $this->processChannelSubscribers($container);
-    }
-
-    private function processBayeuxExtensions(ContainerBuilder $container)
-    {
-        $tags = $container->findTaggedServiceIds('ae_connect.extension');
-
-        foreach ($tags as $id => $attributes) {
-            if (array_key_exists('connections', $attributes) && !empty($attributes['connections'])) {
-                $connections = explode(",", $attributes['connections']);
-            } else {
-                $config      = $container->getExtensionConfig('ae_connect');
-                $connections = array_keys($config[0]['connections']);
-            }
-
-            foreach ($connections as $connection) {
-                $connection = trim($connection);
-                if ($container->hasDefinition("ae_connect.connection.$connection.bayeux_client")) {
-                    $service = $container->getDefinition("ae_connect.connection.$connection.bayeux_client");
-                    $service->addMethodCall('addExtension', [new Reference($id)]);
-                }
-            }
-        }
-    }
-
-    private function processChannelSubscribers(ContainerBuilder $container)
     {
         $tags = $container->findTaggedServiceIds('ae_connect.subscriber');
 

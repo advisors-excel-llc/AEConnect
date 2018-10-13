@@ -14,7 +14,7 @@ use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\MappingException;
-use Symfony\Bridge\Doctrine\ManagerRegistry;
+use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class AssociationTransformer implements TransformerPluginInterface
 {
@@ -24,11 +24,11 @@ class AssociationTransformer implements TransformerPluginInterface
     private $connectionManager;
 
     /**
-     * @var ManagerRegistry
+     * @var RegistryInterface
      */
     private $managerRegistry;
 
-    public function __construct(ConnectionManagerInterface $connectionManager, ManagerRegistry $managerRegistry)
+    public function __construct(ConnectionManagerInterface $connectionManager, RegistryInterface $managerRegistry)
     {
         $this->connectionManager = $connectionManager;
         $this->managerRegistry   = $managerRegistry;
@@ -36,7 +36,7 @@ class AssociationTransformer implements TransformerPluginInterface
 
     public function supports(TransformerPayload $payload): bool
     {
-        if (null === $payload->getPayload()) {
+        if (null === $payload->getValue()) {
             return false;
         }
 
@@ -82,9 +82,9 @@ class AssociationTransformer implements TransformerPluginInterface
         $manager            = $this->managerRegistry->getManagerForClass($className);
         $repo = $manager->getRepository($className);
 
-        $entity = $repo->findOneBy([$sfidProperty => $payload->getPayload()]);
+        $entity = $repo->findOneBy([$sfidProperty => $payload->getValue()]);
 
-        $payload->setPayload($entity);
+        $payload->setValue($entity);
     }
 
     public function transformOutbound(TransformerPayload $payload)
@@ -98,7 +98,7 @@ class AssociationTransformer implements TransformerPluginInterface
         /** @var EntityManager $manager */
         $manager            = $this->managerRegistry->getManagerForClass($className);
         $associatedMetadata = $manager->getClassMetadata($className);
-        $entity             = $payload->getPayload();
+        $entity             = $payload->getValue();
         $sfid               = $associatedMetadata->getFieldValue($entity, $sfidProperty);
 
         if (null === $sfid) {
@@ -106,7 +106,7 @@ class AssociationTransformer implements TransformerPluginInterface
             $sfid = new ReferencePlaceholder($assocRefId, 'id');
         }
 
-        $payload->setPayload($sfid);
+        $payload->setValue($sfid);
     }
 
 }

@@ -9,19 +9,21 @@ namespace AE\ConnectBundle\Tests\Entity;
 
 use AE\ConnectBundle\Annotations as AEConnect;
 use Doctrine\ORM\Mapping as ORM;
+use Ramsey\Uuid\Uuid;
 
 /**
  * Class Account
  * @AEConnect\SObjectType(value="Account")
  * @ORM\Entity()
  * @ORM\Table("account")
+ * @ORM\HasLifecycleCallbacks()
  */
 class Account
 {
     /**
      * @var int
      * @ORM\Id()
-     * @ORM\Column(type="int", options={"unsigned"=true}, unique=true, nullable=false)
+     * @ORM\Column(type="integer", options={"unsigned"=true}, unique=true, nullable=false)
      * @ORM\GeneratedValue(strategy="AUTO")
      */
     private $id;
@@ -30,7 +32,7 @@ class Account
      * @var string
      * @AEConnect\Field(value="hcid__c")
      * @AEConnect\ExternalId()
-     * @ORM\Column(type="guid", length=36, nullable=false)
+     * @ORM\Column(type="guid", length=36, nullable=false, unique=true)
      */
     private $extId;
 
@@ -126,5 +128,16 @@ class Account
         $this->sfid = $sfid;
 
         return $this;
+    }
+
+    /**
+     * @throws \Exception
+     * @ORM\PrePersist()
+     */
+    public function prePersist()
+    {
+        if (null === $this->extId) {
+            $this->extId = Uuid::uuid4()->toString();
+        }
     }
 }

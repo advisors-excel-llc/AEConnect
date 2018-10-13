@@ -8,7 +8,10 @@
 
 namespace AE\ConnectBundle;
 
-use AE\ConnectBundle\DependencyInjection\Compiler\CompilerPass;
+use AE\ConnectBundle\DependencyInjection\Compiler\BayeuxExtensionCompilerPass;
+use AE\ConnectBundle\DependencyInjection\Compiler\ChannelSubscriberCompilerPass;
+use AE\ConnectBundle\DependencyInjection\Compiler\ConnectionCompilerPass;
+use AE\ConnectBundle\DependencyInjection\Compiler\TransformerPluginCompilerPass;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
@@ -17,7 +20,10 @@ class AEConnectBundle extends Bundle
 {
     public function build(ContainerBuilder $container)
     {
-        $container->addCompilerPass(new CompilerPass());
+        $container->addCompilerPass(new ConnectionCompilerPass());
+        $container->addCompilerPass(new BayeuxExtensionCompilerPass());
+        $container->addCompilerPass(new ChannelSubscriberCompilerPass());
+        $container->addCompilerPass(new TransformerPluginCompilerPass());
     }
 
     public function boot()

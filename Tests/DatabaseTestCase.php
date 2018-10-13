@@ -27,8 +27,8 @@ abstract class DatabaseTestCase extends KernelTestCase
     protected function setUp()/* The :void return type declaration that should be here would cause a BC issue */
     {
         parent::setUp();
-        $this->loader = static::$kernel->getContainer()->get('fidry_alice_data_fixtures.loader.doctrine');
-        $this->doctrine = static::$kernel->getContainer()->get('doctrine');
+        $this->loader = static::$container->get('fidry_alice_data_fixtures.loader.doctrine');
+        $this->doctrine = static::$container->get('doctrine');
         $this->createSchemas();
     }
 

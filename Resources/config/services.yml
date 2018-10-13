@@ -1,4 +1,8 @@
 services:
+    _instanceof:
+        AE\ConnectBundle\Connection\ConnectionInterface:
+            tags:
+                - {name: 'ae_connect.connection'}
     AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport:
         autowire: true
     AE\SalesforceRestSdk\Bayeux\Transport\AbstractClientTransport: '@AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport'
@@ -24,3 +28,8 @@ services:
                 name: 'jms_serializer.subscribing_handler'
                 format: 'json'
                 type: 'AE\SalesforceRestSdk\Model\SObject'
+    AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler:
+        autowire: true
+        public: true
+    AE\ConnectBundle\Salesforce\SalesforceConnector:
+        autowire: true

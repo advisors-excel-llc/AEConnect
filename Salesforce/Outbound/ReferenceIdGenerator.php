@@ -27,10 +27,10 @@ class ReferenceIdGenerator
             return null;
         }
 
-        $refId = '';
+        $refId = $metadata->getClassName();
 
         foreach ($fields as $field) {
-            $refId .= $entity->$field;
+            $refId .= '|'.$entity->$field;
         }
 
         return md5($refId);

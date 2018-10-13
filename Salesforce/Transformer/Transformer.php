@@ -21,6 +21,15 @@ class Transformer implements TransformerInterface
         $this->transformers = new PrioritizedCollection();
     }
 
+    public function transform(TransformerPayload $payload)
+    {
+        if (TransformerPayload::INBOUND === $payload->getDirection()) {
+            $this->transformInbound($payload);
+        } else {
+            $this->transformOutbound($payload);
+        }
+    }
+
     public function transformInbound(TransformerPayload $payload)
     {
         /** @var TransformerPluginInterface $transformer */

@@ -13,7 +13,6 @@ use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPluginInterface;
 
 interface TransformerInterface
 {
-    public function transformInbound(TransformerPayload $payload);
-    public function transformOutbound(TransformerPayload $payload);
+    public function transform(TransformerPayload $payload);
     public function registerPlugin(TransformerPluginInterface $transformer, int $priority = 0);
 }

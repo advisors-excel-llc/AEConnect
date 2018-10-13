@@ -9,6 +9,7 @@
 namespace AE\ConnectBundle\DependencyInjection;
 
 use AE\ConnectBundle\Connection\Connection;
+use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Driver\AnnotationDriver;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
@@ -23,6 +24,7 @@ use AE\ConnectBundle\Streaming\Client;
 use AE\ConnectBundle\Streaming\Topic;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Alias;
+use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -61,8 +63,6 @@ class AEConnectExtension extends Extension
         $connections = $config['connections'];
 
         if (count($connections) > 0) {
-            $manager = $container->findDefinition(ConnectionManager::class);
-
             foreach ($connections as $name => $connection) {
                 $this->createAuthProviderService($connection['login'], $name, $container);
                 $this->createBayeuxClientService($name, $container);
@@ -73,14 +73,8 @@ class AEConnectExtension extends Extension
                 $this->createMetadataRegistryService($connection, $name, $container);
                 $this->createConnectionService($connection, $name, $container);
 
-                $manager->addMethodCall('registerConnection', [$name, new Reference("ae_connect.connection.$name")]);
-
                 if ($name !== "default" && $connection['is_default']) {
                     $container->setAlias("ae_connect.connection.default", new Alias("ae_connect.connection.$name"));
-                    $manager->addMethodCall(
-                        'registerConnection',
-                        ['default', new Reference("ae_connect.connection.default")]
-                    );
                 }
             }
         }
@@ -360,6 +354,8 @@ class AEConnectExtension extends Extension
                   )
                   ->setPublic(true)
                   ->setAutowired(true)
+                  ->setAutoconfigured(true)
+                  ->addTag('ae_connect.connection')
         ;
     }
 }

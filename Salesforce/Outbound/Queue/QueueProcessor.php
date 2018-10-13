@@ -8,9 +8,9 @@
 
 namespace AE\ConnectBundle\Salesforce\Outbound\Queue;
 
+use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\MessagePayload;
 use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
-use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use AE\ConnectBundle\Util\ItemizedCollection;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CollectionRequest;
 use AE\SalesforceRestSdk\Rest\Composite\Builder\CompositeRequestBuilder;
@@ -49,7 +49,9 @@ use Doctrine\Common\Collections\ArrayCollection;
 class QueueProcessor
 {
     /**
-     * @param ArrayCollection $messages
+     * @param array $inserts
+     * @param array $updates
+     * @param array $deletes
      *
      * @return ItemizedCollection
      */
@@ -106,11 +108,11 @@ class QueueProcessor
                     $records[] = $payload->getSobject();
                 }
 
-                if (SalesforceConnector::INTENT_INSERT === $intent) {
+                if (CompilerResult::INSERT === $intent) {
                     $builder->createSObjectCollection($refId, new CollectionRequest($records));
-                } elseif (SalesforceConnector::INTENT_UPDATE === $intent) {
+                } elseif (CompilerResult::UPDATE === $intent) {
                     $builder->updateSObjectCollection($refId, new CollectionRequest($records));
-                } elseif (SalesforceConnector::INTENT_DELETE === $intent) {
+                } elseif (CompilerResult::DELETE === $intent) {
                     $builder->deleteSObjectCollection($refId, new CollectionRequest($records));
                 }
             }
@@ -292,8 +294,8 @@ class QueueProcessor
         if ($group->count() + $queueGroup->count() <= 25) {
             $insertRefId = uniqid('insert_');
             $updateRefId = uniqid('update_');
-            $group->set($insertRefId, $queueGroup->getItems(), SalesforceConnector::INTENT_INSERT);
-            $group->set($updateRefId, $queueGroup->getDependentUpdates(), SalesforceConnector::INTENT_UPDATE);
+            $group->set($insertRefId, $queueGroup->getItems(), CompilerResult::INSERT);
+            $group->set($updateRefId, $queueGroup->getDependentUpdates(), CompilerResult::UPDATE);
 
             // Resolve the Reference Placeholders
             self::hydrateReferences($group, $queueGroup->getItems());
@@ -324,7 +326,7 @@ class QueueProcessor
         // Try and get the composite request to 25 sub-requests
         self::appendInsertSubRequests($group, $inserts);
         self::appendCollection($group, $updates);
-        self::appendCollection($group, $deletes, SalesforceConnector::INTENT_DELETE);
+        self::appendCollection($group, $deletes, CompilerResult::DELETE);
 
         // Add any remaining records to any sub-requests that have room for more
         /**
@@ -333,13 +335,13 @@ class QueueProcessor
          */
         foreach ($group as $item => $subset) {
             switch ($item) {
-                case SalesforceConnector::INTENT_INSERT:
+                case CompilerResult::INSERT:
                     self::distributeInserts($inserts, $subset);
                     break;
-                case SalesforceConnector::INTENT_UPDATE:
+                case CompilerResult::UPDATE:
                     self::distributeCollection($updates, $subset);
                     break;
-                case SalesforceConnector::INTENT_DELETE:
+                case CompilerResult::DELETE:
                     self::distributeCollection($deletes, $subset);
                     break;
             }
@@ -415,7 +417,7 @@ class QueueProcessor
         $sets = self::groupSubrequests(self::partitionSubrequests($inserts));
 
         while ($diff > 0 && ($set = current($sets))) {
-            $group->add($set, SalesforceConnector::INTENT_INSERT);
+            $group->add($set, CompilerResult::INSERT);
 
             foreach ($set as $item) {
                 $inserts->removeElement($item);
@@ -454,7 +456,7 @@ class QueueProcessor
         while ($diff > 0 && ($insert = $inserts->current())) {
             $partitions = self::groupSubrequests(self::partitionSubrequests($insert));
             while ($diff > 0 && ($partition = current($partitions))) {
-                $group->add($partition, SalesforceConnector::INTENT_INSERT);
+                $group->add($partition, CompilerResult::INSERT);
 
                 foreach ($partition as $item) {
                     $inserts->removeElement($item);
@@ -474,7 +476,7 @@ class QueueProcessor
     private static function appendCollection(
         ItemizedCollection $group,
         ItemizedCollection $collection,
-        string $grouping = SalesforceConnector::INTENT_UPDATE
+        string $grouping = CompilerResult::UPDATE
     ): void {
         $diff = 25 - count($group->getKeys());
 
@@ -517,7 +519,7 @@ class QueueProcessor
                      * @var string $refId
                      * @var ItemizedCollection $collection
                      */
-                    foreach ($group->get(SalesforceConnector::INTENT_INSERT) as $refId => $collection) {
+                    foreach ($group->get(CompilerResult::INSERT) as $refId => $collection) {
                         $items = $collection->toArray();
                         $index = array_search($eRefId, array_keys($items), true);
                         if (false !== $index) {

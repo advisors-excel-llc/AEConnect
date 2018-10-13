@@ -18,7 +18,7 @@ class TransformerPayload
     /**
      * @var mixed
      */
-    private $payload;
+    private $value;
 
     /**
      * @var string
@@ -68,19 +68,19 @@ class TransformerPayload
     /**
      * @return mixed
      */
-    public function getPayload()
+    public function getValue()
     {
-        return $this->payload;
+        return $this->value;
     }
 
     /**
-     * @param mixed $payload
+     * @param mixed $value
      *
      * @return TransformerPayload
      */
-    public function setPayload($payload)
+    public function setValue($value)
     {
-        $this->payload = $payload;
+        $this->value = $value;
 
         return $this;
     }
