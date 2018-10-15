@@ -8,15 +8,12 @@
 
 namespace AE\ConnectBundle\Tests\Salesforce\Outbound\Compiler;
 
-use AE\ConnectBundle\Manager\ConnectionManager;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
 use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
-use AE\ConnectBundle\Salesforce\Transformer\TransformerInterface;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Contact;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class SObjectCompilerTest extends DatabaseTestCase
 {
@@ -30,13 +27,6 @@ class SObjectCompilerTest extends DatabaseTestCase
         parent::setUp();
 
         $this->compiler = $this->get(SObjectCompiler::class);
-
-        /*$this->compiler = new SObjectCompiler(
-            $this->get(ConnectionManager::class),
-            $this->doctrine,
-            $this->get(TransformerInterface::class),
-            $this->get(ValidatorInterface::class)
-        );*/
     }
 
     protected function loadSchemas(): array
@@ -69,8 +59,15 @@ class SObjectCompilerTest extends DatabaseTestCase
         $metadata = $accountResult->getMetadata();
         $this->assertEquals('Account', $metadata->getSObjectType());
         $this->assertEquals(Account::class, $metadata->getClassName());
-        $this->assertEquals(['extId'], $metadata->getIdentifyingFields());
-        $this->assertEquals(['name' => 'Name'], $metadata->getFieldMap());
+        $this->assertEquals(['extId' => 'hcid__c'], $metadata->getIdentifyingFields());
+        $this->assertEquals(
+            [
+                'name'  => 'Name',
+                'extId' => 'hcid__c',
+                'sfid'  => 'Id',
+            ],
+            $metadata->getPropertyMap()->toArray()
+        );
 
         $sObject = $accountResult->getSObject();
         $this->assertNotNull($sObject);
@@ -84,10 +81,16 @@ class SObjectCompilerTest extends DatabaseTestCase
         $metadata = $contactResult->getMetadata();
         $this->assertEquals('Contact', $metadata->getSObjectType());
         $this->assertEquals(Contact::class, $metadata->getClassName());
-        $this->assertEquals(['extId'], $metadata->getIdentifyingFields());
+        $this->assertEquals(['extId' => 'hcid__c'], $metadata->getIdentifyingFields());
         $this->assertEquals(
-            ['firstName' => 'FirstName', 'lastName' => 'LastName', 'account' => 'AccountId'],
-            $metadata->getFieldMap()
+            [
+                'firstName' => 'FirstName',
+                'lastName'  => 'LastName',
+                'account'   => 'AccountId',
+                'extId'     => 'hcid__c',
+                'sfid'      => 'Id',
+            ],
+            $metadata->getPropertyMap()->toArray()
         );
 
         $sObject = $contactResult->getSObject();

@@ -33,3 +33,5 @@ services:
         public: true
     AE\ConnectBundle\Salesforce\SalesforceConnector:
         autowire: true
+    AE\ConnectBundle\Salesforce\Outbound\ReferenceIdGenerator:
+        autowire: true

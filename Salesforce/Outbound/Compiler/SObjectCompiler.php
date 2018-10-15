@@ -18,11 +18,15 @@ use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\UnitOfWork;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class SObjectCompiler
 {
+    use LoggerAwareTrait;
+
     /**
      * @var ConnectionManagerInterface
      */
@@ -43,18 +47,36 @@ class SObjectCompiler
      */
     private $validator;
 
+    /**
+     * @var ReferenceIdGenerator
+     */
+    private $referenceGenerator;
+
     public function __construct(
         ConnectionManagerInterface $connectionManager,
         RegistryInterface $managerRegistry,
         Transformer $transformer,
-        ValidatorInterface $validator
+        ValidatorInterface $validator,
+        ReferenceIdGenerator $referenceIdGenerator,
+        ?LoggerInterface $logger = null
     ) {
-        $this->connectionManager = $connectionManager;
-        $this->registry          = $managerRegistry;
-        $this->transformer       = $transformer;
-        $this->validator         = $validator;
+        $this->connectionManager  = $connectionManager;
+        $this->registry           = $managerRegistry;
+        $this->transformer        = $transformer;
+        $this->validator          = $validator;
+        $this->referenceGenerator = $referenceIdGenerator;
+
+        if (null !== $logger) {
+            $this->setLogger($logger);
+        }
     }
 
+    /**
+     * @param $entity
+     * @param string $connectionName
+     *
+     * @return CompilerResult
+     */
     public function compile($entity, string $connectionName = "default"): CompilerResult
     {
         $className = ClassUtils::getRealClass(get_class($entity));
@@ -89,28 +111,48 @@ class SObjectCompiler
             $sObject->$field = $classMetadata->getFieldValue($entity, $prop);
         }
 
-        $refId  = ReferenceIdGenerator::create($entity, $metadata);
         $intent = UnitOfWork::STATE_REMOVED === $uow->getEntityState($entity)
             ? CompilerResult::DELETE
             : (null === $sObject->Id ? CompilerResult::INSERT : CompilerResult::UPDATE);
 
         switch ($intent) {
             case CompilerResult::INSERT:
-                $this->compileForInsert($entity, $classMetadata, $metadata, $sObject, $refId);
+                $this->compileForInsert($entity, $metadata, $classMetadata, $sObject);
                 break;
             case CompilerResult::UPDATE:
-                $this->compileForUpdate($entity, $changeSet, $metadata, $classMetadata, $sObject, $refId);
+                $this->compileForUpdate($entity, $changeSet, $metadata, $classMetadata, $sObject);
                 break;
             case CompilerResult::DELETE:
                 $this->compileForDelete($entity, $metadata, $classMetadata, $sObject);
         }
+
+        $refId = $this->referenceGenerator->create($entity, $metadata);
 
         return new CompilerResult($intent, $sObject, $metadata, $refId);
     }
 
     private function validate($entity)
     {
-        // TODO: Validate Entity prior to mapping
+        $messages = $this->validator->validate($entity, null, ['ae_connect_outbound']);
+        if (count($messages) > 0) {
+            $err = '';
+            foreach ($messages as $message) {
+                $err .= $message.PHP_EOL;
+            }
+
+            if (null !== $this->logger) {
+                $this->logger->alert(
+                    "The entity does not meet the following validations:".PHP_EOL."{err}",
+                    [
+                        'err' => $err,
+                    ]
+                );
+            }
+
+            throw new \RuntimeException(
+                "The entity does not meet the following validations:".PHP_EOL.$err
+            );
+        }
     }
 
     /**
@@ -119,7 +161,6 @@ class SObjectCompiler
      * @param $entity
      * @param Metadata $metadata
      * @param ClassMetadata $classMetadata
-     * @param $refId
      *
      * @return mixed
      */
@@ -128,8 +169,7 @@ class SObjectCompiler
         $value,
         $entity,
         Metadata $metadata,
-        ClassMetadata $classMetadata,
-        $refId
+        ClassMetadata $classMetadata
     ) {
         $payload = TransformerPayload::outbound();
         $payload->setValue($value)
@@ -137,7 +177,6 @@ class SObjectCompiler
                 ->setEntity($entity)
                 ->setMetadata($metadata)
                 ->setClassMetadata($classMetadata)
-                ->setRefId($refId)
         ;
         $this->transformer->transform($payload);
 
@@ -148,17 +187,15 @@ class SObjectCompiler
      * @param $entity
      * @param $classMetadata
      * @param $metadata
-     * @param $refId
      * @param $sObject
      */
     private function compileForInsert(
         $entity,
-        ClassMetadata $classMetadata,
         Metadata $metadata,
-        CompositeSObject $sObject,
-        $refId
+        ClassMetadata $classMetadata,
+        CompositeSObject $sObject
     ): void {
-        $fields = $metadata->getFieldMap();
+        $fields = $metadata->getPropertyMap();
 
         foreach ($fields as $property => $field) {
             $value           = $classMetadata->getFieldValue($entity, $property);
@@ -167,8 +204,7 @@ class SObjectCompiler
                 $value,
                 $entity,
                 $metadata,
-                $classMetadata,
-                $refId
+                $classMetadata
             );
         }
     }
@@ -179,17 +215,15 @@ class SObjectCompiler
      * @param $metadata
      * @param $classMetadata
      * @param $sObject
-     * @param $refId
      */
     private function compileForUpdate(
         $entity,
         array $changeSet,
         Metadata $metadata,
         ClassMetadata $classMetadata,
-        CompositeSObject $sObject,
-        $refId
+        CompositeSObject $sObject
     ): void {
-        $fields = $metadata->getFieldMap();
+        $fields = $metadata->getPropertyMap();
         foreach ($fields as $property => $field) {
             if (array_key_exists($property, $changeSet)) {
                 $value           = $changeSet[$property][1];
@@ -198,8 +232,7 @@ class SObjectCompiler
                     $value,
                     $entity,
                     $metadata,
-                    $classMetadata,
-                    $refId
+                    $classMetadata
                 );
             } elseif (ucwords($field) === 'Id'
                 && null !== ($id = $classMetadata->getFieldValue($entity, $property))) {

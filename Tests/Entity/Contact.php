@@ -37,7 +37,7 @@ class Contact
     /**
      * @var string
      * @ORM\Column(length=80, nullable=true)
-     * @Field(name="LastName")
+     * @Field(name="FirstName")
      */
     private $firstName;
 

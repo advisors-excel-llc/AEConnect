@@ -9,30 +9,53 @@
 namespace AE\ConnectBundle\Salesforce\Outbound;
 
 use AE\ConnectBundle\Metadata\Metadata;
-use AE\SalesforceRestSdk\Model\SObject;
+use Doctrine\Common\Util\ClassUtils;
+use Ramsey\Uuid\Uuid;
+use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class ReferenceIdGenerator
 {
     /**
-     * @param SObject $entity
+     * @var RegistryInterface
+     */
+    private $registry;
+
+    public function __construct(RegistryInterface $registry)
+    {
+        $this->registry = $registry;
+    }
+
+    /**
+     * @param $entity
      * @param Metadata $metadata
      *
-     * @return string
+     * @return null|string
      */
-    public static function create(SObject $entity, Metadata $metadata): ?string
+    public function create($entity, Metadata $metadata): ?string
     {
+        $className = ClassUtils::getRealClass($metadata->getClassName());
+        $manager = $this->registry->getManagerForClass($className);
+
+        if (null === $manager) {
+            throw new \RuntimeException("Unable to find a class manager for $className");
+        }
+
         $fields = $metadata->getIdentifyingFields();
 
-        if (empty($properties)) {
+        if (empty($fields)) {
             return null;
         }
 
+        $classMetadata = $manager->getMetadataFactory()->getMetadataFor($className);
+
         $refId = $metadata->getClassName();
 
-        foreach ($fields as $field) {
-            $refId .= '|'.$entity->$field;
+        foreach (array_keys($fields) as $property) {
+            $reflectionProperty = $classMetadata->getReflectionClass()->getProperty($property);
+            $reflectionProperty->setAccessible(true);
+            $refId              .= '|'.$reflectionProperty->getValue($entity);
         }
 
-        return md5($refId);
+        return Uuid::uuid5(Uuid::NAMESPACE_X500, $refId);
     }
 }

@@ -110,7 +110,7 @@ class AnnotationDriver
                     $properties
                 );
 
-                $metadata->setFieldMap(new ArrayCollection($fieldMap));
+                $metadata->setPropertyMap(new ArrayCollection($fieldMap));
 
                 /** @var ExternalId[] $extIds */
                 $extIds = $this->getAnnotatedProperties($class, $metadata->getConnectionName(), [ExternalId::class]);

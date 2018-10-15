@@ -14,10 +14,13 @@ use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\MappingException;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class AssociationTransformer implements TransformerPluginInterface
 {
+    use LoggerAwareTrait;
     /**
      * @var ConnectionManagerInterface
      */
@@ -28,10 +31,24 @@ class AssociationTransformer implements TransformerPluginInterface
      */
     private $managerRegistry;
 
-    public function __construct(ConnectionManagerInterface $connectionManager, RegistryInterface $managerRegistry)
-    {
-        $this->connectionManager = $connectionManager;
-        $this->managerRegistry   = $managerRegistry;
+    /**
+     * @var ReferenceIdGenerator
+     */
+    private $referenceGenerator;
+
+    public function __construct(
+        ConnectionManagerInterface $connectionManager,
+        RegistryInterface $managerRegistry,
+        ReferenceIdGenerator $referenceIdGenerator,
+        ?LoggerInterface $logger = null
+    ) {
+        $this->connectionManager  = $connectionManager;
+        $this->managerRegistry    = $managerRegistry;
+        $this->referenceGenerator = $referenceIdGenerator;
+
+        if (null !== $logger) {
+            $this->setLogger($logger);
+        }
     }
 
     public function supports(TransformerPayload $payload): bool
@@ -47,6 +64,12 @@ class AssociationTransformer implements TransformerPluginInterface
         }
 
         $classMetadata = $payload->getClassMetadata();
+
+        // If the field is not an association field, skip the forthcoming mapping exception
+        if (!$classMetadata->hasAssociation($payload->getPropertyName())) {
+            return false;
+        }
+
         try {
             $association = $classMetadata->getAssociationMapping($payload->getPropertyName());
             $className   = $association['targetEntity'];
@@ -66,6 +89,16 @@ class AssociationTransformer implements TransformerPluginInterface
 
             return true;
         } catch (MappingException $e) {
+            if (null !== $this->logger) {
+                $this->logger->error(
+                    '{msg}'.PHP_EOL.'{trace}',
+                    [
+                        'msg'   => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]
+                );
+            }
+
             return false;
         }
     }
@@ -79,14 +112,21 @@ class AssociationTransformer implements TransformerPluginInterface
         $metadata      = $connection->getMetadataRegistry()->findMetadataByClass($className);
         $sfidProperty  = $metadata->getIdFieldProperty();
         /** @var EntityManager $manager */
-        $manager            = $this->managerRegistry->getManagerForClass($className);
-        $repo = $manager->getRepository($className);
+        $manager = $this->managerRegistry->getManagerForClass($className);
+        $repo    = $manager->getRepository($className);
 
         $entity = $repo->findOneBy([$sfidProperty => $payload->getValue()]);
 
         $payload->setValue($entity);
     }
 
+    /**
+     * @param TransformerPayload $payload
+     *
+     * @throws MappingException
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
+     * @throws \ReflectionException
+     */
     public function transformOutbound(TransformerPayload $payload)
     {
         $connection    = $this->connectionManager->getConnection($payload->getMetadata()->getConnectionName());
@@ -102,8 +142,8 @@ class AssociationTransformer implements TransformerPluginInterface
         $sfid               = $associatedMetadata->getFieldValue($entity, $sfidProperty);
 
         if (null === $sfid) {
-            $assocRefId = ReferenceIdGenerator::create($entity, $metadata);
-            $sfid = new ReferencePlaceholder($assocRefId, 'id');
+            $assocRefId = $this->referenceGenerator->create($entity, $metadata);
+            $sfid       = new ReferencePlaceholder($assocRefId, 'id');
         }
 
         $payload->setValue($sfid);

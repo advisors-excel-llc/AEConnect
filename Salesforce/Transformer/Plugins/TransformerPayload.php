@@ -41,11 +41,6 @@ class TransformerPayload
     private $classMetadata;
 
     /**
-     * @var string|null
-     */
-    private $refId;
-
-    /**
      * @var int
      */
     private $direction;
@@ -161,26 +156,6 @@ class TransformerPayload
     public function setClassMetadata(ClassMetadata $classMetadata): TransformerPayload
     {
         $this->classMetadata = $classMetadata;
-
-        return $this;
-    }
-
-    /**
-     * @return null|string
-     */
-    public function getRefId(): ?string
-    {
-        return $this->refId;
-    }
-
-    /**
-     * @param null|string $refId
-     *
-     * @return TransformerPayload
-     */
-    public function setRefId(?string $refId): TransformerPayload
-    {
-        $this->refId = $refId;
 
         return $this;
     }

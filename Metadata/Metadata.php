@@ -36,7 +36,7 @@ class Metadata
      * @var ArrayCollection<string, string>
      * @Serializer\Type("array")
      */
-    private $fieldMap;
+    private $propertyMap;
 
     /**
      * @var ArrayCollection<string>
@@ -63,7 +63,7 @@ class Metadata
      */
     public function __construct(string $connectionName)
     {
-        $this->fieldMap       = new ArrayCollection();
+        $this->propertyMap    = new ArrayCollection();
         $this->identifiers    = new ArrayCollection();
         $this->connectionName = $connectionName;
     }
@@ -119,21 +119,28 @@ class Metadata
     /**
      * @return ArrayCollection
      */
-    public function getFieldMap(): ArrayCollection
+    public function getPropertyMap(): ArrayCollection
     {
-        return $this->fieldMap;
+        return $this->propertyMap;
     }
 
     /**
-     * @param ArrayCollection $fieldMap
+     * @param ArrayCollection $propertyMap
      *
      * @return Metadata
      */
-    public function setFieldMap(ArrayCollection $fieldMap): Metadata
+    public function setPropertyMap(ArrayCollection $propertyMap): Metadata
     {
-        $this->fieldMap = $fieldMap;
+        $this->propertyMap = $propertyMap;
 
         return $this;
+    }
+
+    public function getFieldMap() : ArrayCollection
+    {
+        $map = $this->propertyMap->toArray();
+
+        return new ArrayCollection(array_flip($map));
     }
 
     /**
@@ -144,7 +151,7 @@ class Metadata
      */
     public function addField(string $propertyName, string $fieldName): Metadata
     {
-        $this->fieldMap->set($propertyName, $fieldName);
+        $this->propertyMap->set($propertyName, $fieldName);
 
         return $this;
     }
@@ -156,7 +163,7 @@ class Metadata
      */
     public function removeField(string $fieldName): Metadata
     {
-        $this->fieldMap->removeElement($fieldName);
+        $this->propertyMap->removeElement($fieldName);
 
         return $this;
     }
@@ -166,7 +173,7 @@ class Metadata
      */
     public function getIdFieldProperty(): ?string
     {
-        return $this->getFieldByProperty('Id');
+        return $this->getPropertyByField('Id');
     }
 
     /**
@@ -176,7 +183,7 @@ class Metadata
      */
     public function getFieldByProperty(string $propertyName): ?string
     {
-        return $this->fieldMap->get($propertyName);
+        return $this->propertyMap->get($propertyName);
     }
 
     /**
@@ -186,7 +193,7 @@ class Metadata
      */
     public function getPropertyByField(string $fieldName): ?string
     {
-        $prop = $this->fieldMap->indexOf($fieldName);
+        $prop = $this->propertyMap->indexOf($fieldName);
 
         return false === $prop ? null : $prop;
     }
@@ -198,7 +205,7 @@ class Metadata
      */
     public function removeProperty(string $propertyName): Metadata
     {
-        $this->fieldMap->remove($propertyName);
+        $this->propertyMap->remove($propertyName);
 
         return $this;
     }
@@ -281,7 +288,7 @@ class Metadata
      */
     public function addIdentifyingField(string $fieldName): Metadata
     {
-        $propertyName = $this->fieldMap->indexOf($fieldName);
+        $propertyName = $this->propertyMap->indexOf($fieldName);
 
         if (false !== $propertyName) {
             $this->addIdentifier($propertyName);
@@ -297,7 +304,7 @@ class Metadata
      */
     public function removeIdentifyingField(string $fieldName): Metadata
     {
-        $propertyName = $this->fieldMap->indexOf($fieldName);
+        $propertyName = $this->propertyMap->indexOf($fieldName);
 
         if (false !== $propertyName) {
             $this->removeIdentifier($propertyName);
@@ -313,7 +320,7 @@ class Metadata
      */
     public function isIdentifyingField(string $fieldName): bool
     {
-        $propertyName = $this->fieldMap->indexOf($fieldName);
+        $propertyName = $this->propertyMap->indexOf($fieldName);
 
         return false !== $propertyName && $this->isIdentifier($propertyName);
     }
@@ -367,7 +374,7 @@ class Metadata
      */
     public function describeFieldByProperty(string $propertyName): ?Field
     {
-        $fieldName = $this->fieldMap->get($propertyName);
+        $fieldName = $this->propertyMap->get($propertyName);
 
         if (null !== $fieldName) {
             return $this->describeField($fieldName);
