@@ -1,0 +1,32 @@
+AE\ConnectBundle\Tests\Entity\Account:
+    account{1..400}:
+        name: 'Test Account <current()>'
+        sfid: '001AF0000000<current()>045'
+AE\ConnectBundle\Tests\Entity\Contact:
+    contact{1..400}:
+        firstName: 'Test'
+        lastName: 'Contact @account<current()>->id'
+        account: '@account<current()>'
+        sfid: '0d1Ag0000000<current()>040'
+    delete_contact{401..500}:
+        firstName: 'Test'
+        lastName: 'Contact <current()>->id'
+        sfid: '0d1Ag0000000<current()>040'
+AE\ConnectBundle\Tests\Entity\Product:
+    product:
+        name: 'Test Product 1'
+        sfid: 'Ed1Ag0000000001140'
+        active: true
+#AE\ConnectBundle\Tests\Entity\Order:
+#    order{1..10}:
+#        account: '@contact<current()>->account'
+#        shipToContact: '@contact<current()>'
+#        sfid: 'Cd1Ag0000000<current()>140'
+#AE\ConnectBundle\Tests\Entity\OrderProduct:
+#    order_product_order{1..10}:
+#        order: '@order<current()>'
+#        product: '@product'
+#        unitPrice: 10
+#        totalPrice: 10
+#        quantity: 1
+#        sfid: 'Dd1Ag0000000<current()>140'

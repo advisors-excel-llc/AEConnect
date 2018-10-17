@@ -10,6 +10,7 @@ namespace AE\ConnectBundle\Salesforce\Outbound\Enqueue;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
+use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\MessagePayload;
 use AE\ConnectBundle\Salesforce\Outbound\Queue\QueueProcessor;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
@@ -22,12 +23,13 @@ use Enqueue\Consumption\Result;
 use Interop\Queue\PsrContext;
 use Interop\Queue\PsrMessage;
 use Interop\Queue\PsrProcessor;
+use JMS\Serializer\SerializerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\ManagerRegistry;
 
 class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
 {
-    public const CACHE_ID_MESSAGES  = '__sobject_messages';
+    public const CACHE_ID_MESSAGES = '__sobject_messages';
 
     /**
      * @var ConnectionManagerInterface
@@ -73,20 +75,22 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
     private $rejected;
 
     /**
-     * @var string
+     * @var SerializerInterface
      */
-    private static $topic;
+    private $serializer;
 
     public function __construct(
         ConnectionManagerInterface $connectionManager,
         CacheProvider $cache,
         ManagerRegistry $registry,
-        string $semaphoreLifespan = '30 seconds',
+        SerializerInterface $serializer,
+        string $semaphoreLifespan = '10 seconds',
         ?LoggerInterface $logger = null
     ) {
         $this->connectionManager = $connectionManager;
         $this->cache             = $cache;
         $this->registry          = $registry;
+        $this->serializer        = $serializer;
         $this->logger            = $logger;
         $this->semaphore         = new \DateTime();
 
@@ -104,12 +108,17 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
      */
     public function process(PsrMessage $message, PsrContext $context): string
     {
-        $connectionName = $message->getProperty('connection');
-        $intent         = $message->getProperty('intent');
-        $created        = $message->getProperty('created', new \DateTime());
-        $refId          = $message->getProperty('refId');
+        /** @var CompilerResult $payload */
+        $payload        = $this->serializer->deserialize(
+            $message->getBody(),
+            CompilerResult::class,
+            'json'
+        );
+        $intent         = $payload->getIntent();
+        $refId          = $payload->getReferenceId();
+        $connectionName = $payload->getMetadata()->getConnectionName();
 
-        if (null === $connectionName || $created > $this->semaphore) {
+        if (null === $connectionName || $message->getTimestamp() > $this->semaphore) {
             return Result::REJECT;
         }
 
@@ -131,21 +140,13 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
             return Result::REJECT;
         }
 
-        /** @var MessagePayload $payload */
-        $payload = $connection->getRestClient()->getSerializer()->deserialize(
-            $message->getBody(),
-            MessagePayload::class,
-            'json'
-        )
-        ;
-
         if (!$message->isRedelivered()) {
             $sObject = $payload->getSobject();
 
             if (!array_key_exists($connectionName, $this->messages)) {
                 $this->messages[$connectionName] = new ArrayCollection([$intent => new ItemizedCollection()]);
             } elseif (!array_key_exists($intent, $this->messages[$connectionName])) {
-                $this->messages[$connectionName]->set($intent, new ArrayCollection());
+                $this->messages[$connectionName]->set($intent, new ItemizedCollection());
             }
 
             /** @var ItemizedCollection $payloadCollection */

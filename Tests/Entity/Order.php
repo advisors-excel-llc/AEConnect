@@ -96,7 +96,7 @@ class Order
      *
      * @return Order
      */
-    public function setAccount(Account $account): Order
+    public function setAccount(?Account $account): Order
     {
         $this->account = $account;
 
@@ -116,7 +116,7 @@ class Order
      *
      * @return Order
      */
-    public function setShipToContact(Contact $shipToContact): Order
+    public function setShipToContact(?Contact $shipToContact): Order
     {
         $this->shipToContact = $shipToContact;
 

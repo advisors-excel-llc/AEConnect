@@ -10,7 +10,6 @@ namespace AE\ConnectBundle\Salesforce;
 
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
-use AE\ConnectBundle\Salesforce\Outbound\MessagePayload;
 use AE\SalesforceRestSdk\Model\SObject;
 use Enqueue\Client\Message;
 use Enqueue\Client\ProducerInterface;
@@ -62,8 +61,6 @@ class SalesforceConnector
         $result   = $this->comiler->compile($entity, $connectionName);
         $intent   = $result->getIntent();
         $sObject  = $result->getSObject();
-        $metadata = $result->getMetadata();
-        $refId    = $result->getReferenceId();
 
         if (CompilerResult::DELETE !== $intent) {
             // If there are no fields other than Id and Type set, don't sync
@@ -73,20 +70,10 @@ class SalesforceConnector
             }
         }
 
-        $messagePayload = new MessagePayload();
-        $messagePayload->setMetadata($metadata)
-                       ->setSobject($sObject)
-        ;
-
         $message = new Message(
-            $this->serializer->serialize($messagePayload, 'json'),
-            [
-                'connection' => $connectionName,
-                'intent'     => $intent,
-                'created'    => new \DateTime(),
-                'refId'      => $refId,
-            ]
+            $this->serializer->serialize($result, 'json')
         );
+
         $this->producer->sendEvent($this->topic, $message);
 
         return true;

@@ -43,7 +43,7 @@ class Task
 
     /**
      * @var Contact|null
-     * @ORM\ManyToOne(targetEntity="AE\ConnecrBundle\Tests\Entity\Contact")
+     * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\Contact")
      * @Field("WhoId")
      */
     private $contact;

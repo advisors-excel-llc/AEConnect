@@ -26,12 +26,17 @@ class QueueGroup implements \Countable
     /**
      * @var ArrayCollection
      */
-    private $dependentGroups;
+    private $childGroups;
+
+    /**
+     * @var QueueGroup
+     */
+    private $parentGroup;
 
     public function __construct(array $items = [], array $dependentUpdates = [])
     {
         $this->items            = new ItemizedCollection($items);
-        $this->dependentGroups  = new ArrayCollection();
+        $this->childGroups      = new ArrayCollection();
         $this->dependentUpdates = new ItemizedCollection($dependentUpdates);
     }
 
@@ -78,41 +83,79 @@ class QueueGroup implements \Countable
     /**
      * @return ArrayCollection
      */
-    public function getDependentGroups(): ArrayCollection
+    public function getChildGroups(): ArrayCollection
     {
-        return $this->dependentGroups;
+        return $this->childGroups;
     }
 
     /**
-     * @param ArrayCollection $dependentGroups
+     * @param ArrayCollection $childGroups
      *
      * @return QueueGroup
      */
-    public function setDependentGroups(ArrayCollection $dependentGroups): QueueGroup
+    public function setChildGroups(ArrayCollection $childGroups): QueueGroup
     {
-        $this->dependentGroups = $dependentGroups;
+        $this->childGroups = $childGroups;
 
         return $this;
     }
 
-    public function addDependentGroup(QueueGroup $group): QueueGroup
+    public function containsChildGroup(QueueGroup $group): bool
     {
-        if (!$this->dependentGroups->contains($group)) {
-            $this->dependentGroups->add($group);
+        return $this->childGroups->contains($group);
+    }
+
+    public function addChildGroup(QueueGroup $group): QueueGroup
+    {
+        if (!$this->childGroups->contains($group)) {
+            if (null !== $group->getParentGroup()
+                && $this !== $group->getParentGroup()
+                && $group->getParentGroup()->containsChildGroup($group)
+            ) {
+                $group->getParentGroup()->removeChildGroup($group);
+            }
+            $this->childGroups->add($group);
+            $group->setParentGroup($this);
         }
 
         return $this;
     }
 
-    public function removeDependentGroup(QueueGroup $group): QueueGroup
+    public function removeChildGroup(QueueGroup $group): QueueGroup
     {
-        $this->dependentGroups->removeElement($group);
+        $this->childGroups->removeElement($group);
+        $group->setParentGroup(null);
+
+        return $this;
+    }
+
+    /**
+     * @return QueueGroup
+     */
+    public function getParentGroup(): ?QueueGroup
+    {
+        return $this->parentGroup;
+    }
+
+    /**
+     * @param QueueGroup $parentGroup
+     *
+     * @return QueueGroup
+     */
+    public function setParentGroup(?QueueGroup $parentGroup): QueueGroup
+    {
+        $this->parentGroup = $parentGroup;
+
+        if (null !== $parentGroup && !$parentGroup->containsChildGroup($this)) {
+            $parentGroup->addChildGroup($this);
+        }
 
         return $this;
     }
 
     /**
      * Returns the total number of subrequests for the group and its dependencies
+     *
      * @return int
      */
     public function count()
@@ -123,8 +166,20 @@ class QueueGroup implements \Countable
         $count += $this->dependentUpdates->count();
 
         /** @var QueueGroup $group */
-        foreach ($this->dependentGroups as $group) {
+        foreach ($this->childGroups as $group) {
             $count += $group->count();
+        }
+
+        return $count;
+    }
+
+    public function groupCount()
+    {
+        $count = $this->items->isEmpty() ? 0 : 1;
+
+        /** @var QueueGroup $group */
+        foreach ($this->childGroups as $group) {
+            $count += $group->groupCount();
         }
 
         return $count;

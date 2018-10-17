@@ -44,6 +44,9 @@ class ItemizedCollection implements Collection, SortableInterface
         if (null === $this->currentItem) {
             reset($this->elements);
             $this->currentItem = key($this->elements);
+            if (null === $this->currentItem) {
+                return null;
+            }
             reset($this->elements[$this->currentItem]);
         }
 

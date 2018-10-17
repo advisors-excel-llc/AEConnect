@@ -9,7 +9,6 @@
 namespace AE\ConnectBundle\Salesforce\Outbound\Queue;
 
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
-use AE\ConnectBundle\Salesforce\Outbound\MessagePayload;
 use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
 use AE\ConnectBundle\Util\ItemizedCollection;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CollectionRequest;
@@ -55,14 +54,17 @@ class QueueProcessor
      *
      * @return ItemizedCollection
      */
-    public static function buildQueue(array $inserts, array $updates, array $deletes): ItemizedCollection
-    {
-        $inserts = new ItemizedCollection($inserts);
-        $updates = new ItemizedCollection($updates);
-        $deletes = new ItemizedCollection($deletes);
+    public static function buildQueue(
+        ItemizedCollection $inserts,
+        ItemizedCollection $updates,
+        ItemizedCollection $deletes
+    ): ItemizedCollection {
+        $inserts = clone ($inserts);
+        $updates = clone ($updates);
+        $deletes = clone ($deletes);
 
         $partitions = $inserts->partition(
-            function ($key, MessagePayload $element) {
+            function ($key, CompilerResult $element) {
                 $object = $element->getSobject();
                 foreach ($object->getFields() as $value) {
                     // If the object has a reference to another object, it's dependent
@@ -103,7 +105,7 @@ class QueueProcessor
         $queueGroup->forAll(
             function ($refId, ItemizedCollection $collection, $intent) use ($builder) {
                 $records = [];
-                /** @var MessagePayload $payload */
+                /** @var CompilerResult $payload */
                 foreach ($collection as $payload) {
                     $records[] = $payload->getSobject();
                 }
@@ -134,7 +136,7 @@ class QueueProcessor
         $subrequests = [];
         $offset      = 0;
 
-        while (!($subrequest = $collection->splice($offset, $length))->isEmpty()) {
+        while (!($subrequest = $collection->slice($offset, $length))->isEmpty()) {
             $subrequests[] = $subrequest;
             $offset        += $length;
         }
@@ -207,69 +209,89 @@ class QueueProcessor
 
         /** @var ItemizedCollection[] $groups */
         $groups = self::groupSubrequests(self::partitionSubrequests($collection));
-        foreach ($groups as $set) {
-            $set->forAll(
-                function ($key, ItemizedCollection $group, $type) use ($queueGroups, $inserts, $updates) {
-                    $refIds     = $group->getKeys($type);
-                    $queueGroup = new QueueGroup();
 
-                    $insert = $inserts->filter(
-                        function ($value) use ($refIds) {
-                            /** @var MessagePayload $value */
+        foreach ($groups as $group) {
+            $queueGroup = new QueueGroup();
+            $queueGroup->setItems($group);
+            $queueGroups->add($queueGroup);
 
-                            foreach ($value->getSobject()->getFields() as $field) {
-                                if ($field instanceof ReferencePlaceholder) {
-                                    if (in_array($field->getEntityRefId(), $refIds)) {
-                                        return true;
-                                    }
-                                }
-                            }
+            self::buildQueueGroup($queueGroup, $group, $inserts, $updates);
 
-                            return false;
-                        }
-                    );
-
-                    // Remove matched dependent inserts from the root collection to speed up future searches
-                    foreach ($insert as $remove) {
-                        $inserts->removeElement($remove);
-                    }
-
-                    $dependentUpdates = $updates->filter(
-                        function ($value) use ($refIds) {
-                            /** @var MessagePayload $value */
-
-                            foreach ($value->getSobject()->getFields() as $field) {
-                                if ($field instanceof ReferencePlaceholder) {
-                                    if (in_array($field->getEntityRefId(), $refIds)) {
-                                        return true;
-                                    }
-                                }
-                            }
-
-                            return false;
-                        }
-                    );
-
-                    /** @var MessagePayload $payload */
-                    foreach ($dependentUpdates as $payload) {
-                        // remove the payload from the update group to allow for faster searching
-                        $updates->removeElement($payload);
-                    }
-
-                    $queueGroup->setItems($insert);
-                    $queueGroup->setDependentUpdates($dependentUpdates);
-
-                    // Process and normalize sub-requests to ensure limits are met
-                    $queueGroup->setDependentGroups(
-                        self::buildQueueGroups($insert, $inserts, $updates)
-                    );
-
-                    $queueGroups->add($queueGroup);
-                }
-            );
+            foreach ($group as $item) {
+                $collection->removeElement($item);
+            }
         }
 
         return $queueGroups;
+    }
+
+    private static function buildQueueGroup(
+        QueueGroup $group,
+        ItemizedCollection $collection,
+        ItemizedCollection $inserts,
+        ItemizedCollection $updates
+    ) {
+        $types = $collection->getKeys();
+        foreach ($types as $type) {
+            $subGroup = new QueueGroup();
+
+            $refIds = $collection->getKeys($type);
+
+            $subInserts = $inserts->filter(
+                function (CompilerResult $result) use ($refIds) {
+                    $object = $result->getSObject();
+                    $objRefIds = [];
+
+                    foreach ($object->getFields() as $value) {
+                        if ($value instanceof ReferencePlaceholder) {
+                            $objRefIds[] = $value->getEntityRefId();
+                        }
+                    }
+
+                    return !empty($objRefIds) && count(array_intersect($objRefIds, $refIds)) === count($objRefIds);
+                }
+            );
+
+            $subUpdates = $updates->filter(
+                function (CompilerResult $result) use ($refIds) {
+                    $object = $result->getSObject();
+                    $objRefIds = [];
+
+                    foreach ($object->getFields() as $value) {
+                        if ($value instanceof ReferencePlaceholder) {
+                            $objRefIds[] = $value->getEntityRefId();
+                        }
+                    }
+
+                    return !empty($objRefIds) && count(array_intersect($objRefIds, $refIds)) === count($objRefIds);
+                }
+            );
+
+
+            if (!$subInserts->isEmpty()) {
+                $subGroup->setItems($subInserts);
+            }
+
+            if (!$subUpdates->isEmpty()) {
+                $subGroup->setDependentUpdates($subUpdates);
+            }
+
+            if ($subGroup->count() > 0) {
+                if (!$subInserts->isEmpty()) {
+                    self::buildQueueGroup($subGroup, $subInserts, $inserts, $updates);
+                }
+
+                $group->addChildGroup($subGroup);
+
+                foreach ($subInserts as $item) {
+                    $inserts->removeElement($item);
+                }
+
+                foreach ($subUpdates as $item) {
+                    $updates->removeElement($item);
+                }
+            }
+        }
     }
 
     /**
@@ -277,8 +299,9 @@ class QueueProcessor
      *
      * @return ItemizedCollection
      */
-    private static function flattenQueueGroups(ArrayCollection $queueGroups): ItemizedCollection
-    {
+    private static function flattenQueueGroups(
+        ArrayCollection $queueGroups
+    ): ItemizedCollection {
         $group = new ItemizedCollection();
 
         /** @var QueueGroup $queueGroup */
@@ -289,19 +312,31 @@ class QueueProcessor
         return $group;
     }
 
-    public static function flattenQueueGroup(ItemizedCollection $group, QueueGroup $queueGroup)
-    {
-        if ($group->count() + $queueGroup->count() <= 25) {
+    public static function flattenQueueGroup(
+        ItemizedCollection $group,
+        QueueGroup $queueGroup
+    ) {
+        $count = $group->count();
+        $queueCount = $queueGroup->groupCount();
+        $totalCount = $count + $queueCount;
+
+        if ($totalCount <= 25) {
             $insertRefId = uniqid('insert_');
             $updateRefId = uniqid('update_');
-            $group->set($insertRefId, $queueGroup->getItems(), CompilerResult::INSERT);
-            $group->set($updateRefId, $queueGroup->getDependentUpdates(), CompilerResult::UPDATE);
 
-            // Resolve the Reference Placeholders
-            self::hydrateReferences($group, $queueGroup->getItems());
-            self::hydrateReferences($group, $queueGroup->getDependentUpdates());
+            if (!$queueGroup->getItems()->isEmpty()) {
+                $group->set($insertRefId, $queueGroup->getItems(), CompilerResult::INSERT);
+                // Resolve the Reference Placeholders
+                self::hydrateReferences($group, $queueGroup->getItems());
+            }
 
-            foreach ($queueGroup->getDependentGroups() as $dependentGroup) {
+            if (!$queueGroup->getDependentUpdates()->isEmpty()) {
+                $group->set($updateRefId, $queueGroup->getDependentUpdates(), CompilerResult::UPDATE);
+                // Resolve the Reference Placeholders
+                self::hydrateReferences($group, $queueGroup->getDependentUpdates());
+            }
+
+            foreach ($queueGroup->getChildGroups() as $dependentGroup) {
                 self::flattenQueueGroup($group, $dependentGroup);
             }
 
@@ -339,10 +374,10 @@ class QueueProcessor
                     self::distributeInserts($inserts, $subset);
                     break;
                 case CompilerResult::UPDATE:
-                    self::distributeCollection($updates, $subset);
+                    self::distributeCollection($updates, $subset, CompilerResult::UPDATE);
                     break;
                 case CompilerResult::DELETE:
-                    self::distributeCollection($deletes, $subset);
+                    self::distributeCollection($deletes, $subset, CompilerResult::DELETE);
                     break;
             }
         }
@@ -359,7 +394,7 @@ class QueueProcessor
         $diff  = 200 - count($subset);
         $types = $subset->getKeys();
         while ($diff > 0 && ($type = current($types))) {
-            $typeSet = new ItemizedCollection($subset->slice(0, $diff, $type));
+            $typeSet = new ItemizedCollection($inserts->splice(0, $diff, $type));
 
             if ($typeSet->isEmpty()) {
                 continue;
@@ -380,8 +415,10 @@ class QueueProcessor
      * @param ItemizedCollection $inserts
      * @param ItemizedCollection $subset
      */
-    private static function appendInsertsToExistingSubRequest(ItemizedCollection $inserts, ItemizedCollection $subset)
-    {
+    private static function appendInsertsToExistingSubRequest(
+        ItemizedCollection $inserts,
+        ItemizedCollection $subset
+    ) {
         $diff     = 200 - count($subset);
         $typeDiff = 5 - count($subset->getKeys());
         $types    = $inserts->getKeys();
@@ -408,8 +445,10 @@ class QueueProcessor
      * @param ItemizedCollection $inserts
      * @param ItemizedCollection $group
      */
-    private static function distributeInserts(ItemizedCollection $inserts, ItemizedCollection $group)
-    {
+    private static function distributeInserts(
+        ItemizedCollection $inserts,
+        ItemizedCollection $group
+    ) {
         self::spreadInsertsOverLikeTypes($inserts, $group);
         self::appendInsertsToExistingSubRequest($inserts, $group);
 
@@ -417,7 +456,8 @@ class QueueProcessor
         $sets = self::groupSubrequests(self::partitionSubrequests($inserts));
 
         while ($diff > 0 && ($set = current($sets))) {
-            $group->add($set, CompilerResult::INSERT);
+            $insertRefId = uniqid('insert_');
+            $group->set($insertRefId, $set, CompilerResult::INSERT);
 
             foreach ($set as $item) {
                 $inserts->removeElement($item);
@@ -431,15 +471,19 @@ class QueueProcessor
     /**
      * @param ItemizedCollection $collection
      * @param ItemizedCollection $group
+     * @param string $grouping
      */
-    private static function distributeCollection(ItemizedCollection $collection, ItemizedCollection $group)
-    {
+    private static function distributeCollection(
+        ItemizedCollection $collection,
+        ItemizedCollection $group,
+        string $grouping = CompilerResult::UPDATE
+    ) {
         foreach ($group as $type => $set) {
             $diff  = 200 - count($set);
             $items = $collection->get($type);
             while ($diff > 0 && ($item = current($items))) {
-                $group->add($item, $type);
-                $collection->removeElement($item);
+                $key = uniqid(strtolower($grouping).'_');
+                $group->set($key, $item, $type);
                 $diff -= 1;
                 next($items);
             }
@@ -450,21 +494,18 @@ class QueueProcessor
      * @param ItemizedCollection $group
      * @param ItemizedCollection $inserts
      */
-    private static function appendInsertSubRequests(ItemizedCollection $group, ItemizedCollection $inserts): void
-    {
-        $diff = 25 - count($group->getKeys());
-        while ($diff > 0 && ($insert = $inserts->current())) {
-            $partitions = self::groupSubrequests(self::partitionSubrequests($insert));
-            while ($diff > 0 && ($partition = current($partitions))) {
-                $group->add($partition, CompilerResult::INSERT);
+    private static function appendInsertSubRequests(
+        ItemizedCollection $group,
+        ItemizedCollection $inserts
+    ): void {
+        $diff = 25 - $group->count();
+        $partitions = self::groupSubrequests(self::partitionSubrequests($inserts));
+        while ($diff > 0 && ($partition = current($partitions))) {
+            $insertRefId = uniqid('insert_');
+            $group->set($insertRefId, $partition, CompilerResult::INSERT);
 
-                foreach ($partition as $item) {
-                    $inserts->removeElement($item);
-                }
-
-                $diff -= 1;
-            }
-            $inserts->next();
+            $diff -= 1;
+            next($partitions);
         }
     }
 
@@ -478,41 +519,35 @@ class QueueProcessor
         ItemizedCollection $collection,
         string $grouping = CompilerResult::UPDATE
     ): void {
-        $diff = 25 - count($group->getKeys());
+        $diff = 25 - $group->count();
+        $types = $collection->getKeys();
 
-        while ($diff > 0 && ($set = $collection->current())) {
-            $types = $set->getKeys();
+        while ($diff > 0 && ($type = current($types))) {
+            /** @var ItemizedCollection[] $partitions */
+            $partitions = self::partitionSubrequests(new ItemizedCollection([$type => $collection->get($type)]));
+            while ($diff > 0 && ($partition = current($partitions))) {
+                $key = uniqid(strtolower($grouping).'_');
+                $group->set($key, $partition, $grouping);
 
-            while ($diff > 0 && ($type = current($types))) {
-                /** @var ItemizedCollection $partitions */
-                $partitions = self::partitionSubrequests($collection->get($type));
-                while ($diff > 0 && ($partition = $partitions->current())) {
-                    $group->add($partition, $grouping);
-
-                    foreach ($partition as $item) {
-                        $collection->removeElement($item);
-                    }
-
-                    $diff -= 1;
-                    $partitions->next();
-                }
-                next($types);
+                $diff -= 1;
+                next($partitions);
             }
-
-            next($collection);
+            next($types);
         }
     }
 
     /**
      * @param ItemizedCollection $group
-     * @param ItemizedCollection|MessagePayload[] $payloads
+     * @param ItemizedCollection|CompilerResult[] $payloads
      */
-    private static function hydrateReferences(ItemizedCollection $group, ItemizedCollection $payloads): void
-    {
-        /** @var MessagePayload $payload */
+    private static function hydrateReferences(
+        ItemizedCollection $group,
+        ItemizedCollection $payloads
+    ): void {
+        /** @var CompilerResult $payload */
         foreach ($payloads as $payload) {
             $object = $payload->getSobject();
-            foreach ($object->getFields() as $value) {
+            foreach ($object->getFields() as $field => $value) {
                 if ($value instanceof ReferencePlaceholder) {
                     $eRefId = $value->getEntityRefId();
                     /**
@@ -527,6 +562,7 @@ class QueueProcessor
                                 new Reference($refId)
                             );
                             $value->setField('records['.$index.'].id');
+                            $object->$field = (string)$value;
                         }
                     }
                 }

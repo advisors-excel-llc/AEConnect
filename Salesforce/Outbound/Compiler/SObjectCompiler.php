@@ -107,6 +107,9 @@ class SObjectCompiler
 
         $sObject = new CompositeSObject($metadata->getSObjectType());
 
+        $idProp = $metadata->getIdFieldProperty();
+        $sObject->Id = $classMetadata->getFieldValue($entity, $idProp);
+
         foreach ($metadata->getIdentifyingFields() as $prop => $field) {
             $sObject->$field = $classMetadata->getFieldValue($entity, $prop);
         }

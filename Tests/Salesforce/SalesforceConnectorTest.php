@@ -31,14 +31,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
     protected function setUp()
     {
         parent::setUp();
-        $this->connector = new SalesforceConnector(
-            'test_run',
-            $this->doctrine,
-            $this->get('ae_connect.connection_manager'),
-            new Transformer(),
-            $this->get('validation'),
-            $this->get(ProducerInterface::class)
-        );
+        $this->connector = $this->get(SalesforceConnector::class);
     }
 
     public function testOutgoing()

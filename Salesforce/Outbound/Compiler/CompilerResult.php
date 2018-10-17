@@ -10,7 +10,14 @@ namespace AE\ConnectBundle\Salesforce\Outbound\Compiler;
 
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
+use JMS\Serializer\Annotation as Serializer;
 
+/**
+ * Class CompilerResult
+ *
+ * @package AE\ConnectBundle\Salesforce\Outbound\Compiler
+ * @Serializer\ExclusionPolicy("NONE")
+ */
 class CompilerResult
 {
     public const INSERT = "INSERT";
@@ -19,21 +26,25 @@ class CompilerResult
 
     /**
      * @var string
+     * @Serializer\Type("string")
      */
     private $intent;
 
     /**
      * @var CompositeSObject
+     * @Serializer\Type("AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject")
      */
     private $sObject;
 
     /**
      * @var Metadata
+     * @Serializer\Type("AE\ConnectBundle\Metadata\Metadata")
      */
     private $metadata;
 
     /**
      * @var string
+     * @Serializer\Type("string")
      */
     private $referenceId;
 

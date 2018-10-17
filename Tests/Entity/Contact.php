@@ -133,7 +133,7 @@ class Contact
     /**
      * @return Account
      */
-    public function getAccount(): Account
+    public function getAccount(): ?Account
     {
         return $this->account;
     }
