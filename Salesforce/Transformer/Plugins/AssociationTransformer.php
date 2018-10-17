@@ -51,6 +51,11 @@ class AssociationTransformer implements TransformerPluginInterface
         }
     }
 
+    /**
+     * @param TransformerPayload $payload
+     *
+     * @return bool
+     */
     public function supports(TransformerPayload $payload): bool
     {
         if (null === $payload->getValue()) {
@@ -103,6 +108,11 @@ class AssociationTransformer implements TransformerPluginInterface
         }
     }
 
+    /**
+     * @param TransformerPayload $payload
+     *
+     * @throws MappingException
+     */
     public function transformInbound(TransformerPayload $payload)
     {
         $connection    = $this->connectionManager->getConnection($payload->getMetadata()->getConnectionName());
@@ -124,8 +134,6 @@ class AssociationTransformer implements TransformerPluginInterface
      * @param TransformerPayload $payload
      *
      * @throws MappingException
-     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
-     * @throws \ReflectionException
      */
     public function transformOutbound(TransformerPayload $payload)
     {
@@ -143,7 +151,7 @@ class AssociationTransformer implements TransformerPluginInterface
 
         if (null === $sfid) {
             $assocRefId = $this->referenceGenerator->create($entity, $metadata);
-            $sfid       = new ReferencePlaceholder($assocRefId, 'id');
+            $sfid       = new ReferencePlaceholder($assocRefId);
         }
 
         $payload->setValue($sfid);

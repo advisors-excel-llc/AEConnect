@@ -9,6 +9,7 @@
 namespace AE\ConnectBundle\Tests\Salesforce\Outbound\Queue;
 
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
+use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
 use AE\ConnectBundle\Salesforce\Outbound\Queue\RequestBuilder;
 use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
@@ -76,7 +77,12 @@ class RequestBuilderTest extends DatabaseTestCase
         $this->createTasks($queue, $newAccounts);
         $this->createTasks($queue, $updatedAccounts);
 
-        $request = RequestBuilder::build($queue);
+        $list    = RequestBuilder::build($queue);
+        $request = RequestBuilder::buildRequest(
+            $list[CompilerResult::INSERT],
+            $list[CompilerResult::UPDATE],
+            $list[CompilerResult::DELETE]
+        );
 
         $requests = $request->getCompositeRequest();
         $this->assertCount(8, $requests);

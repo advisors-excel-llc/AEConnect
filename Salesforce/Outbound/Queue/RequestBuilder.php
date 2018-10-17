@@ -22,24 +22,12 @@ class RequestBuilder
     /**
      * @param $items
      *
-     * @return CompositeRequest
+     * @return array
      */
-    public static function build($items): CompositeRequest
+    public static function build($items): array
     {
-        $builder = new CompositeRequestBuilder();
-        $tree    = DependencyTreeBuilder::build($items);
+        $tree = DependencyTreeBuilder::build($items);
 
-        return self::buildRequest($tree, $builder);
-    }
-
-    /**
-     * @param ArrayCollection $tree
-     * @param CompositeRequestBuilder $builder
-     *
-     * @return CompositeRequest
-     */
-    private static function buildRequest(ArrayCollection $tree, CompositeRequestBuilder $builder): CompositeRequest
-    {
         $collection = new ArrayCollection(
             [
                 CompilerResult::INSERT => new ItemizedCollection(),
@@ -57,9 +45,27 @@ class RequestBuilder
         $deletes = self::partitionCollection($collection->get(CompilerResult::DELETE));
 
         self::hydrateReferencePlaceholders($inserts, $inserts);
-        foreach ($updates as $type => $items) {
+        foreach ($updates as $items) {
             self::hydrateReferencePlaceholders($items, $inserts);
         }
+
+        return [
+            CompilerResult::INSERT => $inserts,
+            CompilerResult::UPDATE => $updates,
+            CompilerResult::DELETE => $deletes,
+        ];
+    }
+
+    /**
+     * @param array $inserts
+     * @param array $updates
+     * @param array $deletes
+     *
+     * @return CompositeRequest
+     */
+    public static function buildRequest(array $inserts = [], array $updates = [], array $deletes = []): CompositeRequest
+    {
+        $builder = new CompositeRequestBuilder();
 
         foreach ($inserts as $ref => $items) {
             $subrequest = new CollectionRequest();
@@ -74,28 +80,24 @@ class RequestBuilder
             );
         }
 
-        foreach ($updates as $types) {
-            foreach ($types as $ref => $items) {
-                $subrequest = new CollectionRequest();
-                /** @var CompilerResult $item */
-                foreach ($items as $item) {
-                    $subrequest->addRecord($item->getSObject());
-                }
-
-                $builder->updateSObjectCollection($ref, $subrequest);
+        foreach ($updates as $ref => $items) {
+            $subrequest = new CollectionRequest();
+            /** @var CompilerResult $item */
+            foreach ($items as $item) {
+                $subrequest->addRecord($item->getSObject());
             }
+
+            $builder->updateSObjectCollection($ref, $subrequest);
         }
 
-        foreach ($deletes as $types) {
-            foreach ($types as $ref => $items) {
-                $subrequest = new CollectionRequest();
-                /** @var CompilerResult $item */
-                foreach ($items as $item) {
-                    $subrequest->addRecord($item->getSObject());
-                }
-
-                $builder->deleteSObjectCollection($ref, $subrequest);
+        foreach ($deletes as $ref => $items) {
+            $subrequest = new CollectionRequest();
+            /** @var CompilerResult $item */
+            foreach ($items as $item) {
+                $subrequest->addRecord($item->getSObject());
             }
+
+            $builder->deleteSObjectCollection($ref, $subrequest);
         }
 
         return $builder->build();
@@ -222,7 +224,7 @@ class RequestBuilder
         ItemizedCollection $collection,
         array $partitions = []
     ): array {
-        $waitList = new ItemizedCollection();
+        $waitList  = new ItemizedCollection();
         $partition = end($partitions);
 
         if (false === $partition) {
@@ -312,8 +314,8 @@ class RequestBuilder
         $types      = $collection->getKeys();
 
         foreach ($types as $type) {
-            $items             = $collection->get($type);
-            $partitions[$type] = self::partition($items);
+            $items      = $collection->get($type);
+            $partitions = array_merge($partitions, self::partition($items));
         }
 
         return $partitions;
@@ -329,7 +331,7 @@ class RequestBuilder
         $partitions = [];
         $offset     = 0;
 
-        while (($slice = array_slice($items, $offset, 200))) {
+        while (($slice = array_slice($items, $offset, 200, true))) {
             $partitions[uniqid('coll_')] = $slice;
             $offset                      += count($slice);
         }
@@ -345,7 +347,6 @@ class RequestBuilder
     {
         /** @var CompilerResult $item */
         foreach ($set as $items) {
-            $i = 0;
             foreach ($items as $item) {
                 $object = $item->getSObject();
                 foreach ($object->getFields() as $field => $value) {
@@ -357,8 +358,6 @@ class RequestBuilder
                         }
                     }
                 }
-
-                $i++;
             }
         }
     }

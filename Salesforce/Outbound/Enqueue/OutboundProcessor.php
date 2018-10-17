@@ -11,11 +11,9 @@ namespace AE\ConnectBundle\Salesforce\Outbound\Enqueue;
 use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
-use AE\ConnectBundle\Salesforce\Outbound\MessagePayload;
-use AE\ConnectBundle\Salesforce\Outbound\Queue\QueueProcessor;
-use AE\ConnectBundle\Salesforce\SalesforceConnector;
-use AE\ConnectBundle\Util\ItemizedCollection;
+use AE\ConnectBundle\Salesforce\Outbound\Queue\RequestBuilder;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CollectionResponse;
+use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeResponse;
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Collections\ArrayCollection;
 use Enqueue\Client\TopicSubscriberInterface;
@@ -114,7 +112,6 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
             CompilerResult::class,
             'json'
         );
-        $intent         = $payload->getIntent();
         $refId          = $payload->getReferenceId();
         $connectionName = $payload->getMetadata()->getConnectionName();
 
@@ -141,22 +138,15 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
         }
 
         if (!$message->isRedelivered()) {
-            $sObject = $payload->getSobject();
-
             if (!array_key_exists($connectionName, $this->messages)) {
-                $this->messages[$connectionName] = new ArrayCollection([$intent => new ItemizedCollection()]);
-            } elseif (!array_key_exists($intent, $this->messages[$connectionName])) {
-                $this->messages[$connectionName]->set($intent, new ItemizedCollection());
+                $this->messages[$connectionName] = [];
             }
 
-            /** @var ItemizedCollection $payloadCollection */
-            $payloadCollection = $this->messages[$connectionName][$intent];
-            $payloadCollection->set($refId, $payload, $sObject->getType());
-
-            $this->semaphore = new \DateTime();
+            $this->messages[$connectionName][$refId] = $payload;
+            $this->semaphore                         = new \DateTime();
         }
 
-        if ($this->shouldFlush($connection)) {
+        if ($this->shouldSend($connection)) {
             $this->send($connection);
             $this->semaphore = new \DateTime();
         } elseif (!$message->isRedelivered()) {
@@ -180,7 +170,7 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
         self::$topic = $topic;
     }
 
-    private function shouldFlush(ConnectionInterface $connection): bool
+    private function shouldSend(ConnectionInterface $connection): bool
     {
         $now  = new \DateTime();
         $then = (clone($this->semaphore))->add(\DateInterval::createFromDateString($this->semaphoreLifespan));
@@ -199,13 +189,13 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
     }
 
     /**
-     * @param MessagePayload $payload
+     * @param CompilerResult $payload
      * @param CollectionResponse $result
      */
-    private function updateCreatedEntity(MessagePayload $payload, CollectionResponse $result): void
+    private function updateCreatedEntity(CompilerResult $payload, CollectionResponse $result): void
     {
         $object = $payload->getSobject();
-        $idProp = $payload->getMetadata()->getPropertyByField('Id');
+        $idProp = $payload->getMetadata()->getIdFieldProperty();
 
         if (null === $idProp) {
             return;
@@ -237,72 +227,20 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
      */
     private function send(ConnectionInterface $connection): void
     {
-        $client  = $connection->getRestClient()->getCompositeClient();
-        $queue   = QueueProcessor::buildQueue(
-            $this->messages[$connection->getName()][SalesforceConnector::INTENT_INSERT]->toArray(),
-            $this->messages[$connection->getName()][SalesforceConnector::INTENT_UPDATE]->toArray(),
-            $this->messages[$connection->getName()][SalesforceConnector::INTENT_DELETE]->toArray()
-        );
-        $builder = QueueProcessor::generateCompositeRequestBuilder($queue);
+        $client = $connection->getRestClient()->getCompositeClient();
+        $queue  = RequestBuilder::build($this->messages[$connection->getName()]);
 
         try {
-            $request   = $builder->build();
+            $request   = RequestBuilder::buildRequest(
+                $queue[CompilerResult::INSERT],
+                $queue[CompilerResult::UPDATE],
+                $queue[CompilerResult::DELETE]
+            );
             $responses = $client->sendCompositeRequest($request);
 
-            /**
-             * @var string $refId
-             * @var ItemizedCollection $requests
-             */
-            foreach ($queue->toArray() as $refId => $requests) {
-                $result = $responses->findResultByReferenceId($refId);
-                if (200 !== $result->getHttpStatusCode()) {
-                    foreach (array_keys($requests->toArray()) as $refId) {
-                        /** @var ItemizedCollection $types */
-                        foreach ($this->messages[$connection->getName()] as $types) {
-                            $types->remove($refId);
-                            $this->rejected[] = $refId;
-                        }
-                    }
-
-                    if (null !== $this->logger) {
-                        /** @var CollectionResponse[] $errors */
-                        $errors = $result->getBody();
-                        foreach ($errors as $error) {
-                            $this->logger->error(
-                                'AE_CONNECT error from SalesForce: ({code}) {msg}',
-                                [
-                                    'code' => $error->getErrorCode(),
-                                    'msg'  => $error->getMessage(),
-                                ]
-                            );
-                        }
-                    }
-                } else {
-                    /** @var CollectionResponse[] $messages */
-                    $messages = $result->getBody();
-                    $payloads = $requests->toArray();
-                    $refIds   = array_keys($payloads);
-                    foreach ($messages as $i => $res) {
-                        $refId = $refIds[$i];
-                        if ($res->isSuccess()) {
-                            $this->acked[] = $refId;
-                        } else {
-                            $this->rejected[] = $refId;
-                        }
-
-                        /** @var ItemizedCollection $types */
-                        foreach ($this->messages[$connection->getName()] as $intent => $types) {
-                            if ($types->containsKey($refId)) {
-                                $types->remove($refId);
-
-                                if ($res->isSuccess() && SalesforceConnector::INTENT_INSERT === $intent) {
-                                    $this->updateCreatedEntity($payloads[$refId], $res);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            self::handleResponses($connection, $responses, $queue[CompilerResult::INSERT], CompilerResult::INSERT);
+            self::handleResponses($connection, $responses, $queue[CompilerResult::UPDATE], CompilerResult::UPDATE);
+            self::handleResponses($connection, $responses, $queue[CompilerResult::DELETE], CompilerResult::DELETE);
 
             $this->cache->save(self::CACHE_ID_MESSAGES, $this->messages);
         } catch (\GuzzleHttp\Exception\GuzzleException $e) {
@@ -322,6 +260,67 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
                         'msg' => $e->getTraceAsString(),
                     ]
                 );
+            }
+        }
+    }
+
+    /**
+     * @param ConnectionInterface $connection
+     * @param CompositeResponse $response
+     * @param array $queue
+     * @param string $intent
+     */
+    private function handleResponses(
+        ConnectionInterface $connection,
+        CompositeResponse $response,
+        array $queue,
+        string $intent
+    ) {
+        $payloads = &$this->messages[$connection->getName()];
+
+        foreach ($queue as $refId => $requests) {
+            $result = $response->findResultByReferenceId($refId);
+
+            if (200 != $result->getHttpStatusCode()) {
+                /** @var CompilerResult $item */
+                foreach ($requests as $item) {
+                    unset($payloads[$item->getReferenceId()]);
+                    $this->rejected->add($item->getReferenceId());
+                }
+
+                if (null !== $this->logger) {
+                    /** @var CollectionResponse[] $errors */
+                    $errors = $result->getBody();
+                    foreach ($errors as $error) {
+                        $this->logger->error(
+                            'AE_CONNECT error from SalesForce: ({code}) {msg}',
+                            [
+                                'code' => $error->getErrorCode(),
+                                'msg'  => $error->getMessage(),
+                            ]
+                        );
+                    }
+                }
+            } else {
+                /** @var CollectionResponse[] $messages */
+                $messages = $result->getBody();
+                foreach ($messages as $i => $res) {
+                    /** @var CompilerResult $item */
+                    $item  = $queue[$i];
+                    $refId = $item->getReferenceId();
+
+                    if ($res->isSuccess()) {
+                        $this->acked->add($refId);
+                    } else {
+                        $this->rejected->add($refId);
+                    }
+
+                    unset($payloads[$refId]);
+
+                    if ($res->isSuccess() && CompilerResult::INSERT === $intent) {
+                        $this->updateCreatedEntity($item, $res);
+                    }
+                }
             }
         }
     }
