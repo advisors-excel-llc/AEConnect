@@ -34,13 +34,13 @@ class Metadata
 
     /**
      * @var ArrayCollection<string, string>
-     * @Serializer\Type("array")
+     * @Serializer\Type("ArrayCollection")
      */
     private $propertyMap;
 
     /**
      * @var ArrayCollection<string>
-     * @Serializer\Type("array")
+     * @Serializer\Type("ArrayCollection")
      */
     private $identifiers;
 

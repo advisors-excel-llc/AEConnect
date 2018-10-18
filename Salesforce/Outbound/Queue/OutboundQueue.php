@@ -24,13 +24,19 @@ class OutboundQueue
 
     public const CACHE_ID_MESSAGES = '__sobject_messages';
 
-    /** @var CacheProvider */
+    /**
+     * @var CacheProvider
+     */
     private $cache;
 
-    /** @var ConnectionManagerInterface */
+    /**
+     * @var ConnectionManagerInterface
+     */
     private $connectionManager;
 
-    /** @var RegistryInterface */
+    /**
+     * @var RegistryInterface
+     */
     private $registry;
 
     /**
@@ -170,12 +176,16 @@ class OutboundQueue
             } else {
                 /** @var CollectionResponse[] $messages */
                 $messages = $result->getBody();
+                $items = array_values($queue[$refId]->toArray());
                 foreach ($messages as $i => $res) {
+                    if (!array_key_exists($i, $items)) {
+                        continue;
+                    }
                     /** @var CompilerResult $item */
-                    $item  = $queue[$i];
-                    $refId = $item->getReferenceId();
+                    $item  = $items[$i];
+                    $ref = $item->getReferenceId();
 
-                    unset($payloads[$refId]);
+                    unset($payloads[$ref]);
 
                     if ($res->isSuccess() && CompilerResult::INSERT === $intent) {
                         $this->updateCreatedEntity($item, $res);
