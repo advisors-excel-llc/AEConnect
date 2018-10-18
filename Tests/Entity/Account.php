@@ -30,7 +30,7 @@ class Account
 
     /**
      * @var string
-     * @AEConnect\Field(value="hcid__c")
+     * @AEConnect\Field(value="S3F__hcid__c")
      * @AEConnect\ExternalId()
      * @ORM\Column(type="guid", length=36, nullable=false, unique=true)
      */

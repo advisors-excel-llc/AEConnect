@@ -6,6 +6,21 @@ framework:
     form: ~
     csrf_protection: false
     validation: false
+
+services:
+    _defaults:
+        public: true
+    AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor:
+        autowire: true
+        public: true
+        tags:
+            - { name: 'enqueue.client.processor' }
+    AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue:
+        autowire: true
+        public: true
+        arguments:
+            $cache: '@doctrine_cache.providers.ae_connect_metadata'
+
 doctrine_cache:
     providers:
         ae_connect_metadata:
@@ -37,6 +52,14 @@ fidry_alice_data_fixtures:
 jms_serializer:
     property_naming:
         id: 'jms_serializer.identical_property_naming_strategy'
+
+enqueue:
+    transport:
+        default: 'file:'
+    client:
+        traceable_producer: true
+    async_events: false
+
 ae_connect:
     paths: ["%kernel.project_dir%/Tests/Entity"]
     connections:

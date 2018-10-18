@@ -59,7 +59,7 @@ class Contact
      * @var string
      * @ORM\Column(type="guid", unique=true, nullable=false)
      * @ExternalId()
-     * @Field("hcid__c")
+     * @Field("S3F__hcid__c")
      */
     private $extId;
 

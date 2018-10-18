@@ -354,7 +354,7 @@ class RequestBuilder
                         list($row, $ref) = self::getReferenceIdForPlaceholder($value, $inserts);
                         if (null !== $ref) {
                             $reference      = new Reference($ref);
-                            $object->$field = $reference->field('records['.$row.'].id');
+                            $object->$field = $reference->field('['.$row.'].id');
                         }
                     }
                 }

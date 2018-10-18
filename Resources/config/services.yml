@@ -1,15 +1,22 @@
 services:
+    _defaults:
+        bind:
+            Enqueue\Client\ProducerInterface: '@Enqueue\Client\Producer'
+
     _instanceof:
         AE\ConnectBundle\Connection\ConnectionInterface:
             tags:
                 - {name: 'ae_connect.connection'}
+
     AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport:
         autowire: true
     AE\SalesforceRestSdk\Bayeux\Transport\AbstractClientTransport: '@AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport'
     AE\ConnectBundle\Manager\ConnectionManager:
         autowire: true
         public: true
-    AE\ConnectBundle\Manager\ConnectionManagerInterface: '@AE\ConnectBundle\Manager\ConnectionManager'
+    AE\ConnectBundle\Manager\ConnectionManagerInterface:
+        alias: 'AE\ConnectBundle\Manager\ConnectionManager'
+        public: true
     ae_connect.connection_manager:
         alias: 'AE\ConnectBundle\Manager\ConnectionManager'
         public: true
@@ -30,8 +37,16 @@ services:
                 type: 'AE\SalesforceRestSdk\Model\SObject'
     AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler:
         autowire: true
-        public: true
     AE\ConnectBundle\Salesforce\SalesforceConnector:
         autowire: true
+        public: true
     AE\ConnectBundle\Salesforce\Outbound\ReferenceIdGenerator:
         autowire: true
+    AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor:
+        autowire: true
+        tags:
+            - { name: 'enqueue.client.processor' }
+    AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue:
+        autowire: true
+        arguments:
+            $cache: '@doctrine_cache.providers.ae_connect_metadata'

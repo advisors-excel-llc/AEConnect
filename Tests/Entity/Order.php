@@ -21,7 +21,7 @@ use Ramsey\Uuid\Uuid;
  * @package AE\ConnectBundle\Tests\Entity
  * @SObjectType("Order")
  * @ORM\Entity()
- * @ORM\Table(name="order")
+ * @ORM\Table(name="order_table")
  * @ORM\HasLifecycleCallbacks()
  */
 class Order
@@ -50,7 +50,7 @@ class Order
 
     /**
      * @var string
-     * @Field(value="hcid__c")
+     * @Field("S3F__HCID__c")
      * @ExternalId()
      * @ORM\Column(type="guid", length=36, nullable=false, unique=true)
      */

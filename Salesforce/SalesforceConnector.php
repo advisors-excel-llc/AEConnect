@@ -10,6 +10,7 @@ namespace AE\ConnectBundle\Salesforce;
 
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
+use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
 use AE\SalesforceRestSdk\Model\SObject;
 use Enqueue\Client\Message;
 use Enqueue\Client\ProducerInterface;
@@ -17,18 +18,10 @@ use JMS\Serializer\SerializerInterface;
 
 class SalesforceConnector
 {
-    public const INTENT_INSERT = "INSERT";
-    public const INTENT_UPDATE = "UPDATE";
-    public const INTENT_DELETE = "DELETE";
-    /**
-     * @var string
-     */
-    private $topic;
-
     /**
      * @var SObjectCompiler
      */
-    private $comiler;
+    private $compiler;
 
     /**
      * @var ProducerInterface
@@ -41,13 +34,13 @@ class SalesforceConnector
     private $serializer;
 
     public function __construct(
-        string $topicPrefix,
         ProducerInterface $producer,
-        SObjectCompiler $compiler
+        SObjectCompiler $compiler,
+        SerializerInterface $serializer
     ) {
-        $this->topic    = $topicPrefix;
-        $this->producer = $producer;
-        $this->comiler  = $compiler;
+        $this->producer   = $producer;
+        $this->compiler   = $compiler;
+        $this->serializer = $serializer;
     }
 
     /**
@@ -58,13 +51,13 @@ class SalesforceConnector
      */
     public function send($entity, string $connectionName = 'default'): bool
     {
-        $result   = $this->comiler->compile($entity, $connectionName);
-        $intent   = $result->getIntent();
-        $sObject  = $result->getSObject();
+        $result  = $this->compiler->compile($entity, $connectionName);
+        $intent  = $result->getIntent();
+        $sObject = $result->getSObject();
 
         if (CompilerResult::DELETE !== $intent) {
             // If there are no fields other than Id and Type set, don't sync
-            $fields = array_diff(['Id', 'Type'], $sObject->getFields());
+            $fields = array_diff(['Id', 'Type'], array_keys($sObject->getFields()));
             if (empty($fields)) {
                 return false;
             }
@@ -73,8 +66,7 @@ class SalesforceConnector
         $message = new Message(
             $this->serializer->serialize($result, 'json')
         );
-
-        $this->producer->sendEvent($this->topic, $message);
+        $this->producer->sendEvent(OutboundProcessor::TOPIC, $message);
 
         return true;
     }
