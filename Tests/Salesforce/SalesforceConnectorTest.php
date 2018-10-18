@@ -66,10 +66,13 @@ class SalesforceConnectorTest extends DatabaseTestCase
 
         $this->context->purge($queue);
 
+        // We don't want to fire on any triggers now do we?
+        $this->connector->disable();
         for ($i = 0; $i < 5; $i++) {
             $this->createOrder($items);
             $manager->flush();
         }
+        $this->connector->enable();
 
         foreach ($items as $item) {
             $this->connector->send($item);
@@ -91,8 +94,11 @@ class SalesforceConnectorTest extends DatabaseTestCase
 
         $this->get(OutboundQueue::class)->send();
 
-        $orderitems = $manager->getRepository(OrderProduct::class)->findBy(['sfid' => null]);
-        $this->assertEmpty($orderitems);
+        $accounts = $manager->getRepository(Account::class)->findBy(['extId' => null]);
+        $this->assertEmpty($accounts);
+
+        //$orderitems = $manager->getRepository(OrderProduct::class)->findBy(['extId' => null]);
+        //$this->assertEmpty($orderitems);
     }
 
     private function createOrder(array &$queue)

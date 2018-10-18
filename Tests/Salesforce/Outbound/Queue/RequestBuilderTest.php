@@ -13,6 +13,7 @@ use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
 use AE\ConnectBundle\Salesforce\Outbound\Queue\RequestBuilder;
 use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
+use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Contact;
@@ -36,12 +37,18 @@ class RequestBuilderTest extends DatabaseTestCase
      */
     private $compiler;
 
+    /**
+     * @var SalesforceConnector
+     */
+    private $connector;
+
     protected function setUp()/* The :void return type declaration that should be here would cause a BC issue */
     {
         parent::setUp();
 
         $this->connectionManager = $this->get(ConnectionManagerInterface::class);
         $this->compiler          = $this->get(SObjectCompiler::class);
+        $this->connector         = $this->get(SalesforceConnector::class);
     }
 
     protected function loadSchemas(): array
@@ -58,6 +65,8 @@ class RequestBuilderTest extends DatabaseTestCase
 
     public function testBuild()
     {
+        // Turn off the connector or it will fire on all entity creation/update/deletion
+        $this->connector->disable();
         $this->loadFixtures(
             [
                 'Tests/Resources/config/fixtures.yml',
@@ -76,6 +85,8 @@ class RequestBuilderTest extends DatabaseTestCase
         $this->deleteContacts($queue);
         $this->createTasks($queue, $newAccounts);
         $this->createTasks($queue, $updatedAccounts);
+
+        $this->connector->enable();
 
         $list    = RequestBuilder::build($queue);
         $request = RequestBuilder::buildRequest(

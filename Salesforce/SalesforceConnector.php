@@ -33,6 +33,11 @@ class SalesforceConnector
      */
     private $serializer;
 
+    /**
+     * @var bool
+     */
+    private $enabled = true;
+
     public function __construct(
         ProducerInterface $producer,
         SObjectCompiler $compiler,
@@ -51,6 +56,10 @@ class SalesforceConnector
      */
     public function send($entity, string $connectionName = 'default'): bool
     {
+        if (!$this->enabled) {
+            return false;
+        }
+
         $result  = $this->compiler->compile($entity, $connectionName);
         $intent  = $result->getIntent();
         $sObject = $result->getSObject();
@@ -73,6 +82,28 @@ class SalesforceConnector
 
     public function receive(SObject $object, string $connectionName = 'default')
     {
+        if (!$this->enabled) {
+            return false;
+        }
+    }
 
+    /**
+     * @return $this
+     */
+    public function enable()
+    {
+        $this->enabled = true;
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    public function disable()
+    {
+        $this->enabled = false;
+
+        return $this;
     }
 }
