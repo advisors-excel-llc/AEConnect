@@ -59,14 +59,15 @@ class SObjectCompilerTest extends DatabaseTestCase
         $metadata = $accountResult->getMetadata();
         $this->assertEquals('Account', $metadata->getSObjectType());
         $this->assertEquals(Account::class, $metadata->getClassName());
-        $this->assertEquals(['extId' => 'hcid__c'], $metadata->getIdentifyingFields());
+        $this->assertEquals(['extId' => 'S3F__hcid__c'], $metadata->getIdentifyingFields());
         $this->assertEquals(
             [
                 'name'  => 'Name',
-                'extId' => 'hcid__c',
+                'extId' => 'S3F__hcid__c',
                 'sfid'  => 'Id',
+                'testPicklist' => 'S3F__Test_Picklist__c'
             ],
-            $metadata->getPropertyMap()->toArray()
+            $metadata->getPropertyMap()
         );
 
         $sObject = $accountResult->getSObject();
@@ -81,16 +82,16 @@ class SObjectCompilerTest extends DatabaseTestCase
         $metadata = $contactResult->getMetadata();
         $this->assertEquals('Contact', $metadata->getSObjectType());
         $this->assertEquals(Contact::class, $metadata->getClassName());
-        $this->assertEquals(['extId' => 'hcid__c'], $metadata->getIdentifyingFields());
+        $this->assertEquals(['extId' => 'S3F__hcid__c'], $metadata->getIdentifyingFields());
         $this->assertEquals(
             [
                 'firstName' => 'FirstName',
                 'lastName'  => 'LastName',
                 'account'   => 'AccountId',
-                'extId'     => 'hcid__c',
+                'extId'     => 'S3F__hcid__c',
                 'sfid'      => 'Id',
             ],
-            $metadata->getPropertyMap()->toArray()
+            $metadata->getPropertyMap()
         );
 
         $sObject = $contactResult->getSObject();

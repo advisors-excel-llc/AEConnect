@@ -21,6 +21,7 @@ use AE\ConnectBundle\Tests\Entity\Order;
 use AE\ConnectBundle\Tests\Entity\OrderProduct;
 use AE\ConnectBundle\Tests\Entity\Product;
 use AE\ConnectBundle\Tests\Entity\Task;
+use AE\ConnectBundle\Tests\Entity\TestObject;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
 use Doctrine\Common\Collections\ArrayCollection;
 use Faker\Test\Provider\Collection;
@@ -60,6 +61,7 @@ class RequestBuilderTest extends DatabaseTestCase
             OrderProduct::class,
             Product::class,
             Task::class,
+            TestObject::class,
         ];
     }
 

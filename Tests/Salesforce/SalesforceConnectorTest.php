@@ -17,6 +17,7 @@ use AE\ConnectBundle\Tests\Entity\Contact;
 use AE\ConnectBundle\Tests\Entity\Order;
 use AE\ConnectBundle\Tests\Entity\Product;
 use AE\ConnectBundle\Tests\Entity\Task;
+use AE\ConnectBundle\Tests\Entity\TestObject;
 use Enqueue\Client\DriverInterface;
 use Enqueue\Consumption\Result;
 use Enqueue\Fs\FsContext;
@@ -42,6 +43,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
             Order::class,
             Product::class,
             Task::class,
+            TestObject::class,
         ];
     }
 

@@ -10,9 +10,12 @@ namespace AE\ConnectBundle\Driver;
 
 use AE\ConnectBundle\Annotations\ExternalId;
 use AE\ConnectBundle\Annotations\Field;
+use AE\ConnectBundle\Annotations\RecordType;
 use AE\ConnectBundle\Annotations\SalesforceId;
 use AE\ConnectBundle\Annotations\SObjectType;
+use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Metadata\Metadata;
+use AE\ConnectBundle\Metadata\RecordTypeMetadata;
 use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
@@ -60,7 +63,8 @@ class AnnotationDriver
             SObjectType::class,
             Field::class,
             ExternalId::class,
-            SalesforceId::class
+            SalesforceId::class,
+            RecordType::class,
         ];
 
     public function __construct(Reader $reader, $paths = null)
@@ -87,38 +91,111 @@ class AnnotationDriver
     public function loadMetadataForClass($className, Metadata $metadata)
     {
         $class             = new \ReflectionClass($className);
-        $sourceAnnotations = $this->getClassAnnotations($class, SObjectType::class);
-        /** @var SObjectType $sourceAnnotation */
+        $sourceAnnotations = $this->getClassAnnotations($class, [SObjectType::class, RecordType::class]);
+        /** @var SObjectType|RecordType $sourceAnnotation */
         foreach ($sourceAnnotations as $sourceAnnotation) {
             if (in_array($metadata->getConnectionName(), $sourceAnnotation->getConnections())) {
+                if ($sourceAnnotation instanceof RecordType) {
+                    $metadata->addFieldMetadata(new RecordTypeMetadata($sourceAnnotation->getName()));
+                    continue;
+                }
+
                 $metadata->setClassName($class->getName());
                 $metadata->setSObjectType($sourceAnnotation->getName());
                 $properties = $this->getAnnotatedProperties($class, $metadata->getConnectionName(), [
                     Field::class,
                     SalesforceId::class,
+                    RecordType::class,
                 ]);
 
-                // Creates a map of properties relating source => target
-                $fieldMap = array_map(
-                    function ($item) {
-                        if ($item instanceof Field) {
-                            return $item->getName();
-                        } else {
-                            return 'Id';
+                foreach ($properties as $name => $item) {
+                    if ($item instanceof RecordType) {
+                        $name = array_search($item, $properties, true);
+
+                        if (false === $name) {
+                            return false;
                         }
-                    },
-                    $properties
+
+                        $meta = $metadata->getRecordType();
+                        if (null === $meta) {
+                            // If name is set, it always wins
+                            $rtName = $item->getName();
+                            $metadata->addFieldMetadata(($meta = new RecordTypeMetadata($rtName, $name)));
+                        }
+
+                        $meta->setProperty($name);
+                    } else {
+                        $metadata->addFieldMetadata(
+                            new FieldMetadata(
+                                $name,
+                                $item instanceof SalesforceId ? 'Id' : $item->getName()
+                            )
+                        );
+                    }
+                }
+
+                $methods = $this->getAnnotatedMethods(
+                    $class,
+                    $metadata->getConnectionName(),
+                    [
+                        Field::class,
+                        RecordType::class
+                    ]
                 );
 
-                $metadata->setPropertyMap(new ArrayCollection($fieldMap));
+                /**
+                 * @var string $name
+                 * @var RecordType|Field $method
+                 */
+                foreach ($methods as $name => $method) {
+                    $propName = strtolower(substr($name, 3, 1)).substr($name, 4);
+                    $prefix = substr($name, 0, 3);
+
+                    if (!in_array($prefix, ['set', 'get'])) {
+                        continue;
+                    }
+
+                    if ($method instanceof RecordType) {
+                        // If name is set, it always wins
+                        $rtName = $method->getName();
+                        $meta   = $metadata->getRecordType();
+                        if (null === $meta) {
+                            $metadata->addFieldMetadata(
+                                ($meta = new RecordTypeMetadata($rtName, $propName))
+                            );
+                        }
+
+                        if (substr($name, 0, 3) === "get") {
+                            $meta->setGetter($name);
+                        } elseif (substr($name, 0, 3) === "set") {
+                            $meta->setSetter($name);
+                        }
+                    } elseif ($method instanceof Field) {
+                        $meta = $metadata->getMetadataForProperty($propName);
+
+                        if (null === $meta) {
+                            $metadata->addFieldMetadata(
+                                ($meta = new FieldMetadata($propName, $method->getName()))
+                            );
+                        }
+                    }
+
+                    if (isset($meta)) {
+                        if ($prefix === "get") {
+                            $meta->setGetter($name);
+                        } elseif ($prefix === "set") {
+                            $meta->setSetter($name);
+                        }
+                    }
+                }
 
                 /** @var ExternalId[] $extIds */
                 $extIds = $this->getAnnotatedProperties($class, $metadata->getConnectionName(), [ExternalId::class]);
 
                 if (!empty($extIds)) {
                     foreach (array_keys($extIds) as $prop) {
-                        if (array_key_exists($prop, $fieldMap)) {
-                            $metadata->addIdentifier($prop);
+                        if (null !== ($meta = $metadata->getMetadataForProperty($prop))) {
+                            $meta->setIsIdentifier(true);
                         }
                     }
                 }
@@ -126,13 +203,13 @@ class AnnotationDriver
         }
     }
 
-    private function getClassAnnotations(\ReflectionClass $class, string $annotationName): array
+    private function getClassAnnotations(\ReflectionClass $class, array $annotationNames): array
     {
         $annotations = $this->reader->getClassAnnotations($class);
         $found       = [];
 
         foreach ($annotations as $annotation) {
-            if (get_class($annotation) === $annotationName) {
+            if (in_array(get_class($annotation), $annotationNames)) {
                 $found[] = $annotation;
             }
         }
@@ -153,18 +230,20 @@ class AnnotationDriver
         foreach ($class->getProperties() as $property) {
             foreach ($annotations as $annotation) {
                 $propAnnot = $this->reader->getPropertyAnnotation($property, $annotation);
-                if (null !== $propAnnot) {
-                    if ($propAnnot instanceof Field) {
-                        if (in_array($connectionName, $propAnnot->getConnections())) {
-                            $properties[$property->getName()] = $propAnnot;
-                        }
-                    } elseif ($propAnnot instanceof SalesforceId) {
-                        if ($propAnnot->getConnection() === $connectionName) {
-                            $properties[$property->getName()] = $propAnnot;
-                        }
-                    } else {
+                if ($propAnnot instanceof RecordType) {
+                    if (in_array($connectionName, $propAnnot->getConnections())) {
                         $properties[$property->getName()] = $propAnnot;
                     }
+                } elseif ($propAnnot instanceof Field) {
+                    if (in_array($connectionName, $propAnnot->getConnections())) {
+                        $properties[$property->getName()] = $propAnnot;
+                    }
+                } elseif ($propAnnot instanceof SalesforceId) {
+                    if ($propAnnot->getConnection() === $connectionName) {
+                        $properties[$property->getName()] = $propAnnot;
+                    }
+                } elseif (null !== $propAnnot) {
+                    $properties[$property->getName()] = $propAnnot;
                 }
             }
         }
@@ -185,14 +264,16 @@ class AnnotationDriver
         foreach ($class->getMethods() as $method) {
             foreach ($annotations as $annotation) {
                 $annot = $this->reader->getMethodAnnotation($method, $annotation);
-                if (null !== $annot) {
-                    if ($annotation instanceof Field) {
-                        if (in_array($connectionName, $annotation->getConnections())) {
-                            $methods[$method->getName()] = $annot;
-                        }
-                    } else {
+                if ($annot instanceof RecordType) {
+                    if (in_array($connectionName, $annot->getConnections())) {
                         $methods[$method->getName()] = $annot;
                     }
+                } elseif ($annot instanceof Field) {
+                    if (in_array($connectionName, $annot->getConnections())) {
+                        $methods[$method->getName()] = $annot;
+                    }
+                } elseif (null !== $annot) {
+                    $methods[$method->getName()] = $annot;
                 }
             }
         }

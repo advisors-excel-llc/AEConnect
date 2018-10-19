@@ -27,8 +27,7 @@ class MetadataRegistryFactory
         string $connectionName
     ): MetadataRegistry {
         $registry = new MetadataRegistry($cache);
-
-        $classes = $driver->getAllClassNames();
+        $classes  = $driver->getAllClassNames();
 
         if (null !== $classes) {
             foreach ($driver->getAllClassNames() as $className) {

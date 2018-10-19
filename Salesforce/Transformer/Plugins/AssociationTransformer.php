@@ -18,7 +18,7 @@ use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
-class AssociationTransformer implements TransformerPluginInterface
+class AssociationTransformer extends AbstractTransformerPlugin
 {
     use LoggerAwareTrait;
     /**
@@ -105,20 +105,6 @@ class AssociationTransformer implements TransformerPluginInterface
             }
 
             return false;
-        }
-    }
-
-    /**
-     * @param TransformerPayload $payload
-     *
-     * @throws MappingException
-     */
-    public function transform(TransformerPayload $payload)
-    {
-        if ($payload->getDirection() === TransformerPayload::INBOUND) {
-            $this->transformInbound($payload);
-        } elseif ($payload->getDirection() === TransformerPayload::OUTBOUND) {
-            $this->transformOutbound($payload);
         }
     }
 

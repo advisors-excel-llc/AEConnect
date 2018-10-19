@@ -12,3 +12,5 @@ services:
         autowire: true
     AE\ConnectBundle\Salesforce\Transformer\Plugins\MultiValuePickListTransformer:
         autowire: true
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\RecordTypeTransformer:
+        autowire: true

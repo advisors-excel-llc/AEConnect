@@ -10,6 +10,7 @@ namespace AE\ConnectBundle\Metadata;
 
 use AE\SalesforceRestSdk\Model\Rest\Metadata\DescribeSObject;
 use AE\SalesforceRestSdk\Model\Rest\Metadata\Field;
+use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Collections\ArrayCollection;
 use JMS\Serializer\Annotation as Serializer;
 
@@ -33,10 +34,10 @@ class Metadata
     private $sObjectType;
 
     /**
-     * @var ArrayCollection<string, string>
-     * @Serializer\Type("ArrayCollection")
+     * @var ArrayCollection|FieldMetadata[]
+     * @Serializer\Type("ArrayCollection<AE\ConnectBundle\Metadata\FieldMetadata>")
      */
-    private $propertyMap;
+    private $fieldMetadata;
 
     /**
      * @var ArrayCollection<string>
@@ -63,7 +64,7 @@ class Metadata
      */
     public function __construct(string $connectionName)
     {
-        $this->propertyMap    = new ArrayCollection();
+        $this->fieldMetadata  = new ArrayCollection();
         $this->identifiers    = new ArrayCollection();
         $this->connectionName = $connectionName;
     }
@@ -117,55 +118,92 @@ class Metadata
     }
 
     /**
-     * @return ArrayCollection
+     * @return FieldMetadata[]|ArrayCollection
      */
-    public function getPropertyMap(): ArrayCollection
+    public function getFieldMetadata(): ArrayCollection
     {
-        return $this->propertyMap;
+        return $this->fieldMetadata;
     }
 
     /**
-     * @param ArrayCollection $propertyMap
+     * @param FieldMetadata[]|ArrayCollection $fieldMetadata
      *
      * @return Metadata
      */
-    public function setPropertyMap(ArrayCollection $propertyMap): Metadata
+    public function setFieldMetadata(ArrayCollection $fieldMetadata)
     {
-        $this->propertyMap = $propertyMap;
+        $this->fieldMetadata = $fieldMetadata;
 
         return $this;
     }
 
-    public function getFieldMap() : ArrayCollection
+    public function addFieldMetadata(FieldMetadata $metadata): Metadata
     {
-        $map = $this->propertyMap->toArray();
+        if (!$this->fieldMetadata->contains($metadata)) {
+            $this->fieldMetadata->add($metadata);
+        }
 
-        return new ArrayCollection(array_flip($map));
+        return $this;
+    }
+
+    public function removeFieldMetadata(FieldMetadata $metadata): Metadata
+    {
+        $this->fieldMetadata->removeElement($metadata);
+
+        return $this;
     }
 
     /**
      * @param string $propertyName
-     * @param string $fieldName
      *
-     * @return Metadata
+     * @return FieldMetadata|null
      */
-    public function addField(string $propertyName, string $fieldName): Metadata
+    public function getMetadataForProperty(string $propertyName): ?FieldMetadata
     {
-        $this->propertyMap->set($propertyName, $fieldName);
+        foreach ($this->fieldMetadata as $metadata) {
+            if ($metadata->getProperty() === $propertyName) {
+                return $metadata;
+            }
+        }
 
-        return $this;
+        return null;
     }
 
     /**
      * @param string $fieldName
      *
-     * @return Metadata
+     * @return FieldMetadata|null
      */
-    public function removeField(string $fieldName): Metadata
+    public function getMetadataForField(string $fieldName): ?FieldMetadata
     {
-        $this->propertyMap->removeElement($fieldName);
+        foreach ($this->fieldMetadata as $metadata) {
+            if ($metadata->getField() === $fieldName) {
+                return $metadata;
+            }
+        }
 
-        return $this;
+        return null;
+    }
+
+    /**
+     * @return array
+     */
+    public function getPropertyMap(): array
+    {
+        $map = [];
+
+        foreach ($this->fieldMetadata as $metadata) {
+            $map[$metadata->getProperty()] = $metadata->getField();
+        }
+
+        return $map;
+    }
+
+    public function getFieldMap(): array
+    {
+        $map = $this->getPropertyMap();
+
+        return array_flip($map);
     }
 
     /**
@@ -183,7 +221,9 @@ class Metadata
      */
     public function getFieldByProperty(string $propertyName): ?string
     {
-        return $this->propertyMap->get($propertyName);
+        $map = $this->getPropertyMap();
+
+        return array_key_exists($propertyName, $map) ? $map[$propertyName] : null;
     }
 
     /**
@@ -193,67 +233,22 @@ class Metadata
      */
     public function getPropertyByField(string $fieldName): ?string
     {
-        $prop = $this->propertyMap->indexOf($fieldName);
+        $map = $this->getFieldMap();
 
-        return false === $prop ? null : $prop;
+        return array_key_exists($fieldName, $map) ? $map[$fieldName] : null;
     }
 
-    /**
-     * @param string $propertyName
-     *
-     * @return Metadata
-     */
-    public function removeProperty(string $propertyName): Metadata
-    {
-        $this->propertyMap->remove($propertyName);
-
-        return $this;
-    }
 
     /**
-     * @return ArrayCollection
+     * @return ArrayCollection|FieldMetadata[]
      */
     public function getIdentifiers(): ArrayCollection
     {
-        return $this->identifiers;
-    }
-
-    /**
-     * @param ArrayCollection $identifiers
-     *
-     * @return Metadata
-     */
-    public function setIdentifiers(ArrayCollection $identifiers): Metadata
-    {
-        $this->identifiers = $identifiers;
-
-        return $this;
-    }
-
-    /**
-     * @param string $propertyName
-     *
-     * @return Metadata
-     */
-    public function addIdentifier(string $propertyName): Metadata
-    {
-        if (!$this->identifiers->contains($propertyName)) {
-            $this->identifiers->add($propertyName);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param string $propertyName
-     *
-     * @return Metadata
-     */
-    public function removeIdentifier(string $propertyName): Metadata
-    {
-        $this->identifiers->removeElement($propertyName);
-
-        return $this;
+        return $this->fieldMetadata->filter(
+            function (FieldMetadata $metadata) {
+                return $metadata->isIdentifier();
+            }
+        );
     }
 
     /**
@@ -263,7 +258,7 @@ class Metadata
      */
     public function isIdentifier(string $propertyName): bool
     {
-        return $this->identifiers->contains($propertyName);
+        return null !== ($meta = $this->getMetadataForProperty($propertyName)) && $meta->isIdentifier();
     }
 
     /**
@@ -271,46 +266,14 @@ class Metadata
      */
     public function getIdentifyingFields(): array
     {
-        $props = $this->getIdentifiers();
+        $props  = $this->getIdentifiers();
         $fields = [];
 
         foreach ($props as $prop) {
-            $fields[$prop] = $this->getFieldByProperty($prop);
+            $fields[$prop->getProperty()] = $prop->getField();
         }
 
         return $fields;
-    }
-
-    /**
-     * @param string $fieldName
-     *
-     * @return Metadata
-     */
-    public function addIdentifyingField(string $fieldName): Metadata
-    {
-        $propertyName = $this->propertyMap->indexOf($fieldName);
-
-        if (false !== $propertyName) {
-            $this->addIdentifier($propertyName);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param string $fieldName
-     *
-     * @return Metadata
-     */
-    public function removeIdentifyingField(string $fieldName): Metadata
-    {
-        $propertyName = $this->propertyMap->indexOf($fieldName);
-
-        if (false !== $propertyName) {
-            $this->removeIdentifier($propertyName);
-        }
-
-        return $this;
     }
 
     /**
@@ -320,9 +283,7 @@ class Metadata
      */
     public function isIdentifyingField(string $fieldName): bool
     {
-        $propertyName = $this->propertyMap->indexOf($fieldName);
-
-        return false !== $propertyName && $this->isIdentifier($propertyName);
+        return null !== ($meta = $this->getMetadataForField($fieldName)) && $meta->isIdentifier();
     }
 
     /**
@@ -374,10 +335,67 @@ class Metadata
      */
     public function describeFieldByProperty(string $propertyName): ?Field
     {
-        $fieldName = $this->propertyMap->get($propertyName);
+        $fieldName = $this->getFieldByProperty($propertyName);
 
         if (null !== $fieldName) {
             return $this->describeField($fieldName);
+        }
+
+        return null;
+    }
+
+    /**
+     * @return RecordTypeMetadata|null
+     */
+    public function getRecordType(): ?RecordTypeMetadata
+    {
+        return $this->getMetadataForField('RecordTypeId');
+    }
+
+    /**
+     * @param string $recordTypeName
+     *
+     * @return null|string
+     */
+    public function getRecordTypeId(string $recordTypeName)
+    {
+        foreach ($this->describe->getRecordTypeInfos() as $recordTypeInfo) {
+            if ($recordTypeInfo->getDeveloperName() === $recordTypeName
+                || $recordTypeInfo->getName() === $recordTypeName) {
+                return $recordTypeInfo->getRecordTypeId();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param string $recordTypeId
+     *
+     * @return null|string
+     */
+    public function getRecordTypeDeveloperName(string $recordTypeId)
+    {
+        foreach ($this->describe->getRecordTypeInfos() as $recordTypeInfo) {
+            if ($recordTypeInfo->getRecordTypeId() === $recordTypeId) {
+                return $recordTypeInfo->getDeveloperName();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param string $recordTypeId
+     *
+     * @return null|string
+     */
+    public function getRecordTypeName(string $recordTypeId)
+    {
+        foreach ($this->describe->getRecordTypeInfos() as $recordTypeInfo) {
+            if ($recordTypeInfo->getRecordTypeId() === $recordTypeId) {
+                return $recordTypeInfo->getName();
+            }
         }
 
         return null;

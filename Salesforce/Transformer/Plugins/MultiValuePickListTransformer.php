@@ -66,21 +66,10 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
      */
     public function transformInbound(TransformerPayload $payload)
     {
-        $value     = $payload->getValue();
-        $metadata  = $payload->getMetadata();
-        $classMeta = $payload->getClassMetadata();
-        $type      = $classMeta->getTypeOfField($metadata->getPropertyByField($payload->getFieldName()));
-        $platform  = $this->registry->getEntityManagerForClass($classMeta->getName())
-                                    ->getConnection()
-                                    ->getDatabasePlatform()
-        ;
-
-        if (is_string($type)) {
-            $type = Type::getType($type);
-        }
+        $value     = explode(';', $payload->getValue());
 
         $payload->setValue(
-            $type->convertToPHPValue(explode(';', $value), $platform)
+            $value
         );
     }
 
@@ -92,7 +81,13 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
 
         if ($field->isRestrictedPicklist()) {
             $values = $field->getPicklistValues();
-            $value  = array_intersect($value, $values);
+            $new = [];
+            foreach ($values as $item) {
+                if ($item->isActive() && in_array($item->getValue(), $value)) {
+                    $new[] = $item->getValue();
+                }
+            }
+            $value = $new;
         }
 
         $payload->setValue(implode(';', $value));

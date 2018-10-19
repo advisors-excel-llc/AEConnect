@@ -107,7 +107,7 @@ class SObjectCompiler
 
         $sObject = new CompositeSObject($metadata->getSObjectType());
 
-        $idProp = $metadata->getIdFieldProperty();
+        $idProp      = $metadata->getIdFieldProperty();
         $sObject->Id = $classMetadata->getFieldValue($entity, $idProp);
 
         foreach ($metadata->getIdentifyingFields() as $prop => $field) {
@@ -177,6 +177,7 @@ class SObjectCompiler
         $payload = TransformerPayload::outbound();
         $payload->setValue($value)
                 ->setPropertyName($property)
+                ->setFieldName($metadata->getFieldByProperty($property))
                 ->setEntity($entity)
                 ->setMetadata($metadata)
                 ->setClassMetadata($classMetadata)
@@ -201,14 +202,16 @@ class SObjectCompiler
         $fields = $metadata->getPropertyMap();
 
         foreach ($fields as $property => $field) {
-            $value           = $classMetadata->getFieldValue($entity, $property);
-            $sObject->$field = $this->compileProperty(
-                $property,
-                $value,
-                $entity,
-                $metadata,
-                $classMetadata
-            );
+            $value = $metadata->getMetadataForProperty($property)->getValueFromEntity($entity);
+            if (null !== $value) {
+                $sObject->$field = $this->compileProperty(
+                    $property,
+                    $value,
+                    $entity,
+                    $metadata,
+                    $classMetadata
+                );
+            }
         }
     }
 
@@ -229,14 +232,16 @@ class SObjectCompiler
         $fields = $metadata->getPropertyMap();
         foreach ($fields as $property => $field) {
             if (array_key_exists($property, $changeSet)) {
-                $value           = $changeSet[$property][1];
-                $sObject->$field = $this->compileProperty(
-                    $property,
-                    $value,
-                    $entity,
-                    $metadata,
-                    $classMetadata
-                );
+                $value = $metadata->getMetadataForProperty($property)->getValueFromEntity($entity);
+                if (null !== $value) {
+                    $sObject->$field = $this->compileProperty(
+                        $property,
+                        $value,
+                        $entity,
+                        $metadata,
+                        $classMetadata
+                    );
+                }
             } elseif (ucwords($field) === 'Id'
                 && null !== ($id = $classMetadata->getFieldValue($entity, $property))) {
                 $sObject->Id = $id;
