@@ -44,6 +44,13 @@ class Account
     private $name;
 
     /**
+     * @var array
+     * @ORM\Column(type="array")
+     * @AEConnect\Field("S3F__Test_Picklist__c")
+     */
+    private $testPicklist;
+
+    /**
      * @var string
      * @AEConnect\SalesforceId()
      * @ORM\Column(length=18, nullable=true, unique=true)
@@ -106,6 +113,26 @@ class Account
     public function setName(string $name): Account
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getTestPicklist(): array
+    {
+        return $this->testPicklist;
+    }
+
+    /**
+     * @param array $testPicklist
+     *
+     * @return Account
+     */
+    public function setTestPicklist(array $testPicklist): Account
+    {
+        $this->testPicklist = $testPicklist;
 
         return $this;
     }

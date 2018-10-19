@@ -26,6 +26,9 @@ use Ramsey\Uuid\Uuid;
  */
 class Order
 {
+    public const DRAFT     = "Draft";
+    public const ACTIVATED = "Activated";
+
     /**
      * @var int|null
      * @ORM\Id()
@@ -49,8 +52,22 @@ class Order
     private $shipToContact;
 
     /**
+     * @var \DateTime
+     * @ORM\Column(type="datetime", nullable=false)
+     * @Field("EffectiveDate")
+     */
+    private $effectiveDate;
+
+    /**
      * @var string
-     * @Field("S3F__HCID__c")
+     * @ORM\Column(length=20, nullable=false)
+     * @Field("Status")
+     */
+    private $status;
+
+    /**
+     * @var string
+     * @Field("S3F__hcid__c")
      * @ExternalId()
      * @ORM\Column(type="guid", length=36, nullable=false, unique=true)
      */
@@ -119,6 +136,46 @@ class Order
     public function setShipToContact(?Contact $shipToContact): Order
     {
         $this->shipToContact = $shipToContact;
+
+        return $this;
+    }
+
+    /**
+     * @return \DateTime
+     */
+    public function getEffectiveDate(): \DateTime
+    {
+        return $this->effectiveDate;
+    }
+
+    /**
+     * @param \DateTime $effectiveDate
+     *
+     * @return Order
+     */
+    public function setEffectiveDate(\DateTime $effectiveDate): Order
+    {
+        $this->effectiveDate = $effectiveDate;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getStatus(): string
+    {
+        return $this->status;
+    }
+
+    /**
+     * @param string $status
+     *
+     * @return Order
+     */
+    public function setStatus(string $status): Order
+    {
+        $this->status = $status;
 
         return $this;
     }

@@ -15,7 +15,6 @@ use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Contact;
 use AE\ConnectBundle\Tests\Entity\Order;
-use AE\ConnectBundle\Tests\Entity\OrderProduct;
 use AE\ConnectBundle\Tests\Entity\Product;
 use AE\ConnectBundle\Tests\Entity\Task;
 use Enqueue\Client\DriverInterface;
@@ -42,7 +41,6 @@ class SalesforceConnectorTest extends DatabaseTestCase
             Contact::class,
             Order::class,
             Product::class,
-            OrderProduct::class,
             Task::class,
         ];
     }
@@ -94,11 +92,11 @@ class SalesforceConnectorTest extends DatabaseTestCase
 
         $this->get(OutboundQueue::class)->send();
 
-        $accounts = $manager->getRepository(Account::class)->findBy(['extId' => null]);
+        $accounts = $manager->getRepository(Account::class)->findBy(['sfid' => null]);
         $this->assertEmpty($accounts);
 
-        //$orderitems = $manager->getRepository(OrderProduct::class)->findBy(['extId' => null]);
-        //$this->assertEmpty($orderitems);
+        $orders = $manager->getRepository(Order::class)->findBy(['sfid' => null]);
+        $this->assertEmpty($orders);
     }
 
     private function createOrder(array &$queue)
@@ -128,18 +126,10 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $order = new Order();
         $order->setAccount($account);
         $order->setShipToContact($contact);
+        $order->setStatus(Order::DRAFT);
+        $order->setEffectiveDate(new \DateTime());
 
         $manager->persist($order);
         $queue[] = $order;
-
-        $orderItem = new OrderProduct();
-        $orderItem->setOrder($order);
-        $orderItem->setProduct($product);
-        $orderItem->setQuantity(1);
-        $orderItem->setUnitPrice(100);
-        $orderItem->setTotalPrice(100);
-
-        $manager->persist($orderItem);
-        $queue[] = $orderItem;
     }
 }

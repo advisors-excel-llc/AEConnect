@@ -113,7 +113,21 @@ class AssociationTransformer implements TransformerPluginInterface
      *
      * @throws MappingException
      */
-    public function transformInbound(TransformerPayload $payload)
+    public function transform(TransformerPayload $payload)
+    {
+        if ($payload->getDirection() === TransformerPayload::INBOUND) {
+            $this->transformInbound($payload);
+        } elseif ($payload->getDirection() === TransformerPayload::OUTBOUND) {
+            $this->transformOutbound($payload);
+        }
+    }
+
+    /**
+     * @param TransformerPayload $payload
+     *
+     * @throws MappingException
+     */
+    protected function transformInbound(TransformerPayload $payload)
     {
         $connection    = $this->connectionManager->getConnection($payload->getMetadata()->getConnectionName());
         $classMetadata = $payload->getClassMetadata();
@@ -135,7 +149,7 @@ class AssociationTransformer implements TransformerPluginInterface
      *
      * @throws MappingException
      */
-    public function transformOutbound(TransformerPayload $payload)
+    protected function transformOutbound(TransformerPayload $payload)
     {
         $connection    = $this->connectionManager->getConnection($payload->getMetadata()->getConnectionName());
         $classMetadata = $payload->getClassMetadata();

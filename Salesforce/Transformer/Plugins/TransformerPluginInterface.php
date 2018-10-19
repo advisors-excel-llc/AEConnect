@@ -11,6 +11,5 @@ namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 interface TransformerPluginInterface
 {
     public function supports(TransformerPayload $payload): bool;
-    public function transformInbound(TransformerPayload $payload);
-    public function transformOutbound(TransformerPayload $payload);
+    public function transform(TransformerPayload $payload);
 }

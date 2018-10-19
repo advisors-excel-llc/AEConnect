@@ -71,7 +71,7 @@ class Task
 
     /**
      * @var string
-     * @Field(value="hcid__c")
+     * @Field("S3F__hcid__c")
      * @ExternalId()
      * @ORM\Column(type="guid", length=36, nullable=false, unique=true)
      */

@@ -189,6 +189,16 @@ class OutboundQueue
 
                     if ($res->isSuccess() && CompilerResult::INSERT === $intent) {
                         $this->updateCreatedEntity($item, $res);
+                    } elseif (!$res->isSuccess() && null !== $this->logger) {
+                        foreach ($res->getErrors() as $error) {
+                            $this->logger->error(
+                                'AE_CONNECT error from SalesForce: ({code}) {msg}',
+                                [
+                                    'code' => $error->getStatusCode(),
+                                    'msg'  => $error->getMessage(),
+                                ]
+                            );
+                        }
                     }
                 }
             }

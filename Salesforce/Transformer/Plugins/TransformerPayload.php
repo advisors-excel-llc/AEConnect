@@ -26,6 +26,11 @@ class TransformerPayload
     private $propertyName;
 
     /**
+     * @var string
+     */
+    private $fieldName;
+
+    /**
      * @var mixed
      */
     private $entity;
@@ -83,7 +88,7 @@ class TransformerPayload
     /**
      * @return string
      */
-    public function getPropertyName(): string
+    public function getPropertyName(): ?string
     {
         return $this->propertyName;
     }
@@ -96,6 +101,26 @@ class TransformerPayload
     public function setPropertyName(string $propertyName): TransformerPayload
     {
         $this->propertyName = $propertyName;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getFieldName(): ?string
+    {
+        return $this->fieldName;
+    }
+
+    /**
+     * @param string $fieldName
+     *
+     * @return TransformerPayload
+     */
+    public function setFieldName(string $fieldName): TransformerPayload
+    {
+        $this->fieldName = $fieldName;
 
         return $this;
     }
@@ -143,7 +168,7 @@ class TransformerPayload
     /**
      * @return ClassMetadata
      */
-    public function getClassMetadata(): ClassMetadata
+    public function getClassMetadata(): ?ClassMetadata
     {
         return $this->classMetadata;
     }

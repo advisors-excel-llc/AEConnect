@@ -23,29 +23,10 @@ class Transformer implements TransformerInterface
 
     public function transform(TransformerPayload $payload)
     {
-        if (TransformerPayload::INBOUND === $payload->getDirection()) {
-            $this->transformInbound($payload);
-        } else {
-            $this->transformOutbound($payload);
-        }
-    }
-
-    public function transformInbound(TransformerPayload $payload)
-    {
         /** @var TransformerPluginInterface $transformer */
         foreach ($this->transformers as $transformer) {
             if ($transformer->supports($payload)) {
-                $transformer->transformInbound($payload);
-            }
-        }
-    }
-
-    public function transformOutbound(TransformerPayload $payload)
-    {
-        /** @var TransformerPluginInterface $transformer */
-        foreach ($this->transformers as $transformer) {
-            if ($transformer->supports($payload)) {
-                $transformer->transformOutbound($payload);
+                $transformer->transform($payload);
             }
         }
     }

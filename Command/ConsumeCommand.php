@@ -15,6 +15,7 @@ use Enqueue\Client\DriverInterface;
 use Enqueue\Consumption\ChainExtension;
 use Enqueue\Consumption\Context;
 use Enqueue\Consumption\Extension\LoggerExtension;
+use Enqueue\Consumption\Extension\SignalExtension;
 use Enqueue\Consumption\QueueConsumer;
 use Enqueue\Symfony\Consumption\QueueConsumerOptionsCommandTrait;
 use Symfony\Component\Console\Command\Command;
@@ -98,6 +99,7 @@ class ConsumeCommand extends Command
             [
                 new SalesforceOutboundExtension($this->outboundQueue, $input->getOption('send-interval').' seconds'),
                 new LoggerExtension(new ConsoleLogger($output)),
+                new SignalExtension(),
             ]
         );
 

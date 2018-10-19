@@ -8,3 +8,7 @@ services:
         public: true
     AE\ConnectBundle\Salesforce\Transformer\Plugins\AssociationTransformer:
         autowire: true
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\DateTimeTransformer:
+        autowire: true
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\MultiValuePickListTransformer:
+        autowire: true
