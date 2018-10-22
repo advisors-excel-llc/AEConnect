@@ -103,7 +103,7 @@ class SObjectCompiler
             $changeSet = $uow->getEntityChangeSet($entity);
         }
 
-        $this->validate($entity);
+        $this->validate($entity, $connectionName);
 
         $sObject = new CompositeSObject($metadata->getSObjectType());
 
@@ -134,9 +134,14 @@ class SObjectCompiler
         return new CompilerResult($intent, $sObject, $metadata, $refId);
     }
 
-    private function validate($entity)
+    private function validate($entity, string $connectionName)
     {
-        $messages = $this->validator->validate($entity, null, ['ae_connect_outbound']);
+        $messages = $this->validator->validate(
+            $entity,
+            null,
+            ['ae_connect_outbound', ['ae_connect_outbound.'.$connectionName]]
+        );
+
         if (count($messages) > 0) {
             $err = '';
             foreach ($messages as $message) {
