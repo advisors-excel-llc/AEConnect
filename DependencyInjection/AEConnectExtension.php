@@ -9,30 +9,28 @@
 namespace AE\ConnectBundle\DependencyInjection;
 
 use AE\ConnectBundle\Connection\Connection;
-use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Driver\AnnotationDriver;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
-use AE\ConnectBundle\Salesforce\Inbound\SObjectConsumer;
+use AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
 use AE\SalesforceRestSdk\AuthProvider\LoginProvider;
 use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
 use AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension;
-use AE\ConnectBundle\Manager\ConnectionManager;
 use AE\ConnectBundle\Streaming\Client;
 use AE\ConnectBundle\Streaming\Topic;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Alias;
-use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
+use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 
-class AEConnectExtension extends Extension
+class AEConnectExtension extends Extension implements PrependExtensionInterface
 {
     /**
      * @param array $configs
@@ -50,6 +48,39 @@ class AEConnectExtension extends Extension
 
         $this->createAnnotationDriver($container, $config);
         $this->processConnections($container, $config);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function prepend(ContainerBuilder $container)
+    {
+        foreach ($container->getExtensionConfig('doctrine_cache') as $config) {
+            $providers = array_key_exists('providers', $config) ? $config['providers'] : [];
+            $providerConfig = [];
+
+            if (!array_key_exists('ae_connect_metadata', $providers)) {
+                $providerConfig['ae_connect_metadata'] = [
+                    'type' => 'file_system'
+                ];
+            }
+
+            if (!array_key_exists('ae_connect_outbound_queue', $providers)) {
+                $providerConfig['ae_connect_outbound_queue'] = [
+                    'type' => 'file_system'
+                ];
+            }
+
+            if (!array_key_exists('ae_connect_polling', $providers)) {
+                $providerConfig['ae_connect_polling'] = [
+                    'type' => 'file_system'
+                ];
+            }
+
+            $container->prependExtensionConfig('doctrine_cache', [
+                'providers' => $providerConfig
+            ]);
+        }
     }
 
     private function createAnnotationDriver(ContainerBuilder $container, array $config)
@@ -186,6 +217,8 @@ class AEConnectExtension extends Extension
      */
     private function buildObjects(string $name, array $config, ContainerBuilder $container, Definition $def): void
     {
+        $pollingDef = $container->findDefinition(PollingService::class);
+
         foreach ($config as $objectName) {
             if (preg_match('/__(c|C)$/', $objectName) == true
                 || in_array(
@@ -218,7 +251,7 @@ class AEConnectExtension extends Extension
 
                 $def->addMethodCall('addSubscriber', [new Reference($eventId)]);
             } else {
-                // TODO: add to scheduled polling service
+                $pollingDef->addMethodCall('registerObject', [$objectName]);
             }
         }
     }

@@ -21,10 +21,6 @@ services:
         arguments:
             $cache: '@doctrine_cache.providers.ae_connect_metadata'
 
-doctrine_cache:
-    providers:
-        ae_connect_metadata:
-            type: file_system
 doctrine:
     dbal:
         connections:

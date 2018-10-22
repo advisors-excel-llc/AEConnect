@@ -52,7 +52,7 @@ services:
     AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue:
         autowire: true
         arguments:
-            $cache: '@doctrine_cache.providers.ae_connect_metadata'
+            $cache: '@doctrine_cache.providers.ae_connect_outbound_queue'
     AE\ConnectBundle\Doctrine\Subscriber\EntitySubscriber:
         autowire: true
         tags:
@@ -61,3 +61,7 @@ services:
         autowire: true
     AE\ConnectBundle\Salesforce\Inbound\SObjectConsumer:
         autowire: true
+    AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService:
+        autowire: true
+        arguments:
+            $cache: '@doctrine_cache.providers.ae_connect_polling'
