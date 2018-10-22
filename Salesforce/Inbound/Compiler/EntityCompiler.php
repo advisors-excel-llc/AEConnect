@@ -99,13 +99,13 @@ class EntityCompiler
                 if (null === $fieldMetadata) {
                     continue;
                 }
-                $payload       = TransformerPayload::inbound()
-                                                   ->setClassMetadata($classMetadata)
-                                                   ->setEntity($object)
-                                                   ->setMetadata($metadata)
-                                                   ->setFieldName($field)
-                                                   ->setPropertyName($fieldMetadata->getProperty())
-                                                   ->setValue($value)
+                $payload = TransformerPayload::inbound()
+                                             ->setClassMetadata($classMetadata)
+                                             ->setEntity($object)
+                                             ->setMetadata($metadata)
+                                             ->setFieldName($field)
+                                             ->setPropertyName($fieldMetadata->getProperty())
+                                             ->setValue($value)
                 ;
 
                 $this->transformer->transform($payload);
@@ -113,10 +113,28 @@ class EntityCompiler
             }
 
             try {
-                $this->validate($entity);
+                $recordType = $metadata->getRecordType();
+
+                if (null !== $recordType
+                    && null !== $object->RecordTypeId
+                    && null !== ($recordTypeName = $metadata->getRecordTypeName($object->RecordTypeId))
+                    && $recordType->getValueFromEntity($entity) !== $recordTypeName
+                ) {
+                    throw new \RuntimeException(
+                        sprintf(
+                            "The record type given, %s, does not match that of the entity, %s.",
+                            $recordType->getValueFromEntity($entity),
+                            $recordTypeName
+                        )
+                    );
+                }
+
+                $this->validate($entity, $connectionName);
 
                 $entities[] = $entity;
             } catch (\RuntimeException $e) {
+                $manager->detach($entity);
+
                 if (null !== $this->logger) {
                     $this->logger->alert($e->getMessage());
                     $this->logger->debug($e->getTraceAsString());
@@ -129,10 +147,15 @@ class EntityCompiler
 
     /**
      * @param $entity
+     * @param string $connectionName
      */
-    private function validate($entity)
+    private function validate($entity, string $connectionName)
     {
-        $messages = $this->validator->validate($entity, null, ['ae_connect_outbound']);
+        $messages = $this->validator->validate(
+            $entity,
+            null,
+            ['ae_connect_inbound', 'ae_connect_inbound.'.$connectionName]
+        );
         if (count($messages) > 0) {
             $err = '';
             foreach ($messages as $message) {

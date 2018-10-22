@@ -20,9 +20,9 @@ class RecordTypeMetadata extends FieldMetadata
      */
     private $name;
 
-    public function __construct(?string $name = null, ?string $propertyName = null)
+    public function __construct(Metadata $metadata, ?string $name = null, ?string $propertyName = null)
     {
-        parent::__construct($propertyName, 'RecordTypeId', false);
+        parent::__construct($metadata, $propertyName, 'RecordTypeId', false);
         $this->name = $name;
     }
 

@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Metadata;
 
+use AE\SalesforceRestSdk\Model\Rest\Metadata\Field;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\Common\Persistence\Proxy;
 use JMS\Serializer\Annotation as Serializer;
@@ -18,13 +19,20 @@ class FieldMetadata extends AbstractFieldMetadata
      * @var string
      * @Serializer\Type("string")
      */
-    private $field;
+    protected $field;
 
     /**
      * @var bool
      * @Serializer\Type("bool")
      */
-    private $isIdentifier = false;
+    protected $isIdentifier = false;
+
+    /**
+     * @var Metadata
+     * @Serializer\Exclude()
+     * @Serializer\Type("AE\ConnectBundle\Metadata\Metadata")
+     */
+    protected $metadata;
 
     /**
      * FieldMetadata constructor.
@@ -33,8 +41,13 @@ class FieldMetadata extends AbstractFieldMetadata
      * @param null|string $field
      * @param bool $isIdentifying
      */
-    public function __construct(?string $property = null, ?string $field, bool $isIdentifying = false)
-    {
+    public function __construct(
+        Metadata $metadata,
+        ?string $property = null,
+        ?string $field = null,
+        bool $isIdentifying = false
+    ) {
+        $this->metadata     = $metadata;
         $this->property     = $property;
         $this->field        = $field;
         $this->isIdentifier = $isIdentifying;
@@ -78,6 +91,17 @@ class FieldMetadata extends AbstractFieldMetadata
         $this->isIdentifier = $isIdentifier;
 
         return $this;
+    }
+
+    /**
+     * @return Field|null
+     */
+    public function describe(): ?Field
+    {
+        return null !== $this->field
+            ? $this->metadata->describeField($this->field)
+            : $this->metadata->describeFieldByProperty($this->property)
+            ;
     }
 
     /**
