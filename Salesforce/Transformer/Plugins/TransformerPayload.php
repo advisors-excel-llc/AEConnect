@@ -9,7 +9,7 @@
 namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 
 use AE\ConnectBundle\Metadata\Metadata;
-use Doctrine\Common\Persistence\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\ClassMetadata;
 
 class TransformerPayload
 {

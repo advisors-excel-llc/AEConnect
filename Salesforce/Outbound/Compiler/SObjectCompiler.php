@@ -139,7 +139,7 @@ class SObjectCompiler
         $messages = $this->validator->validate(
             $entity,
             null,
-            ['ae_connect_outbound', ['ae_connect_outbound.'.$connectionName]]
+            ['ae_connect_outbound', 'ae_connect_outbound.'.$connectionName]
         );
 
         if (count($messages) > 0) {
@@ -237,7 +237,14 @@ class SObjectCompiler
         $fields = $metadata->getPropertyMap();
         foreach ($fields as $property => $field) {
             if (array_key_exists($property, $changeSet)) {
-                $value = $metadata->getMetadataForProperty($property)->getValueFromEntity($entity);
+                $fieldMetadata = $metadata->getMetadataForProperty($property);
+
+                // Don't attempt to set values for fields that cannot be updated in Salesforce
+                if (null === $fieldMetadata || !$fieldMetadata->describe()->isCreateable()) {
+                    continue;
+                }
+
+                $value         = $fieldMetadata->getValueFromEntity($entity);
                 if (null !== $value) {
                     $sObject->$field = $this->compileProperty(
                         $property,
