@@ -127,9 +127,10 @@ class SalesforceConnectorTest extends DatabaseTestCase
 
         $account = new SObject(
             [
-                'Id'   => '001000111000111AAA',
-                'Type' => 'Account',
-                'Name' => 'Test Incoming Update',
+                'Id'           => '001000111000111AAA',
+                'Type'         => 'Account',
+                'Name'         => 'Test Incoming Update',
+                'S3F__hcid__c' => $extId,
             ]
         );
 

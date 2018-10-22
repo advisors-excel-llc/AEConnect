@@ -177,7 +177,7 @@ class Metadata
     public function getMetadataForField(string $fieldName): ?FieldMetadata
     {
         foreach ($this->fieldMetadata as $metadata) {
-            if ($metadata->getField() === $fieldName) {
+            if (strtolower($metadata->getField()) === strtolower($fieldName)) {
                 return $metadata;
             }
         }
@@ -235,7 +235,13 @@ class Metadata
     {
         $map = $this->getFieldMap();
 
-        return array_key_exists($fieldName, $map) ? $map[$fieldName] : null;
+        foreach ($map as $field => $prop) {
+            if (strtolower($field) === strtolower($fieldName)) {
+                return $prop;
+            }
+        }
+
+        return null;
     }
 
 
@@ -320,7 +326,7 @@ class Metadata
         $fields = $this->describe->getFields();
 
         foreach ($fields as $field) {
-            if ($field->getName() === $fieldName) {
+            if (strtolower($field->getName()) === strtolower($fieldName)) {
                 return $field;
             }
         }

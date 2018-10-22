@@ -15,14 +15,12 @@ use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
 use AE\ConnectBundle\Streaming\ChannelSubscriberInterface;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Util\ClassUtils;
-use Doctrine\ORM\ORMException;
 use Enqueue\Client\Message;
 use Enqueue\Client\ProducerInterface;
 use JMS\Serializer\SerializerInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\RegistryInterface;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class SalesforceConnector
 {
