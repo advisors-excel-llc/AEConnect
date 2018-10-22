@@ -35,7 +35,6 @@ class SObjectConsumer implements SalesforceConsumerInterface
         ];
     }
 
-
     public function consume(ChannelInterface $channel, Message $message)
     {
         $data = $message->getData();

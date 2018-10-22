@@ -103,7 +103,7 @@ class SObjectCompiler
             $changeSet = $uow->getEntityChangeSet($entity);
         }
 
-        $this->validate($entity);
+        $this->validate($entity, $connectionName);
 
         $sObject = new CompositeSObject($metadata->getSObjectType());
 
@@ -134,9 +134,14 @@ class SObjectCompiler
         return new CompilerResult($intent, $sObject, $metadata, $refId);
     }
 
-    private function validate($entity)
+    private function validate($entity, string $connectionName)
     {
-        $messages = $this->validator->validate($entity, null, ['ae_connect_outbound']);
+        $messages = $this->validator->validate(
+            $entity,
+            null,
+            ['ae_connect_outbound', 'ae_connect_outbound.'.$connectionName]
+        );
+
         if (count($messages) > 0) {
             $err = '';
             foreach ($messages as $message) {
@@ -232,7 +237,14 @@ class SObjectCompiler
         $fields = $metadata->getPropertyMap();
         foreach ($fields as $property => $field) {
             if (array_key_exists($property, $changeSet)) {
-                $value = $metadata->getMetadataForProperty($property)->getValueFromEntity($entity);
+                $fieldMetadata = $metadata->getMetadataForProperty($property);
+
+                // Don't attempt to set values for fields that cannot be updated in Salesforce
+                if (null === $fieldMetadata || !$fieldMetadata->describe()->isCreateable()) {
+                    continue;
+                }
+
+                $value         = $fieldMetadata->getValueFromEntity($entity);
                 if (null !== $value) {
                     $sObject->$field = $this->compileProperty(
                         $property,

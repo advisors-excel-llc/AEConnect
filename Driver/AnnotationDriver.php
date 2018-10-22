@@ -96,7 +96,7 @@ class AnnotationDriver
         foreach ($sourceAnnotations as $sourceAnnotation) {
             if (in_array($metadata->getConnectionName(), $sourceAnnotation->getConnections())) {
                 if ($sourceAnnotation instanceof RecordType) {
-                    $metadata->addFieldMetadata(new RecordTypeMetadata($sourceAnnotation->getName()));
+                    $metadata->addFieldMetadata(new RecordTypeMetadata($metadata, $sourceAnnotation->getName()));
                     continue;
                 }
 
@@ -120,13 +120,14 @@ class AnnotationDriver
                         if (null === $meta) {
                             // If name is set, it always wins
                             $rtName = $item->getName();
-                            $metadata->addFieldMetadata(($meta = new RecordTypeMetadata($rtName, $name)));
+                            $metadata->addFieldMetadata(($meta = new RecordTypeMetadata($metadata, $rtName, $name)));
                         }
 
                         $meta->setProperty($name);
                     } else {
                         $metadata->addFieldMetadata(
                             new FieldMetadata(
+                                $metadata,
                                 $name,
                                 $item instanceof SalesforceId ? 'Id' : $item->getName()
                             )
@@ -161,7 +162,7 @@ class AnnotationDriver
                         $meta   = $metadata->getRecordType();
                         if (null === $meta) {
                             $metadata->addFieldMetadata(
-                                ($meta = new RecordTypeMetadata($rtName, $propName))
+                                ($meta = new RecordTypeMetadata($metadata, $rtName, $propName))
                             );
                         }
 
@@ -175,7 +176,7 @@ class AnnotationDriver
 
                         if (null === $meta) {
                             $metadata->addFieldMetadata(
-                                ($meta = new FieldMetadata($propName, $method->getName()))
+                                ($meta = new FieldMetadata($metadata, $propName, $method->getName()))
                             );
                         }
                     }
