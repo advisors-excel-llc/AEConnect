@@ -12,17 +12,13 @@ use AE\SalesforceRestSdk\Bayeux\ConsumerInterface;
 
 interface ChannelSubscriberInterface
 {
-    public const CREATED = "CREATED";
-    public const UPDATED = "UPDATED";
-    public const DELETED = "DELETED";
-
     public function getName(): string;
 
     public function setName(string $name);
 
-    public function addSubscriber(ConsumerInterface $consumer);
+    public function addConsumer(ConsumerInterface $consumer);
 
-    public function getSubscribers(): array;
+    public function getConsumers(): array;
 
     public function getChannelName(): string;
 }

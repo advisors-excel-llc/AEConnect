@@ -9,10 +9,10 @@
 namespace AE\ConnectBundle\Salesforce;
 
 use AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler;
+use AE\ConnectBundle\Salesforce\Inbound\SalesforceConsumerInterface;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
 use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
-use AE\ConnectBundle\Streaming\ChannelSubscriberInterface;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Util\ClassUtils;
 use Enqueue\Client\Message;
@@ -114,7 +114,7 @@ class SalesforceConnector
      *
      * @return bool
      */
-    public function receive(SObject $object, string $intent, string $connectionName = 'default')
+    public function receive(SObject $object, string $intent, string $connectionName = 'default'): bool
     {
         if (!$this->enabled) {
             return false;
@@ -127,11 +127,11 @@ class SalesforceConnector
             $manager = $this->registry->getManagerForClass($class);
 
             switch ($intent) {
-                case ChannelSubscriberInterface::CREATED:
-                case ChannelSubscriberInterface::UPDATED:
+                case SalesforceConsumerInterface::CREATED:
+                case SalesforceConsumerInterface::UPDATED:
                     $manager->merge($entity);
                     break;
-                case ChannelSubscriberInterface::DELETED:
+                case SalesforceConsumerInterface::DELETED:
                     $manager->remove($entity);
                     break;
             }
@@ -142,6 +142,8 @@ class SalesforceConnector
                 $this->logger->info('{intent} entity of type {type}', ['intent' => $intent, 'type' => $class]);
             }
         }
+
+        return true;
     }
 
     /**

@@ -9,7 +9,7 @@
 namespace AE\ConnectBundle;
 
 use AE\ConnectBundle\DependencyInjection\Compiler\BayeuxExtensionCompilerPass;
-use AE\ConnectBundle\DependencyInjection\Compiler\ChannelSubscriberCompilerPass;
+use AE\ConnectBundle\DependencyInjection\Compiler\ChannelConsumerCompilerPass;
 use AE\ConnectBundle\DependencyInjection\Compiler\ConnectionCompilerPass;
 use AE\ConnectBundle\DependencyInjection\Compiler\TransformerPluginCompilerPass;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
@@ -22,7 +22,7 @@ class AEConnectBundle extends Bundle
     {
         $container->addCompilerPass(new ConnectionCompilerPass());
         $container->addCompilerPass(new BayeuxExtensionCompilerPass());
-        $container->addCompilerPass(new ChannelSubscriberCompilerPass());
+        $container->addCompilerPass(new ChannelConsumerCompilerPass());
         $container->addCompilerPass(new TransformerPluginCompilerPass());
     }
 

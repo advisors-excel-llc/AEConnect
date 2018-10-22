@@ -174,7 +174,7 @@ class AEConnectExtension extends Extension
 
             $container->setDefinition($eventId, $event);
 
-            $def->addMethodCall('addSubscriber', [new Reference([$eventId])]);
+            $def->addMethodCall('addSubscriber', [new Reference($eventId)]);
         }
     }
 
@@ -357,18 +357,6 @@ class AEConnectExtension extends Extension
                   ->setAutowired(true)
                   ->setAutoconfigured(true)
                   ->addTag('ae_connect.connection')
-        ;
-    }
-
-    private function createSObjectConsumer(array $config, ContainerBuilder $container): void
-    {
-        $channels = array_merge(array_keys($config['topics']), array_keys($config['objects']));
-
-        $container->register(SObjectConsumer::class)
-            ->setAutowired(true)
-            ->addTag('ae_connect.subscriber', [
-                'channels' => implode(',', $channels)
-            ])
         ;
     }
 }

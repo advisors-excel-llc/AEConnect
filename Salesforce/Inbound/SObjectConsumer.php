@@ -8,17 +8,15 @@
 
 namespace AE\ConnectBundle\Salesforce\Inbound;
 
-use AE\ConnectBundle\Connection\ConnectionTrait;
+use AE\ConnectBundle\Connection\ConnectionsTrait;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
-use AE\ConnectBundle\Streaming\ChannelSubscriberInterface;
 use AE\SalesforceRestSdk\Bayeux\ChannelInterface;
-use AE\SalesforceRestSdk\Bayeux\ConsumerInterface;
 use AE\SalesforceRestSdk\Bayeux\Message;
 use AE\SalesforceRestSdk\Model\SObject;
 
-class SObjectConsumer implements ConsumerInterface
+class SObjectConsumer implements SalesforceConsumerInterface
 {
-    use ConnectionTrait;
+    use ConnectionsTrait;
 
     /**
      * @var SalesforceConnector
@@ -30,43 +28,51 @@ class SObjectConsumer implements ConsumerInterface
         $this->connector = $connector;
     }
 
+    public function channels(): array
+    {
+        return [
+            'objects' => '*',
+        ];
+    }
+
+
     public function consume(ChannelInterface $channel, Message $message)
     {
-        if ($message->isSuccessful()) {
-            $data = $message->getData();
+        $data = $message->getData();
 
-            if (preg_match('/^\/data\/(.*?)ChangeEvent$/', $channel->getChannelId())) {
-                $payload = $data->getPayload();
-                if (null === $payload) {
-                    return;
-                }
-                $changeEventHeader = $payload['ChangeEventHeader'];
-                unset($payload['ChangeEventHeader']);
+        if (null !== $data) {
+            $payload = $data->getPayload();
 
-                $intent = $changeEventHeader['changeType'];
-                switch ($intent) {
-                    case "CREATE":
-                        $intent = ChannelSubscriberInterface::CREATED;
-                        break;
-                    case "UPDATE":
-                        $intent = ChannelSubscriberInterface::UPDATED;
-                        break;
-                    case "DELETE":
-                        $intent = ChannelSubscriberInterface::DELETED;
-                        break;
-                }
-                $sObject = new SObject(
-                    $payload + [
-                        'Type' => $changeEventHeader['entityType'],
-                        'Id'   => $changeEventHeader['recordIds'][0],
-                    ]
-                );
-                $this->connector->receive($sObject, $intent, $this->getConnection()->getName());
-            } else {
-                $intent  = strtoupper($data->getEvent()->getType());
-                $sObject = $data->getSobject();
+            if (!is_array($payload)) {
+                return;
+            }
 
-                $this->connector->receive($sObject, $intent, $this->getConnection()->getName());
+            $changeEventHeader = $payload['ChangeEventHeader'];
+            unset($payload['ChangeEventHeader']);
+
+            $intent = $changeEventHeader['changeType'];
+
+            switch ($intent) {
+                case "CREATE":
+                    $intent = SalesforceConsumerInterface::CREATED;
+                    break;
+                case "UPDATE":
+                    $intent = SalesforceConsumerInterface::UPDATED;
+                    break;
+                case "DELETE":
+                    $intent = SalesforceConsumerInterface::DELETED;
+                    break;
+            }
+
+            $sObject = new SObject(
+                $payload + [
+                    'Type' => $changeEventHeader['entityName'],
+                    'Id'   => $changeEventHeader['recordIds'][0],
+                ]
+            );
+
+            foreach ($this->connections as $connection) {
+                $this->connector->receive($sObject, $intent, $connection->getName());
             }
         }
     }
