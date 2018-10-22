@@ -8,8 +8,6 @@
 
 namespace AE\ConnectBundle\Streaming;
 
-use AE\SalesforceRestSdk\Bayeux\ConsumerInterface;
-use Doctrine\Common\Collections\ArrayCollection;
 use JMS\Serializer\Annotation as JMS;
 
 /**

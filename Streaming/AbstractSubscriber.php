@@ -25,14 +25,14 @@ abstract class AbstractSubscriber implements ChannelSubscriberInterface
         $this->subscribers = new ArrayCollection();
     }
 
-    public function addSubscriber(ConsumerInterface $consumer)
+    public function addConsumer(ConsumerInterface $consumer)
     {
         if (!$this->subscribers->contains($consumer)) {
             $this->subscribers->add($consumer);
         }
     }
 
-    public function getSubscribers(): array
+    public function getConsumers(): array
     {
         return $this->subscribers->getValues();
     }

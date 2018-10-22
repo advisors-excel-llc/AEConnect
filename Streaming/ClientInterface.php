@@ -8,12 +8,12 @@
 
 namespace AE\ConnectBundle\Streaming;
 
-use AE\SalesforceRestSdk\Bayeux\ConsumerInterface;
+use AE\ConnectBundle\Salesforce\Inbound\SalesforceConsumerInterface;
 
 interface ClientInterface
 {
-    public function addSubscriber(ChannelSubscriberInterface $topic);
-    public function subscribe(string $topicName, ConsumerInterface $consumer);
+    public function addSubscriber(ChannelSubscriberInterface $subscriber);
+    public function subscribe(SalesforceConsumerInterface $consumer);
     public function start();
     public function stop();
     public function getClient();

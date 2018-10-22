@@ -1,0 +1,4 @@
+doctrine_cache:
+    providers:
+        ae_connect_metadata:
+            type: file_system

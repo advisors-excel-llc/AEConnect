@@ -7,7 +7,6 @@
         <env name="KERNEL_CLASS"
              value="AE\ConnectBundle\Tests\AppKernel"
         />
-        <env name="SF_URL" value="URL_OF_SALESFORCE" />
         <env name="SF_USER" value="YOUR_APP_USERNAME" />
         <env name="SF_PASS" value="YOUR_APP_PASS_W_TOKEN" />
         <env name="SF_CLIENT_ID" value="YOUR_APP_ID" />

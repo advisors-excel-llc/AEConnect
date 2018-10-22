@@ -29,9 +29,9 @@ class ConnectionManager implements ConnectionManagerInterface
      *
      * @return ConnectionManager
      */
-    public function registerConnection(string $name, ConnectionInterface $connection): ConnectionManager
+    public function registerConnection(ConnectionInterface $connection): ConnectionManager
     {
-        $this->connections->set($name, $connection);
+        $this->connections->set($connection->getName(), $connection);
 
         return $this;
     }
@@ -44,9 +44,26 @@ class ConnectionManager implements ConnectionManagerInterface
     public function getConnection(?string $name = null): ?ConnectionInterface
     {
         if (null === $name) {
-            return $this->connections->get('default');
+            if ($this->connections->containsKey('default')) {
+                return $this->connections->get('default');
+            }
+
+            /** @var ConnectionInterface $connection */
+            foreach ($this->connections as $connection) {
+                if ($connection->isDefault()) {
+                    return $connection;
+                }
+            }
         }
 
         return $this->connections->get($name);
+    }
+
+    /**
+     * @return array
+     */
+    public function getConnections(): array
+    {
+        return $this->connections->toArray();
     }
 }

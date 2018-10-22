@@ -8,12 +8,29 @@
 
 namespace AE\ConnectBundle\Connection;
 
+use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Streaming\ClientInterface;
 use AE\SalesforceRestSdk\Rest\Client as RestClient;
 use AE\SalesforceRestSdk\Bulk\Client as BulkClient;
+use AE\SalesforceRestSdk\Rest\Composite\Builder\CompositeRequestBuilder;
 
+/**
+ * Class Connection
+ *
+ * @package AE\ConnectBundle\Connection
+ */
 class Connection implements ConnectionInterface
 {
+    /**
+     * @var string
+     */
+    private $name;
+
+    /**
+     * @var bool
+     */
+    private $isDefault = false;
+
     /**
      * @var ClientInterface
      */
@@ -29,22 +46,57 @@ class Connection implements ConnectionInterface
      */
     private $bulkClient;
 
+    /**
+     * @var MetadataRegistry
+     */
+    private $metadataRegistry;
+
+    /**
+     * Connection constructor.
+     *
+     * @param string $name
+     * @param ClientInterface $streamingClient
+     * @param RestClient $restClient
+     * @param BulkClient $bulkClient
+     * @param MetadataRegistry $metadataRegistry
+     * @param bool $isDefault
+     */
     public function __construct(
+        string $name,
         ClientInterface $streamingClient,
         RestClient $restClient,
-        BulkClient $bulkClient
+        BulkClient $bulkClient,
+        MetadataRegistry $metadataRegistry,
+        bool $isDefault = false
     ) {
-        $this->streamingClient = $streamingClient;
-        $this->restClient      = $restClient;
-        $this->bulkClient      = $bulkClient;
+        $this->name             = $name;
+        $this->streamingClient  = $streamingClient;
+        $this->restClient       = $restClient;
+        $this->bulkClient       = $bulkClient;
+        $this->metadataRegistry = $metadataRegistry;
+        $this->isDefault        = $isDefault;
     }
 
+    /**
+     * @return string
+     */
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    /**
+     * @return ClientInterface
+     */
     public function getStreamingClient(): ClientInterface
     {
         return $this->streamingClient;
     }
 
-    public function getRestClient()
+    /**
+     * @return RestClient
+     */
+    public function getRestClient(): RestClient
     {
         return $this->restClient;
     }
@@ -67,5 +119,53 @@ class Connection implements ConnectionInterface
         $this->bulkClient = $bulkClient;
 
         return $this;
+    }
+
+    /**
+     * @return MetadataRegistry
+     */
+    public function getMetadataRegistry(): MetadataRegistry
+    {
+        return $this->metadataRegistry;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isDefault(): bool
+    {
+        return $this->isDefault;
+    }
+
+    /**
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function hydrateMetadataDescribe(): void
+    {
+        $builder          = new CompositeRequestBuilder();
+        $metadataRegistry = $this->getMetadataRegistry();
+
+        foreach ($metadataRegistry->getMetadata() as $i => $metadatum) {
+            if (null === $metadatum->getDescribe()) {
+                $builder->describe("{$metadatum->getSObjectType()}_{$i}", $metadatum->getSObjectType());
+            }
+        }
+
+        $request = $builder->build();
+
+        // Don't be firing off if ya ain't got no ammo
+        if (count($request->getCompositeRequest()) > 0) {
+            $response = $this->getRestClient()->getCompositeClient()->sendCompositeRequest($request);
+
+            foreach ($metadataRegistry->getMetadata() as $i => $metadatum) {
+                $result = $response->findResultByReferenceId("{$metadatum->getSObjectType()}_{$i}");
+                if (null !== $result && 200 === $result->getHttpStatusCode()) {
+                    $metadatum->setDescribe($result->getBody());
+                    $cacheId = "{$this->name}__{$metadatum->getClassName()}";
+                    $this->metadataRegistry->getCache()->save($cacheId, $metadatum);
+                }
+            }
+        }
     }
 }

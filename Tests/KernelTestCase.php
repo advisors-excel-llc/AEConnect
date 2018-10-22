@@ -24,6 +24,6 @@ class KernelTestCase extends TestCase
 
     protected function get($serviceId)
     {
-        return static::$kernel->getContainer()->get($serviceId);
+        return static::$container->get($serviceId);
     }
 }

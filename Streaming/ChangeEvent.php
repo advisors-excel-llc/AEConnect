@@ -43,13 +43,7 @@ class ChangeEvent extends AbstractSubscriber
 
     public function getChannelName(): string
     {
-        $name = $this->name;
-
-        if (preg_match('/__(c|C)$/', $name) == true) {
-            $name = preg_replace('/__(c|C)$/', '__ChangeEvent', $name);
-        } else {
-            $name .= 'ChangeEvent';
-        }
+        $name = preg_replace('/__(c|C)$/', '__', $this->name).'ChangeEvent';
 
         return '/data/'.$name;
     }

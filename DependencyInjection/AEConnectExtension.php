@@ -8,6 +8,12 @@
 
 namespace AE\ConnectBundle\DependencyInjection;
 
+use AE\ConnectBundle\Connection\Connection;
+use AE\ConnectBundle\Connection\ConnectionInterface;
+use AE\ConnectBundle\Driver\AnnotationDriver;
+use AE\ConnectBundle\Metadata\MetadataRegistry;
+use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
+use AE\ConnectBundle\Salesforce\Inbound\SObjectConsumer;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
@@ -19,6 +25,7 @@ use AE\ConnectBundle\Streaming\Client;
 use AE\ConnectBundle\Streaming\Topic;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Alias;
+use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -41,7 +48,15 @@ class AEConnectExtension extends Extension
 
         $config = $this->processConfiguration(new Configuration\Configuration(), $configs);
 
+        $this->createAnnotationDriver($container, $config);
         $this->processConnections($container, $config);
+    }
+
+    private function createAnnotationDriver(ContainerBuilder $container, array $config)
+    {
+        $definition = new Definition(AnnotationDriver::class, [new Reference("annotation_reader"), $config['paths']]);
+
+        $container->setDefinition("ae_connect.annotation_driver", $definition);
     }
 
     private function processConnections(ContainerBuilder $container, array $config)
@@ -49,139 +64,60 @@ class AEConnectExtension extends Extension
         $connections = $config['connections'];
 
         if (count($connections) > 0) {
-            $manager = $container->findDefinition(ConnectionManager::class);
-
             foreach ($connections as $name => $connection) {
-                $authProvider = $this->createAuthProviderService($connection['login']);
-                $container->setDefinition("ae_connect.connection.$name.auth_provider", $authProvider);
-
-                $bayeuxClient = new Definition(
-                    BayeuxClient::class,
-                    [
-                        '$authProvider' => new Reference("ae_connect.connection.$name.auth_provider"),
-                    ]
-                );
-                $bayeuxClient->setAutowired(true);
-
-                $container->setDefinition("ae_connect.connection.$name.bayeux_client", $bayeuxClient);
-                $container->setDefinition(
-                    "ae_connect.connection.$name.streaming_client",
-                    $this->createStreamingClientService($name, $connection, $container)
-                );
-
-                $restClient = new Definition(
-                    \AE\SalesforceRestSdk\Rest\Client::class,
-                    [
-                        '$provider' => new Reference("ae_connect.connection.$name.auth_provider"),
-                    ]
-                );
-                $restClient->setAutowired(true);
-
-                $container->setDefinition(
-                    "ae_connect.connection.$name.rest_client",
-                    $restClient
-                );
-
-                $bulkClient = new Definition(
-                    \AE\SalesforceRestSdk\Bulk\Client::class,
-                    [
-                        '$authProvider' => new Reference("ae_connect.connection.$name.auth_provider")
-                    ]
-                );
-                $bulkClient->setAutowired(true);
-
-                $container->setDefinition(
-                    "ae_connect.connection.$name.bulk_client",
-                    $bulkClient
-                );
-
-                $container->setDefinition(
-                    "ae_connect.connection.$name.replay_extension",
-                    $this->createReplayExtension($name, $connection['config']['replay_start_id'])
-                );
-
-                $container->setDefinition(
-                    "ae_connect.connection.$name",
-                    new Definition(
-                        Client::class,
-                        [
-                            new Reference(
-                                "ae_connect.connection.$name.streaming_client"
-                            ),
-                            new Reference(
-                                "ae_connect.connection.$name.rest_client"
-                            )
-                        ]
-                    )
-                );
-
-                $manager->addMethodCall('registerConnection', [$name, new Reference("ae_connect.connection.$name")]);
+                $this->createAuthProviderService($connection['login'], $name, $container);
+                $this->createBayeuxClientService($name, $container);
+                $this->createStreamingClientService($name, $connection, $container);
+                $this->createRestClientService($name, $container);
+                $this->createBulkClientExtension($name, $container);
+                $this->createReplayExtensionService($connection, $name, $container);
+                $this->createMetadataRegistryService($connection, $name, $container);
+                $this->createConnectionService($connection, $name, $container);
 
                 if ($name !== "default" && $connection['is_default']) {
                     $container->setAlias("ae_connect.connection.default", new Alias("ae_connect.connection.$name"));
-                    $manager->addMethodCall(
-                        'registerConnection',
-                        ['default', new Reference("ae_connect.connection.default")]
-                    );
                 }
             }
         }
     }
 
-    private function createAuthProviderService(array $config): Definition
+    private function createAuthProviderService(array $config, string $connectionName, ContainerBuilder $container)
     {
-        return new Definition(
-            LoginProvider::class,
-            [
-                $config['key'],
-                $config['secret'],
-                $config['username'],
-                $config['password'],
-                $config['url'],
-            ]
-        );
+        $container->register("ae_connect.connection.$connectionName.auth_provider", LoginProvider::class)
+                  ->setArguments(
+                      [
+                          $config['key'],
+                          $config['secret'],
+                          $config['username'],
+                          $config['password'],
+                          $config['url'],
+                      ]
+                  )
+                  ->setPublic(true)
+        ;
     }
 
-    private function createStreamingClientService(string $name, array $config, ContainerBuilder $container): Definition
+    private function createStreamingClientService(string $connectionName, array $config, ContainerBuilder $container)
     {
-        $def = new Definition(
-            Client::class,
-            [
-                new Reference("ae_connect.connection.$name.bayeux_client"),
-            ]
-        );
+        $def = $container->register("ae_connect.connection.$connectionName.streaming_client", Client::class)
+                         ->setArgument('$client', new Reference("ae_connect.connection.$connectionName.bayeux_client"))
+        ;
 
         if (!empty($config['topics'])) {
-            $this->buildTopics($name, $config['topics'], $container, $def);
+            $this->buildTopics($connectionName, $config['topics'], $container, $def);
         }
 
         if (!empty($config['platform_events'])) {
-            $this->buildPlatformEvents($name, $config['platform_events'], $container, $def);
+            $this->buildPlatformEvents($connectionName, $config['platform_events'], $container, $def);
         }
 
         if (!empty($config['generic_events'])) {
-            $this->buildGenericEvents($name, $config['generic_events'], $container, $def);
+            $this->buildGenericEvents($connectionName, $config['generic_events'], $container, $def);
         }
 
         if (!empty($config['objects'])) {
-            $this->buildObjects($name, $config['objects'], $container, $def);
+            $this->buildObjects($connectionName, $config['objects'], $container, $def);
         }
-
-        return $def;
-    }
-
-    private function createReplayExtension(string $name, int $replayId): Definition
-    {
-        $def = new Definition(
-            ReplayExtension::class,
-            [
-                $replayId,
-            ]
-        );
-
-        $def->addTag('ae_connect.extension', ['connections' => $name]);
-
-        return $def;
     }
 
     private function createTopic(array $config): Definition
@@ -233,12 +169,12 @@ class AEConnectExtension extends Extension
         Definition $def
     ): void {
         foreach ($config as $eventName) {
-            $event = new Definition(PlatformEvent::class, [$eventName]);
+            $event   = new Definition(PlatformEvent::class, [$eventName]);
             $eventId = "ae_connect.connection.$name.platform_event.$eventName";
 
             $container->setDefinition($eventId, $event);
 
-            $def->addMethodCall('addSubscriber', [new Reference([$eventId])]);
+            $def->addMethodCall('addSubscriber', [new Reference($eventId)]);
         }
     }
 
@@ -303,5 +239,124 @@ class AEConnectExtension extends Extension
 
             $def->addMethodCall('addSubscriber', [new Reference($eventId)]);
         }
+    }
+
+    /**
+     * @param string $connectionName
+     * @param ContainerBuilder $container
+     */
+    private function createBayeuxClientService(string $connectionName, ContainerBuilder $container): void
+    {
+        $container->register("ae_connect.connection.$connectionName.bayeux_client", BayeuxClient::class)
+                  ->setArgument('$authProvider', new Reference("ae_connect.connection.$connectionName.auth_provider"))
+                  ->setAutowired(true)
+        ;
+    }
+
+    /**
+     * @param string $connectionName
+     * @param ContainerBuilder $container
+     */
+    private function createRestClientService(string $connectionName, ContainerBuilder $container): void
+    {
+        $container->register(
+            "ae_connect.connection.$connectionName.rest_client",
+            \AE\SalesforceRestSdk\Rest\Client::class
+        )
+                  ->setArgument('$provider', new Reference("ae_connect.connection.$connectionName.auth_provider"))
+                  ->setAutowired(true)
+        ;
+    }
+
+    /**
+     * @param string $connectionName
+     * @param ContainerBuilder $container
+     */
+    private function createBulkClientExtension(string $connectionName, ContainerBuilder $container): void
+    {
+        $container->register(
+            "ae_connect.connection.$connectionName.bulk_client",
+            \AE\SalesforceRestSdk\Bulk\Client::class
+        )
+                  ->setArgument('$authProvider', new Reference("ae_connect.connection.$connectionName.auth_provider"))
+                  ->setAutowired(true)
+        ;
+    }
+
+    /**
+     * @param array $config
+     * @param string $connectionName
+     * @param ContainerBuilder $container
+     */
+    private function createReplayExtensionService(
+        array $config,
+        string $connectionName,
+        ContainerBuilder $container
+    ): void {
+        $container->register("ae_connect.connection.$connectionName.replay_extension", ReplayExtension::class)
+                  ->setArguments(
+                      [
+                          $config['config']['replay_start_id'],
+                      ]
+                  )
+                  ->addTag('ae_connect.extension', ['connections' => $connectionName])
+        ;
+    }
+
+    /**
+     * @param array $config
+     * @param string $connectionName
+     * @param ContainerBuilder $container
+     */
+    private function createMetadataRegistryService(
+        array $config,
+        string $connectionName,
+        ContainerBuilder $container
+    ): void {
+        $cacheProviderId = "doctrine_cache.providers.{$config['config']['cache']['metadata_provider']}";
+        $container->setAlias("ae_connect.connection.$connectionName.cache.metadata_provider", $cacheProviderId);
+        $container->register("ae_connect.connection.$connectionName.metadata_registry", MetadataRegistry::class)
+                  ->setArguments(
+                      [
+                          new Reference("ae_connect.annotation_driver"),
+                          new Reference("ae_connect.connection.$connectionName.cache.metadata_provider"),
+                          $connectionName,
+                      ]
+                  )
+                  ->setFactory([MetadataRegistryFactory::class, 'generate'])
+        ;
+    }
+
+    /**
+     * @param array $config
+     * @param string $connectionName
+     * @param ContainerBuilder $container
+     */
+    private function createConnectionService(array $config, string $connectionName, ContainerBuilder $container): void
+    {
+        $container->register("ae_connect.connection.$connectionName", Connection::class)
+                  ->setArguments(
+                      [
+                          '$name'             => $connectionName,
+                          '$streamingClient'  => new Reference(
+                              "ae_connect.connection.$connectionName.streaming_client"
+                          ),
+                          '$restClient'       => new Reference(
+                              "ae_connect.connection.$connectionName.rest_client"
+                          ),
+                          '$bulkClient'       => new Reference(
+                              "ae_connect.connection.$connectionName.bulk_client"
+                          ),
+                          '$metadataRegistry' => new Reference(
+                              "ae_connect.connection.$connectionName.metadata_registry"
+                          ),
+                          '$isDefault'        => $config['is_default'],
+                      ]
+                  )
+                  ->setPublic(true)
+                  ->setAutowired(true)
+                  ->setAutoconfigured(true)
+                  ->addTag('ae_connect.connection')
+        ;
     }
 }

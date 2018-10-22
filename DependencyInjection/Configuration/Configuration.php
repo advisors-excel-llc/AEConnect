@@ -18,7 +18,14 @@ class Configuration implements ConfigurationInterface
     {
         $tree = new TreeBuilder();
 
-        $tree->root('ae_connect')->append($this->buildConnectionTree());
+        $tree->root('ae_connect')
+             ->children()
+                ->arrayNode('paths')
+                    ->isRequired()
+                    ->scalarPrototype()->end()
+              ->end()
+             ->end()
+             ->append($this->buildConnectionTree());
 
         return $tree;
     }
@@ -36,7 +43,7 @@ class Configuration implements ConfigurationInterface
                         ->append($this->buildPlatformEventsTree())
                         ->append($this->buildObjectsTree())
                         ->append($this->buildGenericEventsTree())
-                        ->append($this->buildTopicConfigTree())
+                        ->append($this->buildConfigTree())
                     ->end()
                 ->end()
             ->validate()
@@ -75,7 +82,7 @@ class Configuration implements ConfigurationInterface
         return $node;
     }
 
-    private function buildTopicConfigTree()
+    private function buildConfigTree()
     {
         $tree = new TreeBuilder();
 
@@ -90,6 +97,15 @@ class Configuration implements ConfigurationInterface
                                 return !is_numeric($value) || $value < -2;
                             })
                             ->thenInvalid('replay_start_id must be a numeric value no less than -2.')
+                        ->end()
+                    ->end()
+                    ->arrayNode('cache')
+                        ->addDefaultsIfNotSet()
+                        ->children()
+                            ->scalarNode('metadata_provider')
+                                ->cannotBeEmpty()
+                                ->defaultValue('ae_connect_metadata')
+                            ->end()
                         ->end()
                     ->end()
                 ->end()

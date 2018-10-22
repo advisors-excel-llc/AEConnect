@@ -1,1 +1,16 @@
 services:
+    _instanceof:
+        AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPluginInterface:
+            tags:
+                - {name: "ae_connect.transformer_plugin"}
+    AE\ConnectBundle\Salesforce\Transformer\Transformer:
+        autowire: true
+        public: true
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\AssociationTransformer:
+        autowire: true
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\DateTimeTransformer:
+        autowire: true
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\MultiValuePickListTransformer:
+        autowire: true
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\RecordTypeTransformer:
+        autowire: true
