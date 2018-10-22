@@ -133,6 +133,8 @@ class EntityCompiler
 
                 $entities[] = $entity;
             } catch (\RuntimeException $e) {
+                $manager->detach($entity);
+
                 if (null !== $this->logger) {
                     $this->logger->alert($e->getMessage());
                     $this->logger->debug($e->getTraceAsString());
