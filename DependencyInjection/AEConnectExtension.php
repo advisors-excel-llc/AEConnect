@@ -13,6 +13,7 @@ use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Driver\AnnotationDriver;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
+use AE\ConnectBundle\Salesforce\Inbound\SObjectConsumer;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
@@ -356,6 +357,18 @@ class AEConnectExtension extends Extension
                   ->setAutowired(true)
                   ->setAutoconfigured(true)
                   ->addTag('ae_connect.connection')
+        ;
+    }
+
+    private function createSObjectConsumer(array $config, ContainerBuilder $container): void
+    {
+        $channels = array_merge(array_keys($config['topics']), array_keys($config['objects']));
+
+        $container->register(SObjectConsumer::class)
+            ->setAutowired(true)
+            ->addTag('ae_connect.subscriber', [
+                'channels' => implode(',', $channels)
+            ])
         ;
     }
 }

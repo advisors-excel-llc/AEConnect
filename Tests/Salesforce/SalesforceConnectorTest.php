@@ -11,6 +11,7 @@ namespace AE\ConnectBundle\Tests\Salesforce;
 use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
 use AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
+use AE\ConnectBundle\Streaming\ChannelSubscriberInterface;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Contact;
@@ -18,6 +19,7 @@ use AE\ConnectBundle\Tests\Entity\Order;
 use AE\ConnectBundle\Tests\Entity\Product;
 use AE\ConnectBundle\Tests\Entity\Task;
 use AE\ConnectBundle\Tests\Entity\TestObject;
+use AE\SalesforceRestSdk\Model\SObject;
 use Enqueue\Client\DriverInterface;
 use Enqueue\Consumption\Result;
 use Enqueue\Fs\FsContext;
@@ -99,6 +101,86 @@ class SalesforceConnectorTest extends DatabaseTestCase
 
         $orders = $manager->getRepository(Order::class)->findBy(['sfid' => null]);
         $this->assertEmpty($orders);
+    }
+
+    public function testIncoming()
+    {
+        $account = new SObject(
+            [
+                'Id'   => '001000111000111AAA',
+                'Type' => 'Account',
+                'Name' => 'Test Incoming',
+            ]
+        );
+
+        $this->connector->receive($account, ChannelSubscriberInterface::CREATED);
+
+        /** @var Account $account */
+        $account = $this->doctrine->getManagerForClass(Account::class)
+                                  ->getRepository(Account::class)
+                                  ->findOneBy(['sfid' => '001000111000111AAA'])
+        ;
+        $extId   = $account->getExtId();
+
+        $this->assertNotNull($account);
+        $this->assertEquals('Test Incoming', $account->getName());
+
+        $account = new SObject(
+            [
+                'Id'   => '001000111000111AAA',
+                'Type' => 'Account',
+                'Name' => 'Test Incoming Update',
+            ]
+        );
+
+        $this->connector->receive($account, ChannelSubscriberInterface::UPDATED);
+
+        /** @var Account $account */
+        $account = $this->doctrine->getManagerForClass(Account::class)
+                                  ->getRepository(Account::class)
+                                  ->findOneBy(['extId' => $extId])
+        ;
+
+        $this->assertNotNull($account);
+        $this->assertEquals('Test Incoming Update', $account->getName());
+
+        $contact = new SObject(
+            [
+                'Id'        => '001000111000111BBB',
+                'Type'      => 'Contact',
+                'AccountId' => '001000111000111AAA',
+                'FirstName' => 'Test',
+                'LastName'  => 'Contact',
+            ]
+        );
+
+        $this->connector->receive($contact, ChannelSubscriberInterface::CREATED);
+
+        /** @var Contact $contact */
+        $contact = $this->doctrine->getManagerForClass(Contact::class)
+                                  ->getRepository(Contact::class)
+                                  ->findOneBy(['sfid' => '001000111000111BBB'])
+        ;
+
+        $this->assertNotNull($contact);
+        $this->assertNotNull($contact->getAccount());
+        $this->assertEquals($account->getId(), $contact->getAccount()->getId());
+
+        $contact = new SObject(
+            [
+                'Id'   => '001000111000111BBB',
+                'Type' => 'Contact',
+            ]
+        );
+
+        $this->connector->receive($contact, ChannelSubscriberInterface::DELETED);
+        /** @var Contact $contact */
+        $contact = $this->doctrine->getManagerForClass(Contact::class)
+                                  ->getRepository(Contact::class)
+                                  ->findOneBy(['sfid' => '001000111000111BBB'])
+        ;
+
+        $this->assertNull($contact);
     }
 
     private function createOrder(array &$queue)

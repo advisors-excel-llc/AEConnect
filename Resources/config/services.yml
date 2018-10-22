@@ -54,3 +54,5 @@ services:
         autowire: true
         tags:
             - { name: 'doctrine.event_subscriber' }
+    AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler:
+        autowire: true

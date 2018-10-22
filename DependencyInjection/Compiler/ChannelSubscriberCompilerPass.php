@@ -19,36 +19,62 @@ class ChannelSubscriberCompilerPass implements CompilerPassInterface
         $tags = $container->findTaggedServiceIds('ae_connect.subscriber');
 
         foreach ($tags as $id => $attributes) {
-            if (!array_key_exists('channel', $attributes) || empty($attributes['channel'])) {
-                throw new \RuntimeException("The 'channel' attribute must be set on the consumer's service tag.");
+            if (!array_key_exists('channels', $attributes) || empty($attributes['channel'])) {
+                throw new \RuntimeException("The 'channels' attribute must be set on the consumer's service tag.");
             }
 
             if (array_key_exists('connections', $attributes) && strlen($attributes['connections']) > 0) {
                 $connections = explode(",", $attributes['connections']);
             } else {
                 $config      = $container->getExtensionConfig('ae_connect');
-                $connections = array_keys($config[0]['connections']);
+                $connections = $config[0]['connections'];
             }
 
             $subscriber = $container->getDefinition($id);
 
-            foreach ($connections as $connection) {
-                $connection = trim($connection);
-                if ($container->hasDefinition("ae_connect.connection.$connection")) {
-                    $service = $container->getDefinition("ae_connect.connection.$connection");
-                    $service->addMethodCall('subscribe', [$attributes['topic'], new Reference($id)]);
+            foreach ($connections as $name => $connection) {
+                $name = trim($connection);
+                $channels = explode(',', $attributes['channels']);
+
+                if ($container->hasDefinition("ae_connect.connection.$name")) {
+                    $service = $container->getDefinition("ae_connect.connection.$name");
+
+                    foreach (array_keys($connection['topics']) as $topic) {
+                        if (in_array($topic, $channels)) {
+                            $service->addMethodCall('subscribe', ['/topic/'.$topic, new Reference($id)]);
+                        }
+                    }
+
+                    foreach (array_keys($connection['platform_events']) as $topic) {
+                        if (in_array($topic, $channels)) {
+                            $service->addMethodCall('subscribe', ['/event/'.$topic, new Reference($id)]);
+                        }
+                    }
+
+                    foreach (array_keys($connection['generic_events']) as $topic) {
+                        if (in_array($topic, $channels)) {
+                            $service->addMethodCall('subscribe', ['/u/'.$topic, new Reference($id)]);
+                        }
+                    }
+
+                    foreach (array_keys($connection['objects']) as $topic) {
+                        if (in_array($topic, $channels)) {
+                            $topic = preg_replace('/__(c|C)$/', '__', $topic).'ChangeEvent';
+                            $service->addMethodCall('subscribe', ['/data/'.$topic, new Reference($id)]);
+                        }
+                    }
 
                     if ($subscriber->hasMethodCall('addConnection')) {
                         $subscriber->addMethodCall(
                             'addConnection',
-                            [new Reference("ae_connect.connection.$connection")]
+                            [new Reference("ae_connect.connection.$name")]
                         );
                     }
 
                     if ($subscriber->hasMethodCall('setConnection')) {
                         $subscriber->addMethodCall(
                             'setConnection',
-                            [new Reference("ae_connect.connection.$connection")]
+                            [new Reference("ae_connect.connection.$name")]
                         );
                     }
                 }

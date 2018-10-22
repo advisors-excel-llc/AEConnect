@@ -8,20 +8,35 @@
 
 namespace AE\ConnectBundle\Salesforce;
 
+use AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
 use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
+use AE\ConnectBundle\Streaming\ChannelSubscriberInterface;
 use AE\SalesforceRestSdk\Model\SObject;
+use Doctrine\Common\Util\ClassUtils;
+use Doctrine\ORM\ORMException;
 use Enqueue\Client\Message;
 use Enqueue\Client\ProducerInterface;
 use JMS\Serializer\SerializerInterface;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
+use Symfony\Bridge\Doctrine\RegistryInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class SalesforceConnector
 {
+    use LoggerAwareTrait;
+
     /**
      * @var SObjectCompiler
      */
-    private $compiler;
+    private $sObjectCompiler;
+
+    /**
+     * @var EntityCompiler
+     */
+    private $entityCompiler;
 
     /**
      * @var ProducerInterface
@@ -34,18 +49,32 @@ class SalesforceConnector
     private $serializer;
 
     /**
+     * @var RegistryInterface
+     */
+    private $registry;
+
+    /**
      * @var bool
      */
     private $enabled = true;
 
     public function __construct(
         ProducerInterface $producer,
-        SObjectCompiler $compiler,
-        SerializerInterface $serializer
+        SObjectCompiler $sObjectCompiler,
+        EntityCompiler $entityCompiler,
+        SerializerInterface $serializer,
+        RegistryInterface $registry,
+        ?LoggerInterface $logger = null
     ) {
-        $this->producer   = $producer;
-        $this->compiler   = $compiler;
-        $this->serializer = $serializer;
+        $this->producer        = $producer;
+        $this->sObjectCompiler = $sObjectCompiler;
+        $this->entityCompiler  = $entityCompiler;
+        $this->serializer      = $serializer;
+        $this->registry        = $registry;
+
+        if (null !== $logger) {
+            $this->setLogger($logger);
+        }
     }
 
     /**
@@ -60,7 +89,7 @@ class SalesforceConnector
             return false;
         }
 
-        $result  = $this->compiler->compile($entity, $connectionName);
+        $result  = $this->sObjectCompiler->compile($entity, $connectionName);
         $intent  = $result->getIntent();
         $sObject = $result->getSObject();
 
@@ -80,10 +109,40 @@ class SalesforceConnector
         return true;
     }
 
-    public function receive(SObject $object, string $connectionName = 'default')
+    /**
+     * @param SObject $object
+     * @param string $intent
+     * @param string $connectionName
+     *
+     * @return bool
+     */
+    public function receive(SObject $object, string $intent, string $connectionName = 'default')
     {
         if (!$this->enabled) {
             return false;
+        }
+
+        $entities = $this->entityCompiler->compile($object, $connectionName);
+
+        foreach ($entities as $entity) {
+            $class   = ClassUtils::getClass($entity);
+            $manager = $this->registry->getManagerForClass($class);
+
+            switch ($intent) {
+                case ChannelSubscriberInterface::CREATED:
+                case ChannelSubscriberInterface::UPDATED:
+                    $manager->merge($entity);
+                    break;
+                case ChannelSubscriberInterface::DELETED:
+                    $manager->remove($entity);
+                    break;
+            }
+
+            $manager->flush();
+
+            if (null !== $this->logger) {
+                $this->logger->info('{intent} entity of type {type}', ['intent' => $intent, 'type' => $class]);
+            }
         }
     }
 
