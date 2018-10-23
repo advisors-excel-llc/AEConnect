@@ -75,8 +75,8 @@ class ConsumeCommand extends Command
 
         $this->setName('ae_connect:consume')
              ->addOption(
-                 'send-interval',
-                 's',
+                 'wait',
+                 'w',
                  InputOption::VALUE_OPTIONAL,
                  'The maximum time in seconds the consumer should wait for more messages before sending the request to Salesforce',
                  10
@@ -97,7 +97,7 @@ class ConsumeCommand extends Command
         $queue          = $this->driver->createQueue('default');
         $chainExtension = new ChainExtension(
             [
-                new SalesforceOutboundExtension($this->outboundQueue, $input->getOption('send-interval').' seconds'),
+                new SalesforceOutboundExtension($this->outboundQueue, $input->getOption('wait').' seconds'),
                 new LoggerExtension(new ConsoleLogger($output)),
                 new SignalExtension(),
             ]

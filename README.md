@@ -1,1 +1,27 @@
 # AEConnect
+
+## Requirements
+
+* PHP 7.1+
+* PCNTL extension
+* Symfony 3.4+
+
+## Installation
+
+Install the bundle via composer
+
+```bash
+composer install ae/connect-bundle
+```
+
+## Documentation
+* [Configuration](Resources/docs/config/README.md)
+    * [Entity Mapping](config/entity_mapping.md)
+* [Inbound Data from Salesforce](Resources/docs/inbound/README.md)
+* [Outbound Data to Salesforce](Resources/docs/outbound/README.md)
+* [Inbound and Outbound Validation](Resources/docs/validation/README.md)
+* [Data Transformation](Resources/docs/transformers/README.md)
+
+## Resources
+* [Enqueue](https://github.com/php-enqueue/enqueue-dev)
+* [Salesforce Rest SDK](https://github.com/advisors-excel-llc/salesforce-rest-sdk)
