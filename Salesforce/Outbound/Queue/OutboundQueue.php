@@ -119,20 +119,16 @@ class OutboundQueue
         } catch (\GuzzleHttp\Exception\GuzzleException $e) {
             if (null !== $this->logger) {
                 $this->logger->critical(
-                    'An exception occurred while trying to send queue:\n{msg}',
-                    [
-                        'msg' => $e->getTraceAsString(),
-                    ]
+                    'An exception occurred while trying to send queue.'
                 );
+                $this->logger->debug($e->getTraceAsString());
             }
         } catch (\Exception $e) {
             if (null !== $this->logger) {
                 $this->logger->critical(
-                    'An exception occurred while trying to send queue:\n{msg}',
-                    [
-                        'msg' => $e->getTraceAsString(),
-                    ]
+                    'An exception occurred while trying to send queue.'
                 );
+                $this->logger->debug($e->getTraceAsString());
             }
         }
     }

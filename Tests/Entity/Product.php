@@ -14,6 +14,7 @@ use AE\ConnectBundle\Annotations\SalesforceId;
 use AE\ConnectBundle\Annotations\SObjectType;
 use Doctrine\ORM\Mapping as ORM;
 use Ramsey\Uuid\Uuid;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Class Product
@@ -44,7 +45,6 @@ class Product
     /**
      * @var bool
      * @ORM\Column(type="boolean")
-     * @Field(name="IsActive")
      */
     private $active;
 
