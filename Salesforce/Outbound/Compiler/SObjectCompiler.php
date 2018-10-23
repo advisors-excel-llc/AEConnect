@@ -207,6 +207,13 @@ class SObjectCompiler
         $fields = $metadata->getPropertyMap();
 
         foreach ($fields as $property => $field) {
+            $fieldMetadata = $metadata->getMetadataForProperty($property);
+
+            // Don't attempt to set values for fields that cannot be updated in Salesforce
+            if (null === $fieldMetadata || !$fieldMetadata->describe()->isCreateable()) {
+                continue;
+            }
+
             $value = $metadata->getMetadataForProperty($property)->getValueFromEntity($entity);
             if (null !== $value) {
                 $sObject->$field = $this->compileProperty(

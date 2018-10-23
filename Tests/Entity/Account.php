@@ -13,7 +13,7 @@ use Ramsey\Uuid\Uuid;
 
 /**
  * Class Account
- * @AEConnect\SObjectType(value="Account")
+ * @AEConnect\SObjectType(name="Account")
  * @ORM\Entity()
  * @ORM\Table("account")
  * @ORM\HasLifecycleCallbacks()
@@ -30,7 +30,7 @@ class Account
 
     /**
      * @var string
-     * @AEConnect\Field(value="S3F__hcid__c")
+     * @AEConnect\Field("S3F__hcid__c")
      * @AEConnect\ExternalId()
      * @ORM\Column(type="guid", length=36, nullable=false, unique=true)
      */
@@ -38,7 +38,7 @@ class Account
 
     /**
      * @var string
-     * @AEConnect\Field(value="Name", required=true)
+     * @AEConnect\Field("Name")
      * @ORM\Column(length=80, nullable=false)
      */
     private $name;
