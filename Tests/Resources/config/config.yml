@@ -20,6 +20,11 @@ services:
         public: true
         arguments:
             $cache: '@doctrine_cache.providers.ae_connect_metadata'
+    AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService:
+        autowire: true
+        public: true
+        arguments:
+            $cache: '@doctrine_cache.providers.ae_connect_polling'
 
 doctrine:
     dbal:
@@ -61,12 +66,13 @@ ae_connect:
     connections:
         default:
             login:
-                key: "%env(SF_CLIENT_ID)%"
-                secret: "%env(SF_CLIENT_SECRET)%"
+                #key: "%env(SF_CLIENT_ID)%"
+                #secret: "%env(SF_CLIENT_SECRET)%"
                 username: "%env(SF_USER)%"
                 password: "%env(SF_PASS)%"
                 url: "https://login.salesforce.com"
             objects:
                 - Account
+                - UserRole
             config:
                 replay_start_id: !php/const AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension::REPLAY_SAVED

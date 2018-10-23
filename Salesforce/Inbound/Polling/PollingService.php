@@ -100,57 +100,76 @@ class PollingService
         }
 
         $objects = $this->getObjects($connectionName);
-        $builder = new CompositeRequestBuilder();
-        $client  = $connection->getRestClient()->getCompositeClient();
 
-        foreach ($objects as $object) {
-            $builder->getUpdated('updated_'.$object, $object, $this->lastUpdated, null);
-            $builder->getDeleted('deleted_'.$object, $object, $this->lastUpdated, null);
+        if (empty($objects)) {
+            return;
         }
 
-        $response = $client->sendCompositeRequest($builder->build());
-        $builder  = new CompositeRequestBuilder();
-        $updates  = [];
-        $removals = [];
+        $chunks = array_chunk($objects, 12);
 
-        foreach ($response->getCompositeResponse() as $result) {
-            if ($result->getHttpStatusCode() === 200) {
-                list($action, $type) = explode('_', $result->getReferenceId());
-                $body = $result->getBody();
-                if ($body instanceof UpdatedResponse) {
-                    $fields = [];
-                    foreach ($connection->getMetadataRegistry()->findMetadataBySObjectType($type) as $metadata) {
-                        $fields = array_merge($fields, array_values($metadata->getFieldMap()));
-                    }
-                    $builder->getSObjectCollection($type, $type, $body->getIds(), $fields);
-                } elseif ($body instanceof DeletedResponse) {
-                    /** @var DeletedRecord[] $records */
-                    $records = $body->getDeletedRecords();
-                    foreach ($records as $record) {
-                        $removals[] = new SObject(['Id' => $record->getId(), 'Type' => $type]);
+        foreach ($chunks as $chunk) {
+            $builder = new CompositeRequestBuilder();
+            $client  = $connection->getRestClient()->getCompositeClient();
+            $end     = (new \DateTime())->add(\DateInterval::createFromDateString('1 Minute'));
+
+            foreach ($chunk as $object) {
+                $builder->getUpdated('updated_'.$object, $object, $this->lastUpdated, $end);
+                $builder->getDeleted('deleted_'.$object, $object, $this->lastUpdated, $end);
+            }
+
+            $request  = $builder->build();
+            $response = $client->sendCompositeRequest($request);
+            $builder  = new CompositeRequestBuilder();
+            $updates  = [];
+            $removals = [];
+
+            foreach ($response->getCompositeResponse() as $result) {
+                if ($result->getHttpStatusCode() === 200) {
+                    list($action, $type) = explode('_', $result->getReferenceId());
+                    $body = $result->getBody();
+                    if ($body instanceof UpdatedResponse) {
+                        $fields = [];
+                        foreach ($connection->getMetadataRegistry()->findMetadataBySObjectType($type) as $metadata) {
+                            $fields = array_merge($fields, array_values($metadata->getPropertyMap()));
+                        }
+                        $builder->getSObjectCollection($type, $type, $body->getIds(), $fields);
+                    } elseif ($body instanceof DeletedResponse) {
+                        /** @var DeletedRecord[] $records */
+                        $records = $body->getDeletedRecords();
+                        foreach ($records as $record) {
+                            $removals[] = new SObject(['Id' => $record->getId(), 'Type' => $type]);
+                        }
                     }
                 }
             }
-        }
 
-        $response = $client->sendCompositeRequest($builder->build());
-        foreach ($response->getCompositeResponse() as $result) {
-            if ($result->getHttpStatusCode() === 200) {
-                /** @var CompositeSObject[] $body */
-                $body = $result->getBody();
-                $updates = array_merge($updates, $body);
+            if (empty($updates) && empty($removals)) {
+                return;
             }
-        }
 
-        /**
-         * @var CompositeSObject $update
-         */
-        foreach ($updates as $update) {
-            $this->connector->receive($update, SalesforceConsumerInterface::UPDATED, $connectionName);
-        }
+            try {
+                $response = $client->sendCompositeRequest($builder->build());
+                foreach ($response->getCompositeResponse() as $result) {
+                    if ($result->getHttpStatusCode() === 200) {
+                        /** @var CompositeSObject[] $body */
+                        $body    = $result->getBody();
+                        $updates = array_merge($updates, $body);
+                    }
+                }
+            } catch (\RuntimeException $e) {
+                // A runtime exception is thrown if there are no requests to build.
+            }
 
-        foreach ($removals as $removal) {
-            $this->connector->receive($removal, SalesforceConsumerInterface::DELETED, $connectionName);
+            /**
+             * @var CompositeSObject $update
+             */
+            foreach ($updates as $update) {
+                $this->connector->receive($update, SalesforceConsumerInterface::UPDATED, $connectionName);
+            }
+
+            foreach ($removals as $removal) {
+                $this->connector->receive($removal, SalesforceConsumerInterface::DELETED, $connectionName);
+            }
         }
 
         $this->lastUpdated = new \DateTime();

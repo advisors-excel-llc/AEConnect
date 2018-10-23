@@ -71,11 +71,11 @@ class Configuration implements ConfigurationInterface
 
         $node = $tree->root('login')
                 ->children()
-                    ->scalarNode('key')->isRequired()->end()
-                    ->scalarNode('secret')->isRequired()->end()
+                    ->scalarNode('key')->end()
+                    ->scalarNode('secret')->end()
                     ->scalarNode('username')->isRequired()->end()
                     ->scalarNode('password')->isRequired()->end()
-                    ->scalarNode('url')->cannotBeEmpty()->defaultValue('http://login.salesforce.com')->end()
+                    ->scalarNode('url')->cannotBeEmpty()->defaultValue('https://login.salesforce.com')->end()
                 ->end()
         ;
 

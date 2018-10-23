@@ -12,11 +12,12 @@ use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Driver\AnnotationDriver;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
-use AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
 use AE\SalesforceRestSdk\AuthProvider\LoginProvider;
+use AE\SalesforceRestSdk\AuthProvider\OAuthProvider;
+use AE\SalesforceRestSdk\AuthProvider\SoapProvider;
 use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
 use AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension;
 use AE\ConnectBundle\Streaming\Client;
@@ -114,18 +115,31 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
     private function createAuthProviderService(array $config, string $connectionName, ContainerBuilder $container)
     {
-        $container->register("ae_connect.connection.$connectionName.auth_provider", LoginProvider::class)
-                  ->setArguments(
-                      [
-                          $config['key'],
-                          $config['secret'],
-                          $config['username'],
-                          $config['password'],
-                          $config['url'],
-                      ]
-                  )
-                  ->setPublic(true)
-        ;
+        if (array_key_exists('key', $config) && array_key_exists('secret', $config)) {
+            $container->register("ae_connect.connection.$connectionName.auth_provider", OAuthProvider::class)
+                      ->setArguments(
+                          [
+                              $config['key'],
+                              $config['secret'],
+                              $config['username'],
+                              $config['password'],
+                              $config['url'],
+                          ]
+                      )
+                      ->setPublic(true)
+            ;
+        } else {
+            $container->register("ae_connect.connection.$connectionName.auth_provider", SoapProvider::class)
+                ->setArguments(
+                    [
+                        $config['username'],
+                        $config['password'],
+                        $config['url'],
+                    ]
+                )
+                ->setPublic(true)
+            ;
+        }
     }
 
     private function createStreamingClientService(string $connectionName, array $config, ContainerBuilder $container)
@@ -217,7 +231,10 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
      */
     private function buildObjects(string $name, array $config, ContainerBuilder $container, Definition $def): void
     {
-        $pollingDef = $container->findDefinition(PollingService::class);
+        $pollObjects = $container->hasParameter('ae_connect.poll_objects')
+            ? $container->getParameter('ae_connect.poll_objects')
+            : []
+        ;
 
         foreach ($config as $objectName) {
             if (preg_match('/__(c|C)$/', $objectName) == true
@@ -251,8 +268,10 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
                 $def->addMethodCall('addSubscriber', [new Reference($eventId)]);
             } else {
-                $pollingDef->addMethodCall('registerObject', [$objectName]);
+                $pollObjects[$name][] = $objectName;
             }
+
+            $container->setParameter('ae_connect.poll_objects', $pollObjects);
         }
     }
 
