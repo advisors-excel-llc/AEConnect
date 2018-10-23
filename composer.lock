@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "ae/salesforce-rest-sdk",
-            "version": "v1.1.5",
+            "version": "v1.1.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/advisors-excel-llc/salesforce-rest-sdk.git",
-                "reference": "12884bb79cd8430ef7acbb98a67a10c86b48acde"
+                "reference": "fa4422aa2d8e3c7944e0a1a0b53ca2a9121a2416"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/advisors-excel-llc/salesforce-rest-sdk/zipball/12884bb79cd8430ef7acbb98a67a10c86b48acde",
-                "reference": "12884bb79cd8430ef7acbb98a67a10c86b48acde",
+                "url": "https://api.github.com/repos/advisors-excel-llc/salesforce-rest-sdk/zipball/fa4422aa2d8e3c7944e0a1a0b53ca2a9121a2416",
+                "reference": "fa4422aa2d8e3c7944e0a1a0b53ca2a9121a2416",
                 "shasum": ""
             },
             "require": {
@@ -57,10 +57,10 @@
             ],
             "description": "An SDK for the Salesforce Rest API",
             "support": {
-                "source": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/tree/v1.1.5",
+                "source": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/tree/v1.1.8",
                 "issues": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/issues"
             },
-            "time": "2018-10-12T16:42:06+00:00"
+            "time": "2018-10-23T14:20:50+00:00"
         },
         {
             "name": "doctrine/annotations",

@@ -67,7 +67,7 @@ class ConfigurationTest extends TestCase
                             'secret'   => 'client_secret',
                             'username' => 'username',
                             'password' => 'password',
-                            'url'      => 'http://login.salesforce.com',
+                            'url'      => 'https://login.salesforce.com',
                         ],
                         'topics'          => [
                             'TestTopic' => [
@@ -132,11 +132,9 @@ class ConfigurationTest extends TestCase
                         'non_default' => [
                             'is_default' => false,
                             'login'      => [
-                                'key'      => 'client_key',
-                                'secret'   => 'client_secret',
                                 'username' => 'username',
                                 'password' => 'password',
-                                'url'      => 'http://test.salesforce.com',
+                                'url'      => 'https://test.salesforce.com',
                             ],
                             'topics'     => [
                                 'TestTopic'  => [
@@ -172,7 +170,7 @@ class ConfigurationTest extends TestCase
                             'secret'   => 'client_secret',
                             'username' => 'username',
                             'password' => 'password',
-                            'url'      => 'http://login.salesforce.com',
+                            'url'      => 'https://login.salesforce.com',
                         ],
                         'topics'          => [
                             'TestTopic' => [
@@ -202,11 +200,9 @@ class ConfigurationTest extends TestCase
                     'non_default' => [
                         'is_default'      => false,
                         'login'           => [
-                            'key'      => 'client_key',
-                            'secret'   => 'client_secret',
                             'username' => 'username',
                             'password' => 'password',
-                            'url'      => 'http://test.salesforce.com',
+                            'url'      => 'https://test.salesforce.com',
                         ],
                         'topics'          => [
                             'TestTopic'  => [
