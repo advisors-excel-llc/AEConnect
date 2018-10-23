@@ -121,7 +121,7 @@ class Configuration implements ConfigurationInterface
         $node = $tree->root('topics')
                 ->prototype('array')
                     ->children()
-                        ->scalarNode('query')->isRequired()->end()
+                        ->scalarNode('query')->end()
                         ->arrayNode('filter')
                             ->prototype('scalar')->end()
                         ->end()
