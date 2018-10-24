@@ -16,7 +16,7 @@ composer install ae/connect-bundle
 
 ## Documentation
 * [Configuration](Resources/docs/config/README.md)
-    * [Entity Mapping](config/entity_mapping.md)
+    * [Entity Mapping](Resources/docs/config/entity_mapping.md)
 * [Inbound Data from Salesforce](Resources/docs/inbound/README.md)
 * [Outbound Data to Salesforce](Resources/docs/outbound/README.md)
 * [Inbound and Outbound Validation](Resources/docs/validation/README.md)
