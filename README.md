@@ -11,7 +11,7 @@
 Install the bundle via composer
 
 ```bash
-composer install ae/connect-bundle
+composer require ae/connect-bundle
 ```
 
 ## Documentation
