@@ -31,6 +31,15 @@ services:
     AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker:
         autowire: true
         public: true
+    AE\ConnectBundle\Salesforce\Bulk\IncomingBulkQueue:
+        autowire: true
+        public: true
+    AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue:
+        autowire: true
+        public: true
+    AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor:
+        autowire: true
+        public: true
 
 doctrine:
     dbal:

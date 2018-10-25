@@ -9,14 +9,9 @@
 namespace AE\ConnectBundle\Salesforce\Bulk;
 
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
-use AE\ConnectBundle\Salesforce\SalesforceConnector;
-use Psr\Log\LoggerAwareTrait;
-use Psr\Log\LoggerInterface;
 
 class BulkDataProcessor
 {
-    use LoggerAwareTrait;
-
     public const UPDATE_NONE     = 0;
     public const UPDATE_INCOMING = 1;
     public const UPDATE_OUTGOING = 2;
@@ -28,35 +23,23 @@ class BulkDataProcessor
     private $connectionManager;
 
     /**
-     * @var SalesforceConnector
-     */
-    private $connector;
-
-    /**
-     * @var BulkEntity
-     */
-    private $bulkEntity;
-
-    /**
      * @var InboundBulkQueue
      */
     private $inboundQueue;
 
+    /**
+     * @var OutboundBulkQueue
+     */
+    private $outboundQueue;
+
     public function __construct(
         ConnectionManagerInterface $connectionManager,
-        SalesforceConnector $connector,
-        BulkEntity $bulkEntity,
         InboundBulkQueue $inboundBulkQueue,
-        ?LoggerInterface $logger = null
+        OutboundBulkQueue $outboundBulkQueue
     ) {
         $this->connectionManager = $connectionManager;
-        $this->connector         = $connector;
-        $this->bulkEntity        = $bulkEntity;
         $this->inboundQueue      = $inboundBulkQueue;
-
-        if (null !== $logger) {
-            $this->setLogger($logger);
-        }
+        $this->outboundQueue     = $outboundBulkQueue;
     }
 
     public function process(?string $connectionName, array $types = [], int $updateFlag = self::UPDATE_NONE)
@@ -71,6 +54,7 @@ class BulkDataProcessor
 
         foreach ($connections as $connection) {
             $this->inboundQueue->process($connection, $types, self::UPDATE_INCOMING & $updateFlag);
+            $this->outboundQueue->process($connection, $types, self::UPDATE_OUTGOING & $updateFlag);
         }
     }
 }

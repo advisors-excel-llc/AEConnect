@@ -71,3 +71,7 @@ services:
         autowire: true
     AE\ConnectBundle\Salesforce\Bulk\IncomingBulkQueue:
         autowire: true
+    AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue:
+        autowire: true
+    AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor:
+        autowire: true
