@@ -28,6 +28,9 @@ services:
     AE\ConnectBundle\Salesforce\Bulk\EntityTreeMaker:
         autowire: true
         public: true
+    AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker:
+        autowire: true
+        public: true
 
 doctrine:
     dbal:

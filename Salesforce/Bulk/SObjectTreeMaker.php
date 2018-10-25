@@ -13,11 +13,11 @@ use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 
 /**
- * Class EntityTreeMaker
+ * Class SObjectTreeMaker
  *
  * @package AE\ConnectBundle\Salesforce\Bulk
  */
-class EntityTreeMaker extends AbstractTreeBuilder
+class SObjectTreeMaker extends AbstractTreeBuilder
 {
     /**
      * @param ConnectionInterface $connection
@@ -26,15 +26,18 @@ class EntityTreeMaker extends AbstractTreeBuilder
      */
     protected function aggregate(ConnectionInterface $connection): array
     {
-        $classes = [];
+        $objects = [];
 
         foreach ($connection->getMetadataRegistry()->getMetadata() as $metadata) {
-            $class = $metadata->getClassName();
-            array_key_exists($class, $classes) ? $classes[$class] : ($classes[$class] = 0);
-            $classes[$class] = $this->buildDependencies($connection->getMetadataRegistry(), $metadata);
+            $type = $metadata->getSObjectType();
+            array_key_exists($type, $objects) ? $objects[$type] : ($objects[$type] = []);
+            $objects[$type] = array_merge_recursive(
+                $objects[$type],
+                $this->buildDependencies($connection->getMetadataRegistry(), $metadata)
+            );
         }
 
-        return $classes;
+        return $objects;
     }
 
     /**
@@ -56,7 +59,13 @@ class EntityTreeMaker extends AbstractTreeBuilder
                 $depMetadata = $metadataRegistry->findMetadataByClass($depClass);
 
                 if (null !== $depMetadata) {
-                    $deps[$depClass] = $this->buildDependencies($metadataRegistry, $depMetadata);
+                    $depType        = $depMetadata->getSObjectType();
+                    $deps[$depType] = array_merge_recursive(
+                        array_key_exists($depType, $deps)
+                            ? $deps[$depType]
+                            : [],
+                        $this->buildDependencies($metadataRegistry, $depMetadata)
+                    );
                 }
             }
         }
