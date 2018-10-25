@@ -57,8 +57,13 @@ class OutboundBulkQueue
         }
     }
 
-    public function process(ConnectionInterface $connection, array $types = [], bool $updateExisting = false)
-    {
+    public function process(
+        ConnectionInterface $connection,
+        array $types = [],
+        int $batchSize = 2000,
+        bool $updateExisting
+        = false
+    ) {
         $map              = empty($types) ? $this->treeMaker->buildFlatMap($connection) : $types;
         $metadataRegistry = $connection->getMetadataRegistry();
 
@@ -74,15 +79,17 @@ class OutboundBulkQueue
         }
 
         foreach ($map as $class) {
-            $this->startJob($connection, $class, $updateExisting);
+            $this->startJob($connection, $class, $batchSize, $updateExisting);
         }
     }
 
-    private function startJob(ConnectionInterface $connection, string $class, bool $updateExisting)
+    private function startJob(ConnectionInterface $connection, string $class, int $batchSize, bool $updateExisting)
     {
         $metadata = $connection->getMetadataRegistry()->findMetadataByClass($class);
 
-        if (null === $metadata) {
+        if (null === $metadata
+            || !$metadata->getDescribe()->isCreateable() || !$metadata->getDescribe()->isUpdateable()
+        ) {
             return;
         }
 
@@ -113,7 +120,7 @@ class OutboundBulkQueue
         $qb->from($class, 'e')
            ->select('e')
            ->setFirstResult($offset)
-           ->setMaxResults(500)
+           ->setMaxResults($batchSize)
         ;
 
         if (!$updateExisting) {
@@ -128,7 +135,7 @@ class OutboundBulkQueue
 
             foreach ($results as $result) {
                 $entityIds[] = $classMetadata->getIdentifierValues($result);
-                $objects[] = $this->compiler->compile($result, $connection->getName())->getSObject();
+                $objects[]   = $this->compiler->compile($result, $connection->getName())->getSObject();
             }
 
             $batch                    = $client->addBatch($job, $objects);

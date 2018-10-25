@@ -74,6 +74,10 @@ class InboundBulkQueue
         $metadataRegistry = $connection->getMetadataRegistry();
 
         foreach ($metadataRegistry->findMetadataBySObjectType($objectType) as $metadata) {
+            if (!$metadata->getDescribe()->isQueryable()) {
+                continue;
+            }
+
             foreach ($metadata->getPropertyMap() as $field) {
                 if (false === array_search($field, $fields)) {
                     $fields[] = $field;
@@ -103,7 +107,7 @@ class InboundBulkQueue
             $this->logger->info(
                 'Batch (ID# {batch}) added to Job (ID# {job})',
                 [
-                    'job' => $job->getId(),
+                    'job'   => $job->getId(),
                     'batch' => $batch->getId(),
                 ]
             );
@@ -116,7 +120,7 @@ class InboundBulkQueue
             $this->logger->info(
                 'Batch (ID# {batch}) for Job (ID# {job}) is complete',
                 [
-                    'job' => $job->getId(),
+                    'job'   => $job->getId(),
                     'batch' => $batch->getId(),
                 ]
             );
@@ -136,7 +140,7 @@ class InboundBulkQueue
             $this->logger->info(
                 'Job (ID# {job}) is now closed',
                 [
-                    'job' => $job->getId()
+                    'job' => $job->getId(),
                 ]
             );
         } catch (\Exception $e) {
@@ -163,6 +167,8 @@ class InboundBulkQueue
             $this->preProcess($object, $connection, $updateEntities);
             $this->connector->receive($object, SalesforceConsumerInterface::UPDATED, $connection->getName());
         }
+
+        $this->logger->info('Processed {count} {type} objects.', ['count' => count($objects), 'type' => $objectType]);
     }
 
     private function preProcess(CompositeSObject $object, ConnectionInterface $connection, bool $updateEntities)
