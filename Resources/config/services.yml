@@ -69,3 +69,5 @@ services:
         autowire: true
     AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker:
         autowire: true
+    AE\ConnectBundle\Salesforce\Bulk\IncomingBulkQueue:
+        autowire: true
