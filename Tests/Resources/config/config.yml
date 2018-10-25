@@ -31,7 +31,7 @@ services:
     AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker:
         autowire: true
         public: true
-    AE\ConnectBundle\Salesforce\Bulk\IncomingBulkQueue:
+    AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue:
         autowire: true
         public: true
     AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue:

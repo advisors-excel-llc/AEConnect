@@ -140,7 +140,7 @@ class Account
     /**
      * @return string
      */
-    public function getSfid(): string
+    public function getSfid(): ?string
     {
         return $this->sfid;
     }
@@ -150,7 +150,7 @@ class Account
      *
      * @return Account
      */
-    public function setSfid(string $sfid): Account
+    public function setSfid(?string $sfid): Account
     {
         $this->sfid = $sfid;
 
