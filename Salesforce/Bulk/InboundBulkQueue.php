@@ -16,6 +16,7 @@ use AE\SalesforceRestSdk\Bulk\JobInfo;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class InboundBulkQueue
@@ -43,12 +44,14 @@ class InboundBulkQueue
         RegistryInterface $registry,
         ?LoggerInterface $logger = null
     ) {
-        $this->treeMaker  = $treeMaker;
-        $this->connector  = $connector;
-        $this->registry   = $registry;
+        $this->treeMaker = $treeMaker;
+        $this->connector = $connector;
+        $this->registry  = $registry;
 
         if (null !== $logger) {
             $this->setLogger($logger);
+        } else {
+            $this->setLogger(new NullLogger());
         }
     }
 
@@ -82,12 +85,37 @@ class InboundBulkQueue
             $query  = "SELECT ".implode(',', $fields)." FROM $objectType";
             $client = $connection->getBulkClient();
             $job    = $client->createJob($objectType, "query", JobInfo::TYPE_JSON);
-            $batch  = $client->addBatch($job, $query);
+
+            $this->logger->info(
+                'Bulk Job (ID# {job}) started for SObject Type {type}',
+                [
+                    'job'  => $job->getId(),
+                    'type' => $objectType,
+                ]
+            );
+
+            $batch = $client->addBatch($job, $query);
+
+            $this->logger->info(
+                'Batch (ID# {batch}) added to Job (ID# {job})',
+                [
+                    'job' => $job->getId(),
+                    'batch' => $batch->getId(),
+                ]
+            );
 
             do {
                 $batchStatus = $client->getBatchStatus($job->getId(), $batch->getId());
                 sleep(10);
             } while (BatchInfo::STATE_COMPLETED !== $batchStatus->getState());
+
+            $this->logger->info(
+                'Batch (ID# {batch}) for Job (ID# {job}) is complete',
+                [
+                    'job' => $job->getId(),
+                    'batch' => $batch->getId(),
+                ]
+            );
 
             $batchResults = $client->getBatchResults($job->getId(), $batch->getId());
 
@@ -100,11 +128,16 @@ class InboundBulkQueue
             }
 
             $client->closeJob($job->getId());
+
+            $this->logger->info(
+                'Job (ID# {job}) is now closed',
+                [
+                    'job' => $job->getId()
+                ]
+            );
         } catch (\Exception $e) {
-            if (null !== $this->logger) {
-                $this->logger->warning($e->getMessage());
-                $this->logger->debug($e->getTraceAsString());
-            }
+            $this->logger->warning($e->getMessage());
+            $this->logger->debug($e->getTraceAsString());
         }
     }
 
