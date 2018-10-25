@@ -25,7 +25,7 @@ class EntityTreeMaker
         $this->registry = $registry;
     }
 
-    public function build(ConnectionInterface $connection)
+    public function build(ConnectionInterface $connection): array
     {
         $classes = [];
         $tree    = [];
@@ -82,6 +82,24 @@ class EntityTreeMaker
         }
 
         return $tree;
+    }
+
+    public function buildFlatMap(ConnectionInterface $connection): array
+    {
+        $map = [];
+        $tree = $this->build($connection);
+
+        $this->flatten($tree, $map);
+
+        return $map;
+    }
+
+    private function flatten($tree, &$map)
+    {
+        foreach ($tree as $key => &$branch) {
+            $map[] = $key;
+            $this->flatten($branch, $map);
+        }
     }
 
     private function buildDeps(MetadataRegistry $metadataRegistry, Metadata $metadata)
