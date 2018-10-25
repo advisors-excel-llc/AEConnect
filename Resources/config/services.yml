@@ -65,3 +65,5 @@ services:
         autowire: true
         arguments:
             $cache: '@doctrine_cache.providers.ae_connect_polling'
+    AE\ConnectBundle\Salesforce\Bulk\EntityTreeMaker:
+        autowire: true
