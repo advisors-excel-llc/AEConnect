@@ -55,9 +55,13 @@ class InboundBulkQueue
         }
     }
 
-    public function process(ConnectionInterface $connection, bool $updateEntities = false)
+    public function process(ConnectionInterface $connection, array $types = [], bool $updateEntities = false)
     {
         $map = $this->treeMaker->buildFlatMap($connection);
+
+        if (!empty($types)) {
+            $map = array_intersect($map, $types);
+        }
 
         foreach ($map as $type) {
             $this->startJob($connection, $type, $updateEntities);

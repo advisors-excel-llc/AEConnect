@@ -59,7 +59,7 @@ class BulkDataProcessor
         }
     }
 
-    public function process(?string $connectionName, int $updateFlag = self::UPDATE_NONE)
+    public function process(?string $connectionName, array $types = [], int $updateFlag = self::UPDATE_NONE)
     {
         $connections = $this->connectionManager->getConnections();
 
@@ -70,7 +70,7 @@ class BulkDataProcessor
         }
 
         foreach ($connections as $connection) {
-            $this->inboundQueue->process($connection, self::UPDATE_INCOMING & $updateFlag);
+            $this->inboundQueue->process($connection, $types, self::UPDATE_INCOMING & $updateFlag);
         }
     }
 }
