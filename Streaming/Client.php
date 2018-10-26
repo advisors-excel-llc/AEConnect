@@ -75,7 +75,7 @@ class Client implements ClientInterface
                         $subscriber->addConsumer($consumer);
                     }
                 } elseif (!$this->channelSubscribers->containsKey($channelGroup)) {
-                    $this->channelSubscribers->get($channelGroup)->addSubscriber($consumer);
+                    $this->channelSubscribers->get($channelGroup)->addConsumer($consumer);
                 }
             }
         }
@@ -138,7 +138,9 @@ class Client implements ClientInterface
 
         foreach ($channelNames as $name) {
             if ($this->channelSubscribers->containsKey($name)) {
-                $this->channelSubscribers->get($name)->addSubscriber($consumer);
+                /** @var Topic $channelSubscriber */
+                $channelSubscriber = $this->channelSubscribers->get($name);
+                $channelSubscriber->addConsumer($consumer);
             }
         }
     }
@@ -164,7 +166,9 @@ class Client implements ClientInterface
 
         foreach ($channelNames as $name) {
             if ($this->channelSubscribers->containsKey($name)) {
-                $this->channelSubscribers->get($name)->addSubscriber($consumer);
+                /** @var ChangeEvent $channelSubscriber */
+                $channelSubscriber = $this->channelSubscribers->get($name);
+                $channelSubscriber->addConsumer($consumer);
             }
         }
     }
@@ -192,7 +196,9 @@ class Client implements ClientInterface
 
         foreach ($channelNames as $name) {
             if ($this->channelSubscribers->containsKey($name)) {
-                $this->channelSubscribers->get($name)->addSubscriber($consumer);
+                /** @var PlatformEvent $channelSubscriber */
+                $channelSubscriber = $this->channelSubscribers->get($name);
+                $channelSubscriber->addConsumer($consumer);
             }
         }
     }
@@ -219,7 +225,9 @@ class Client implements ClientInterface
 
         foreach ($channelNames as $name) {
             if ($this->channelSubscribers->containsKey($name)) {
-                $this->channelSubscribers->get($name)->addSubscriber($consumer);
+                /** @var GenericEvent $channelSubscriber */
+                $channelSubscriber = $this->channelSubscribers->get($name);
+                $channelSubscriber->addConsumer($consumer);
             }
         }
     }

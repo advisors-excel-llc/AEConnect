@@ -25,6 +25,21 @@ services:
         public: true
         arguments:
             $cache: '@doctrine_cache.providers.ae_connect_polling'
+    AE\ConnectBundle\Salesforce\Bulk\EntityTreeMaker:
+        autowire: true
+        public: true
+    AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker:
+        autowire: true
+        public: true
+    AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue:
+        autowire: true
+        public: true
+    AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue:
+        autowire: true
+        public: true
+    AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor:
+        autowire: true
+        public: true
 
 doctrine:
     dbal:
@@ -66,13 +81,16 @@ ae_connect:
     connections:
         default:
             login:
-                #key: "%env(SF_CLIENT_ID)%"
-                #secret: "%env(SF_CLIENT_SECRET)%"
+                key: "%env(SF_CLIENT_ID)%"
+                secret: "%env(SF_CLIENT_SECRET)%"
                 username: "%env(SF_USER)%"
                 password: "%env(SF_PASS)%"
                 url: "https://login.salesforce.com"
             objects:
                 - Account
                 - UserRole
+            topics:
+                TestObjects:
+                    type: 'S3F__Test_Object__c'
             config:
                 replay_start_id: !php/const AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension::REPLAY_SAVED

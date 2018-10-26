@@ -171,13 +171,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
         $topic->addMethodCall('setName', [$config['name']]);
         $topic->addMethodCall('setFilters', [$config['filter']]);
-        $topic->addMethodCall('setApiVersion', [$config['api_version']]);
-        $topic->addMethodCall('setAutoCreate', [$config['create_if_not_exists']]);
-        $topic->addMethodCall('setNotifyForOperationCreate', [$config['create']]);
-        $topic->addMethodCall('setNotifyForOperationUpdate', [$config['update']]);
-        $topic->addMethodCall('setNotifyForOperationUndelete', [$config['undelete']]);
-        $topic->addMethodCall('setNotifyForOperationDelete', [$config['delete']]);
-        $topic->addMethodCall('setNotifyForFields', [$config['notify_for_fields']]);
+        $topic->addMethodCall('setType', [$config['type']]);
 
         return $topic;
     }

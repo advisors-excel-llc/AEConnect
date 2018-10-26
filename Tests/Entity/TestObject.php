@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Tests\Entity;
 
+use AE\ConnectBundle\Annotations\ExternalId;
 use AE\ConnectBundle\Annotations\Field;
 use AE\ConnectBundle\Annotations\RecordType;
 use AE\ConnectBundle\Annotations\SalesforceId;
@@ -45,6 +46,7 @@ class TestObject
      * @var string
      * @ORM\Column(type="guid", length=36, unique=true, nullable=false)
      * @Field("S3F__hcid__c")
+     * @ExternalId()
      */
     private $extId;
 
@@ -165,10 +167,11 @@ class TestObject
 
     /**
      * @throws \Exception
+     * @ORM\PrePersist()
      */
     public function prePersist()
     {
-        if (null === $this->extId) {
+        if (null === $this->extId || strlen($this->extId) === 0) {
             $this->extId = Uuid::uuid4()->toString();
         }
     }

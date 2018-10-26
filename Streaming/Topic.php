@@ -8,84 +8,33 @@
 
 namespace AE\ConnectBundle\Streaming;
 
-use JMS\Serializer\Annotation as JMS;
+use AE\SalesforceRestSdk\Bayeux\ChannelInterface;
+use AE\SalesforceRestSdk\Bayeux\Consumer;
+use AE\SalesforceRestSdk\Bayeux\ConsumerInterface;
+use AE\SalesforceRestSdk\Bayeux\Message;
 
 /**
  * Class Topic
  *
  * @package AE\ConnectBundle\Streaming
- * @JMS\ExclusionPolicy("NONE")
  */
-class Topic extends AbstractSubscriber implements TopicInterface
+class Topic extends AbstractSubscriber
 {
 
     /**
      * @var string
-     * @JMS\Type("string")
-     * @JMS\SerializedName("Name")
      */
     private $name;
 
     /**
      * @var string
-     * @JMS\Type("string")
-     * @JMS\SerializedName("Query")
      */
-    private $query;
+    private $type;
 
     /**
      * @var array
-     * @JMS\Exclude()
      */
     private $filters = [];
-
-    /**
-     * @var string
-     * @JMS\Type("string")
-     * @JMS\SerializedName("ApiVersion")
-     */
-    private $apiVersion;
-
-    /**
-     * @var bool
-     * @JMS\Type("bool")
-     * @JMS\SerializedName("NotifyForOperationCreate")
-     */
-    private $notifyForOperationCreate;
-
-    /**
-     * @var bool
-     * @JMS\Type("bool")
-     * @JMS\SerializedName("NotifyForOperationUpdate")
-     */
-    private $notifyForOperationUpdate;
-
-    /**
-     * @var bool
-     * @JMS\Type("bool")
-     * @JMS\SerializedName("NotifyForOperationUndelete")
-     */
-    private $notifyForOperationUndelete;
-
-    /**
-     * @var bool
-     * @JMS\Type("bool")
-     * @JMS\SerializedName("NotifyForOperationDelete")
-     */
-    private $notifyForOperationDelete;
-
-    /**
-     * @var string
-     * @JMS\Type("string")
-     * @JMS\SerializedName("NotifyForFields")
-     */
-    private $notifyForFields;
-
-    /**
-     * @var bool
-     * @JMS\Exclude()
-     */
-    private $autoCreate = true;
 
     /**
      * @return string
@@ -110,19 +59,19 @@ class Topic extends AbstractSubscriber implements TopicInterface
     /**
      * @return string
      */
-    public function getQuery(): string
+    public function getType(): string
     {
-        return $this->query;
+        return $this->type;
     }
 
     /**
-     * @param string $query
+     * @param string $type
      *
      * @return Topic
      */
-    public function setQuery(string $query): Topic
+    public function setType(string $type): Topic
     {
-        $this->query = $query;
+        $this->type = $type;
 
         return $this;
     }
@@ -147,146 +96,6 @@ class Topic extends AbstractSubscriber implements TopicInterface
         return $this;
     }
 
-    /**
-     * @return string
-     */
-    public function getApiVersion(): string
-    {
-        return $this->apiVersion;
-    }
-
-    /**
-     * @param string $apiVersion
-     *
-     * @return Topic
-     */
-    public function setApiVersion(string $apiVersion): Topic
-    {
-        $this->apiVersion = $apiVersion;
-
-        return $this;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isNotifyForOperationCreate(): bool
-    {
-        return $this->notifyForOperationCreate;
-    }
-
-    /**
-     * @param bool $notifyForOperationCreate
-     *
-     * @return Topic
-     */
-    public function setNotifyForOperationCreate(bool $notifyForOperationCreate): Topic
-    {
-        $this->notifyForOperationCreate = $notifyForOperationCreate;
-
-        return $this;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isNotifyForOperationUpdate(): bool
-    {
-        return $this->notifyForOperationUpdate;
-    }
-
-    /**
-     * @param bool $notifyForOperationUpdate
-     *
-     * @return Topic
-     */
-    public function setNotifyForOperationUpdate(bool $notifyForOperationUpdate): Topic
-    {
-        $this->notifyForOperationUpdate = $notifyForOperationUpdate;
-
-        return $this;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isNotifyForOperationUndelete(): bool
-    {
-        return $this->notifyForOperationUndelete;
-    }
-
-    /**
-     * @param bool $notifyForOperationUndelete
-     *
-     * @return Topic
-     */
-    public function setNotifyForOperationUndelete(bool $notifyForOperationUndelete): Topic
-    {
-        $this->notifyForOperationUndelete = $notifyForOperationUndelete;
-
-        return $this;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isNotifyForOperationDelete(): bool
-    {
-        return $this->notifyForOperationDelete;
-    }
-
-    /**
-     * @param bool $notifyForOperationDelete
-     *
-     * @return Topic
-     */
-    public function setNotifyForOperationDelete(bool $notifyForOperationDelete): Topic
-    {
-        $this->notifyForOperationDelete = $notifyForOperationDelete;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getNotifyForFields(): string
-    {
-        return $this->notifyForFields;
-    }
-
-    /**
-     * @param string $notifyForFields
-     *
-     * @return Topic
-     */
-    public function setNotifyForFields(string $notifyForFields): Topic
-    {
-        $this->notifyForFields = $notifyForFields;
-
-        return $this;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isAutoCreate(): bool
-    {
-        return $this->autoCreate;
-    }
-
-    /**
-     * @param bool $autoCreate
-     *
-     * @return Topic
-     */
-    public function setAutoCreate(bool $autoCreate): Topic
-    {
-        $this->autoCreate = $autoCreate;
-
-        return $this;
-    }
-
     public function getChannelName(): string
     {
         $name = '/topic/'.$this->name;
@@ -301,5 +110,24 @@ class Topic extends AbstractSubscriber implements TopicInterface
         }
 
         return $name;
+    }
+
+    public function addConsumer(ConsumerInterface $consumer)
+    {
+        $consumerWrapper = Consumer::create(function (ChannelInterface $channel, Message $message) use ($consumer) {
+            $data = $message->getData();
+
+            if (null !== $data) {
+                $object = $data->getSobject();
+
+                if (null !== $object) {
+                    $object->Type = $this->type;
+                }
+            }
+
+            $consumer->consume($channel, $message);
+        });
+
+        parent::addConsumer($consumerWrapper);
     }
 }

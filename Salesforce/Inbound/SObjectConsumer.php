@@ -12,6 +12,7 @@ use AE\ConnectBundle\Connection\ConnectionsTrait;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use AE\SalesforceRestSdk\Bayeux\ChannelInterface;
 use AE\SalesforceRestSdk\Bayeux\Message;
+use AE\SalesforceRestSdk\Bayeux\Salesforce\Event;
 use AE\SalesforceRestSdk\Model\SObject;
 
 class SObjectConsumer implements SalesforceConsumerInterface
@@ -32,6 +33,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
     {
         return [
             'objects' => '*',
+            'topics'  => '*',
         ];
     }
 
@@ -40,38 +42,10 @@ class SObjectConsumer implements SalesforceConsumerInterface
         $data = $message->getData();
 
         if (null !== $data) {
-            $payload = $data->getPayload();
-
-            if (!is_array($payload)) {
-                return;
-            }
-
-            $changeEventHeader = $payload['ChangeEventHeader'];
-            unset($payload['ChangeEventHeader']);
-
-            $intent = $changeEventHeader['changeType'];
-
-            switch ($intent) {
-                case "CREATE":
-                    $intent = SalesforceConsumerInterface::CREATED;
-                    break;
-                case "UPDATE":
-                    $intent = SalesforceConsumerInterface::UPDATED;
-                    break;
-                case "DELETE":
-                    $intent = SalesforceConsumerInterface::DELETED;
-                    break;
-            }
-
-            $sObject = new SObject(
-                $payload + [
-                    'Type' => $changeEventHeader['entityName'],
-                    'Id'   => $changeEventHeader['recordIds'][0],
-                ]
-            );
-
-            foreach ($this->connections as $connection) {
-                $this->connector->receive($sObject, $intent, $connection->getName());
+            if (null !== $data->getSobject()) {
+                $this->consumeTopic($data->getSobject(), $data->getEvent());
+            } elseif (null !== $data->getPayload() && is_array($data->getPayload())) {
+                $this->consumeChangeEvent($data->getPayload());
             }
         }
     }
@@ -79,5 +53,47 @@ class SObjectConsumer implements SalesforceConsumerInterface
     public function getPriority(): ?int
     {
         return 0;
+    }
+
+    private function consumeChangeEvent(array $payload)
+    {
+        $changeEventHeader = $payload['ChangeEventHeader'];
+        unset($payload['ChangeEventHeader']);
+
+        $intent = $changeEventHeader['changeType'];
+
+        switch ($intent) {
+            case "CREATE":
+                $intent = SalesforceConsumerInterface::CREATED;
+                break;
+            case "UPDATE":
+                $intent = SalesforceConsumerInterface::UPDATED;
+                break;
+            case "DELETE":
+                $intent = SalesforceConsumerInterface::DELETED;
+                break;
+        }
+
+        $sObject = new SObject(
+            $payload + [
+                'Type' => $changeEventHeader['entityName'],
+                'Id'   => $changeEventHeader['recordIds'][0],
+            ]
+        );
+
+        foreach ($this->connections as $connection) {
+            $this->connector->receive($sObject, $intent, $connection->getName());
+        }
+    }
+
+    private function consumeTopic(SObject $object, Event $event)
+    {
+        if (null !== $object->Type) {
+            $intent = strtoupper($event->getType());
+
+            foreach ($this->connections as $connection) {
+                $this->connector->receive($object, $intent, $connection->getName());
+            }
+        }
     }
 }

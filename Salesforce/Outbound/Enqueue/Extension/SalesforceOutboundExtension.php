@@ -37,7 +37,8 @@ class SalesforceOutboundExtension implements ExtensionInterface
      */
     public function onStart(Context $context)
     {
-        // Nothing to do here
+        // send any queued messages
+        $this->outboundQueue->send();
     }
 
     /**
