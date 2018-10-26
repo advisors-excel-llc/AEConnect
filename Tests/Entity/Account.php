@@ -163,7 +163,7 @@ class Account
      */
     public function prePersist()
     {
-        if (null === $this->extId) {
+        if (null === $this->extId || strlen($this->extId) === 0) {
             $this->extId = Uuid::uuid4()->toString();
         }
     }

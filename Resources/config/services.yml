@@ -81,6 +81,9 @@ services:
             - { name: console.command }
     AE\ConnectBundle\Command\ConsumeCommand:
         autowire: true
+        arguments:
+            $context: '@enqueue.transport.context'
+            $driver: '@enqueue.client.driver'
         tags:
             - { name: console.command }
     AE\ConnectBundle\Command\ListenCommand:

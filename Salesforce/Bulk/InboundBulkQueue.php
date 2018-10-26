@@ -14,6 +14,7 @@ use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use AE\SalesforceRestSdk\Bulk\BatchInfo;
 use AE\SalesforceRestSdk\Bulk\JobInfo;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
+use AE\SalesforceRestSdk\Psr7\CsvStream;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -92,7 +93,7 @@ class InboundBulkQueue
         try {
             $query  = "SELECT ".implode(',', $fields)." FROM $objectType";
             $client = $connection->getBulkClient();
-            $job    = $client->createJob($objectType, "query", JobInfo::TYPE_JSON);
+            $job    = $client->createJob($objectType, JobInfo::QUERY, JobInfo::TYPE_CSV);
 
             $this->logger->info(
                 'Bulk Job (ID# {job}) started for SObject Type {type}',
@@ -113,7 +114,7 @@ class InboundBulkQueue
             );
 
             do {
-                $batchStatus = $client->getBatchStatus($job->getId(), $batch->getId());
+                $batchStatus = $client->getBatchStatus($job, $batch->getId());
                 sleep(10);
             } while (BatchInfo::STATE_COMPLETED !== $batchStatus->getState());
 
@@ -125,17 +126,17 @@ class InboundBulkQueue
                 ]
             );
 
-            $batchResults = $client->getBatchResults($job->getId(), $batch->getId());
+            $batchResults = $client->getBatchResults($job, $batch->getId());
 
             foreach ($batchResults as $resultId) {
-                $result = $client->getResult($job->getId(), $batch->getId(), $resultId);
+                $result = $client->getResult($job, $batch->getId(), $resultId);
 
                 if (null !== $result) {
                     $this->saveResult($result, $objectType, $connection, $updateEntities);
                 }
             }
 
-            $client->closeJob($job->getId());
+            $client->closeJob($job);
 
             $this->logger->info(
                 'Job (ID# {job}) is now closed',
@@ -150,25 +151,30 @@ class InboundBulkQueue
     }
 
     private function saveResult(
-        string $result,
+        CsvStream $result,
         string $objectType,
         ConnectionInterface $connection,
         bool $updateEntities
     ) {
-        $serializer = $connection->getRestClient()->getSerializer();
-        $objects    = $serializer->deserialize(
-            $result,
-            'array<'.CompositeSObject::class.'>',
-            'json'
-        );
+        $fields = [];
+        $count = 0;
 
-        foreach ($objects as $object) {
-            $object->Type = $objectType;
+        while (false != ($row = $result->read())) {
+            if (empty($fields)) {
+                $fields = $row;
+                continue;
+            }
+
+            $object = new CompositeSObject($objectType);
+            foreach ($row as $i => $value) {
+                $object->{$fields[$i]} = $value;
+            }
             $this->preProcess($object, $connection, $updateEntities);
             $this->connector->receive($object, SalesforceConsumerInterface::UPDATED, $connection->getName());
+            ++$count;
         }
 
-        $this->logger->info('Processed {count} {type} objects.', ['count' => count($objects), 'type' => $objectType]);
+        $this->logger->info('Processed {count} {type} objects.', ['count' => $count, 'type' => $objectType]);
     }
 
     private function preProcess(CompositeSObject $object, ConnectionInterface $connection, bool $updateEntities)
