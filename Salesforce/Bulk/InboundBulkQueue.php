@@ -170,7 +170,9 @@ class InboundBulkQueue
                 $object->{$fields[$i]} = $value;
             }
             $this->preProcess($object, $connection, $updateEntities);
+            $this->connector->enable();
             $this->connector->receive($object, SalesforceConsumerInterface::UPDATED, $connection->getName());
+            $this->connector->disable();
             ++$count;
         }
 

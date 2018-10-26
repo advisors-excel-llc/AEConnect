@@ -10,10 +10,12 @@ namespace AE\ConnectBundle\Command;
 
 use AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 class BulkCommand extends Command
 {
@@ -66,12 +68,73 @@ class BulkCommand extends Command
     {
         $updateFlag = ($input->hasArgument('update-inbound') & BulkDataProcessor::UPDATE_INCOMING) |
             ($input->hasArgument('update-outbound') & BulkDataProcessor::UPDATE_OUTGOING);
-        $types = $input->getOption('types');
+        $types      = $input->getOption('types');
+
+        $output->writeln(
+            sprintf(
+                '<info>AE Connect will now sync %s to %s.</info>',
+                empty($types) ? 'all types' : implode(', ', $types).' type(s)',
+                null === $input->getFirstArgument() ? ' all connections' : $input->getFirstArgument()
+            )
+        );
+        $output->writeln(
+            'This operation is not easy to reverse. It is recommended you backup your data before continuing.'
+        );
+
+        if ($updateFlag & BulkDataProcessor::UPDATE_INCOMING) {
+            $output->writeln(
+                sprintf(
+                    '<comment>Local entities will be updated with data from Salesforce.</comment>'
+                )
+            );
+        } else {
+            $output->writeln(
+                sprintf(
+                    '<comment>Only new entities will be created with data from Salesforce.</comment>'
+                )
+            );
+        }
+
+        if ($updateFlag & BulkDataProcessor::UPDATE_OUTGOING) {
+            $output->writeln(
+                sprintf(
+                    '<comment>Salesforce will be updated with data from the local database.</comment>'
+                )
+            );
+        } else {
+            $output->writeln(
+                sprintf(
+                    '<comment>Only new records will be created with in Salesforce.</comment>'
+                )
+            );
+        }
+
+        /** @var QuestionHelper $helper */
+        $helper = $this->getHelper('question');
+        $consumerQuestion = new ConfirmationQuestion(
+            'Have you stopped all ae_connect:consume and ae_connect:listen processes?'
+        );
+
+        if (!$helper->ask($input, $output, $consumerQuestion)) {
+            $output->writeln(
+                '<error>Please stop all ae_connect:consume and ae_connect:listen processes before continuing.</error>'
+            );
+
+            return;
+        }
+
+        $confirmQuestion = new ConfirmationQuestion(
+            'Is your data backed up and are the settings correct to continue?'
+        );
+
+        if (!$helper->ask($input, $output, $confirmQuestion)) {
+            return;
+        }
 
         $output->writeln(
             sprintf(
                 '<info>Starting bulk sync for %s</info>',
-                empty($types) ? 'all types' : implode(', ', $types) . ' types'
+                empty($types) ? 'all types' : implode(', ', $types).' type(s)'
             )
         );
 

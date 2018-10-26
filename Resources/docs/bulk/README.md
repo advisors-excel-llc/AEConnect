@@ -23,6 +23,8 @@ Ok, now that that's all out of the way, let's sync!
 
 > It's best to stop all `ae_connect:listen` and `ae_connect:consume` processes before running the bulk sync
 
+> ALWAYS! ALWAYS! ALWAYS! Backup data before performing operations that alter data
+
 ```bash
 # This command will sync all new entities for all object types for all connections
 $ bin/console ae_connect:bulk
@@ -44,8 +46,8 @@ $ bin/console ae_connect:bulk -t Account
 $ bin/console ae_connect:bulk -l 1000 # limits to querying 1000 records at a time
 
 # Let's put it all together!
-# This command will sync all entities associated the Account type both up and down for the default connection
+# This command will sync all entities associated the Account and Contact types both up and down for the default connection
 # limiting local queries to 1000 records
-$ bin/console ae_connect:bulk default -t Account -i -o -l 1000
+$ bin/console ae_connect:bulk default -t Account -t Contact -i -o -l 1000
 
 ```

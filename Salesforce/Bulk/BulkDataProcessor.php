@@ -10,6 +10,7 @@ namespace AE\ConnectBundle\Salesforce\Bulk;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
+use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use Doctrine\ORM\EntityRepository;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
@@ -40,16 +41,23 @@ class BulkDataProcessor
      */
     private $registry;
 
+    /**
+     * @var SalesforceConnector
+     */
+    private $connector;
+
     public function __construct(
         ConnectionManagerInterface $connectionManager,
         InboundBulkQueue $inboundBulkQueue,
         OutboundBulkQueue $outboundBulkQueue,
-        RegistryInterface $registry
+        RegistryInterface $registry,
+        SalesforceConnector $connector
     ) {
         $this->connectionManager = $connectionManager;
         $this->inboundQueue      = $inboundBulkQueue;
         $this->outboundQueue     = $outboundBulkQueue;
         $this->registry          = $registry;
+        $this->connector         = $connector;
     }
 
     public function process(
@@ -66,11 +74,15 @@ class BulkDataProcessor
             $connections = [$connection];
         }
 
+        $this->connector->disable();
+
         foreach ($connections as $connection) {
             $this->clearSalesforceIds($connection);
             $this->inboundQueue->process($connection, $types, self::UPDATE_INCOMING & $updateFlag);
             $this->outboundQueue->process($connection, $types, $outboundBatchSize, self::UPDATE_OUTGOING & $updateFlag);
         }
+
+        $this->connector->enable();
     }
 
     /**
