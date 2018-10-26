@@ -54,17 +54,17 @@ class SObjectCompiler
 
     public function __construct(
         ConnectionManagerInterface $connectionManager,
-        RegistryInterface $managerRegistry,
+        RegistryInterface $registry,
         Transformer $transformer,
         ValidatorInterface $validator,
-        ReferenceIdGenerator $referenceIdGenerator,
+        ReferenceIdGenerator $referenceGenerator,
         ?LoggerInterface $logger = null
     ) {
         $this->connectionManager  = $connectionManager;
-        $this->registry           = $managerRegistry;
+        $this->registry           = $registry;
         $this->transformer        = $transformer;
         $this->validator          = $validator;
-        $this->referenceGenerator = $referenceIdGenerator;
+        $this->referenceGenerator = $referenceGenerator;
 
         if (null !== $logger) {
             $this->setLogger($logger);

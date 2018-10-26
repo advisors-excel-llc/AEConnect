@@ -39,12 +39,12 @@ class AssociationTransformer extends AbstractTransformerPlugin
     public function __construct(
         ConnectionManagerInterface $connectionManager,
         RegistryInterface $managerRegistry,
-        ReferenceIdGenerator $referenceIdGenerator,
+        ReferenceIdGenerator $referenceGenerator,
         ?LoggerInterface $logger = null
     ) {
         $this->connectionManager  = $connectionManager;
         $this->managerRegistry    = $managerRegistry;
-        $this->referenceGenerator = $referenceIdGenerator;
+        $this->referenceGenerator = $referenceGenerator;
 
         if (null !== $logger) {
             $this->setLogger($logger);

@@ -21,10 +21,10 @@ class PollCommand extends Command
      */
     private $polling;
 
-    public function __construct(PollingService $pollingService)
+    public function __construct(PollingService $polling)
     {
         parent::__construct(null);
-        $this->polling = $pollingService;
+        $this->polling = $polling;
     }
 
     protected function configure()
