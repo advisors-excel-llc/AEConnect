@@ -1,21 +1,13 @@
 services:
-    _defaults:
-        bind:
-            Enqueue\Client\ProducerInterface: '@Enqueue\Client\Producer'
-
     _instanceof:
         AE\ConnectBundle\Connection\ConnectionInterface:
-            tags:
-                - {name: 'ae_connect.connection'}
+            tags: ['ae_connect.connection']
         AE\ConnectBundle\Salesforce\Inbound\SalesforceConsumerInterface:
-            tags:
-                - {name: 'ae_connect.consumer'}
+            tags: ['ae_connect.consumer']
 
-    AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport:
-        autowire: true
+    AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport: ~
     AE\SalesforceRestSdk\Bayeux\Transport\AbstractClientTransport: '@AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport'
     AE\ConnectBundle\Manager\ConnectionManager:
-        autowire: true
         public: true
     AE\ConnectBundle\Manager\ConnectionManagerInterface:
         alias: 'AE\ConnectBundle\Manager\ConnectionManager'
@@ -24,8 +16,7 @@ services:
         alias: 'AE\ConnectBundle\Manager\ConnectionManager'
         public: true
     AE\SalesforceRestSdk\Bayeux\Extension\SfdcExtension:
-        tags:
-            - {name: 'ae_connect.extension'}
+        tags: ['ae_connect.extension']
     AE\ConnectBundle\Serializer\CompositeSObjectSubscriber:
         tags:
             -
@@ -39,58 +30,84 @@ services:
                 format: 'json'
                 type: 'AE\SalesforceRestSdk\Model\SObject'
     AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler:
-        autowire: true
+        $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $transformer: '@AE\ConnectBundle\Salesforce\Transformer\Transformer'
+        $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
+        $referenceGenerator: '@AE\ConnectBundle\Salesforce\Outbound\ReferenceIdGenerator'
+        $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\SalesforceConnector:
-        autowire: true
-        public: true
+        $sObjectCompiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
+        $entityCompiler: '@AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler'
+        $producer: '@Enqueue\Client\Producer'
+        $serializer: '@JMS\Serializer\SerializerInterface'
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Outbound\ReferenceIdGenerator:
-        autowire: true
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor:
-        autowire: true
-        tags:
-            - { name: 'enqueue.client.processor' }
+        arguments:
+            $queue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
+            $serializer: '@JMS\Serializer\SerializerInterface'
+        tags: ['enqueue.client.processor']
     AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue:
-        autowire: true
-        arguments:
-            $cache: '@doctrine_cache.providers.ae_connect_outbound_queue'
+        $cache: '@doctrine_cache.providers.ae_connect_outbound_queue'
+        $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Doctrine\Subscriber\EntitySubscriber:
-        autowire: true
-        tags:
-            - { name: 'doctrine.event_subscriber' }
+        arguments:
+            $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        tags: ['doctrine.event_subscriber']
     AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler:
-        autowire: true
+        $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
+        $transformer: '@AE\ConnectBundle\Salesforce\Transformer\Transformer'
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Inbound\SObjectConsumer:
-        autowire: true
+        $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
     AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService:
-        autowire: true
-        arguments:
-            $cache: '@doctrine_cache.providers.ae_connect_polling'
+        $cache: '@doctrine_cache.providers.ae_connect_polling'
+        $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
     AE\ConnectBundle\Salesforce\Bulk\EntityTreeMaker:
-        autowire: true
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker:
-        autowire: true
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue:
-        autowire: true
+        $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker'
+        $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue:
-        autowire: true
+        $compiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\EntityTreeMaker'
+        $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor:
-        autowire: true
+        $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        $inboundQueue: '@AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue'
+        $outboundQueue: '@AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue'
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Command\BulkCommand:
-        autowire: true
-        tags:
-            - { name: console.command }
-    AE\ConnectBundle\Command\ConsumeCommand:
-        autowire: true
         arguments:
+            $processor: '@AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor'
+        tags: ['console.command']
+    AE\ConnectBundle\Command\ConsumeCommand:
+        arguments:
+            $consumer: '@Enqueue\Consumption\QueueConsumer'
             $context: '@enqueue.transport.context'
             $driver: '@enqueue.client.driver'
-        tags:
-            - { name: console.command }
+            $processor: '@AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor'
+            $queue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
+        tags: ['console.command']
     AE\ConnectBundle\Command\ListenCommand:
-        autowire: true
-        tags:
-            - { name: console.command }
+        arguments:
+            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        tags: ['console.command']
     AE\ConnectBundle\Command\PollCommand:
-        autowire: true
-        tags:
-            - { name: console.command }
+        arguments:
+            $polling: '@AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService'
+        tags: ['console.command']
