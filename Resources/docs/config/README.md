@@ -86,7 +86,7 @@ Let's take a look at how you can connect to Salesforce's Streaming API without a
 
 #### Push Topics
 
-A Push Topic must be first created on the Salesforce org before it can be subscribed to... for now anyway. Once the
+A Push Topic must be first created on the Salesforce org before it can be subscribed to. Once the
 Push Topic is created, simply use the topic's name to subscribe to it.
 
 You can also filter out results of a Push Topic using the fields from the topic's query and some specified values. This
@@ -94,9 +94,12 @@ is a convenient way of reusing existing topics without having to create new ones
 used in an organization, so it's best to use an existing Push Topic, adding any missing fields that are needed, and filtering
 on those fields when subscribing to the topic.
 
-The config example below will only tell AE Connect to subscribe to the topic channel. In order to actually handle the
-incoming data, a custom consumer will need to be created. See [Inbound Data from Salesforce](../inbound/README.md) for
-how to set that up.
+The config example below will only tell AE Connect to subscribe to the topic channel. AE Connect will use the `type` value
+to tell its SObjectConsumer what type of object the topic subscribes to. From there, AE Connect will attempt to update
+the local database with the relative change.
+
+You can choose to disable the SObjectConsumer and use your own, or create a side-effect from the event. 
+See [Inbound Data from Salesforce](../inbound/README.md) for how to set that up.
 
 ```yaml
 # app/config.yml (or config/ae_connect.yaml if you're using flex)
@@ -107,8 +110,10 @@ ae_connect:
             login:
                 # ...
             topics:
-                MyCustomTopic: ~
+                MyCustomTopic:
+                    type: 'MyCustomObject__c'
                 MyFilteredTopic:
+                    type: 'MyOtherCustomObject__c'
                     filters:
                         CustomField__c: 'Seattle'
                         OtherCustom__c: 'Pomegranate'

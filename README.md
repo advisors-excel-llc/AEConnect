@@ -21,6 +21,7 @@ composer install ae/connect-bundle
 * [Outbound Data to Salesforce](Resources/docs/outbound/README.md)
 * [Inbound and Outbound Validation](Resources/docs/validation/README.md)
 * [Data Transformation](Resources/docs/transformers/README.md)
+* [Bulk Synchronization](Resources/docs/bulk/README.md)
 
 ## Resources
 * [Enqueue](https://github.com/php-enqueue/enqueue-dev)
