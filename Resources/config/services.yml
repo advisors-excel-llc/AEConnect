@@ -65,3 +65,32 @@ services:
         autowire: true
         arguments:
             $cache: '@doctrine_cache.providers.ae_connect_polling'
+    AE\ConnectBundle\Salesforce\Bulk\EntityTreeMaker:
+        autowire: true
+    AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker:
+        autowire: true
+    AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue:
+        autowire: true
+    AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue:
+        autowire: true
+    AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor:
+        autowire: true
+    AE\ConnectBundle\Command\BulkCommand:
+        autowire: true
+        tags:
+            - { name: console.command }
+    AE\ConnectBundle\Command\ConsumeCommand:
+        autowire: true
+        arguments:
+            $context: '@enqueue.transport.context'
+            $driver: '@enqueue.client.driver'
+        tags:
+            - { name: console.command }
+    AE\ConnectBundle\Command\ListenCommand:
+        autowire: true
+        tags:
+            - { name: console.command }
+    AE\ConnectBundle\Command\PollCommand:
+        autowire: true
+        tags:
+            - { name: console.command }

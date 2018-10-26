@@ -6,3 +6,4 @@
 * [Outbound Data to Salesforce](outbound/README.md)
 * [Inbound and Outbound Validation](validation/README.mds)
 * [Data Transformation](transformers/README.md)
+* [Bulk Synchronization](bulk/README.md)

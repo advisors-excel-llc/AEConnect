@@ -1,0 +1,3 @@
+AE\ConnectBundle\Tests\Entity\Account:
+    account{1..50}:
+        name: 'Bulk Test Account <current()>'

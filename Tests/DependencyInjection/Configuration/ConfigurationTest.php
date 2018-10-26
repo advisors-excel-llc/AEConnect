@@ -37,7 +37,7 @@ class ConfigurationTest extends TestCase
                             ],
                             'topics'          => [
                                 'TestTopic' => [
-                                    'query'  => 'Select Id, Name, CustomField__c From Account',
+                                    'type'   => 'Account',
                                     'filter' => [
                                         'CustomField__c' => 'Seattle',
                                     ],
@@ -71,17 +71,10 @@ class ConfigurationTest extends TestCase
                         ],
                         'topics'          => [
                             'TestTopic' => [
-                                'query'                => 'Select Id, Name, CustomField__c From Account',
-                                'filter'               => [
+                                'type'   => 'Account',
+                                'filter' => [
                                     'CustomField__c' => 'Seattle',
                                 ],
-                                'api_version'          => '43.0',
-                                'create_if_not_exists' => true,
-                                'create'               => true,
-                                'update'               => true,
-                                'undelete'             => true,
-                                'delete'               => true,
-                                'notify_for_fields'    => 'Referenced',
                             ],
                         ],
                         'config'          => [
@@ -122,7 +115,7 @@ class ConfigurationTest extends TestCase
                             ],
                             'topics' => [
                                 'TestTopic' => [
-                                    'query'  => 'Select Id, Name, CustomField__c From Account',
+                                    'type'   => 'Account',
                                     'filter' => [
                                         'CustomField__c' => 'Seattle',
                                     ],
@@ -138,13 +131,13 @@ class ConfigurationTest extends TestCase
                             ],
                             'topics'     => [
                                 'TestTopic'  => [
-                                    'query'  => 'Select Id, Name, CustomField__c From Account',
+                                    'type'   => 'Account',
                                     'filter' => [
                                         'CustomField__c' => 'Seattle',
                                     ],
                                 ],
                                 'OtherTopic' => [
-                                    'query'  => 'Select Id, Name, CustomField__c From Contact',
+                                    'type'   => 'Contact',
                                     'filter' => [
                                         'CustomField__c' => 'Manhattan',
                                     ],
@@ -174,17 +167,10 @@ class ConfigurationTest extends TestCase
                         ],
                         'topics'          => [
                             'TestTopic' => [
-                                'query'                => 'Select Id, Name, CustomField__c From Account',
-                                'filter'               => [
+                                'type'   => 'Account',
+                                'filter' => [
                                     'CustomField__c' => 'Seattle',
                                 ],
-                                'api_version'          => '43.0',
-                                'create_if_not_exists' => true,
-                                'create'               => true,
-                                'update'               => true,
-                                'undelete'             => true,
-                                'delete'               => true,
-                                'notify_for_fields'    => 'Referenced',
                             ],
                         ],
                         'config'          => [
@@ -206,30 +192,16 @@ class ConfigurationTest extends TestCase
                         ],
                         'topics'          => [
                             'TestTopic'  => [
-                                'query'                => 'Select Id, Name, CustomField__c From Account',
-                                'filter'               => [
+                                'type'   => 'Account',
+                                'filter' => [
                                     'CustomField__c' => 'Seattle',
                                 ],
-                                'api_version'          => '43.0',
-                                'create_if_not_exists' => true,
-                                'create'               => true,
-                                'update'               => true,
-                                'undelete'             => true,
-                                'delete'               => true,
-                                'notify_for_fields'    => 'Referenced',
                             ],
                             'OtherTopic' => [
-                                'query'                => 'Select Id, Name, CustomField__c From Contact',
-                                'filter'               => [
+                                'type'   => 'Contact',
+                                'filter' => [
                                     'CustomField__c' => 'Manhattan',
                                 ],
-                                'api_version'          => '43.0',
-                                'create_if_not_exists' => true,
-                                'create'               => true,
-                                'update'               => true,
-                                'undelete'             => true,
-                                'delete'               => true,
-                                'notify_for_fields'    => 'Referenced',
                             ],
                         ],
                         'config'          => [
@@ -263,7 +235,7 @@ class ConfigurationTest extends TestCase
                             ],
                             'topics' => [
                                 'TestTopic' => [
-                                    'query'  => 'Select Id, Name, CustomField__c From Account',
+                                    'type'   => 'Account',
                                     'filter' => [
                                         'CustomField__c' => 'Seattle',
                                     ],
@@ -280,13 +252,13 @@ class ConfigurationTest extends TestCase
                             ],
                             'topics' => [
                                 'TestTopic'  => [
-                                    'query'  => 'Select Id, Name, CustomField__c From Account',
+                                    'type'   => 'Account',
                                     'filter' => [
                                         'CustomField__c' => 'Seattle',
                                     ],
                                 ],
                                 'OtherTopic' => [
-                                    'query'  => 'Select Id, Name, CustomField__c From Contact',
+                                    'type'   => 'Contact',
                                     'filter' => [
                                         'CustomField__c' => 'Manhattan',
                                     ],
@@ -318,7 +290,7 @@ class ConfigurationTest extends TestCase
                             ],
                             'topics' => [
                                 'TestTopic' => [
-                                    'query'  => 'Select Id, Name, CustomField__c From Account',
+                                    'type'  => 'Account',
                                     'filter' => [
                                         'CustomField__c' => 'Seattle',
                                     ],
@@ -336,13 +308,13 @@ class ConfigurationTest extends TestCase
                             ],
                             'topics'     => [
                                 'TestTopic'  => [
-                                    'query'  => 'Select Id, Name, CustomField__c From Account',
+                                    'type'  => 'Account',
                                     'filter' => [
                                         'CustomField__c' => 'Seattle',
                                     ],
                                 ],
                                 'OtherTopic' => [
-                                    'query'  => 'Select Id, Name, CustomField__c From Contact',
+                                    'type'  => 'Contact',
                                     'filter' => [
                                         'CustomField__c' => 'Manhattan',
                                     ],

@@ -129,6 +129,12 @@ Now we just need to wire up our consumer to the container:
 services:
     App\Salesforce\Inbound\MyEventConsumer:
         autowire: true
+        
+    # you can also control which connections your consumer subscribes to using the tag
+    App\Salesforce\Inbound\MyEventConsumer:
+        autowire: true
+        tags:
+            - { name: 'ae_connect.consumer', connections: 'default,other_connection' }
 ```
 
 Boom! Now your consumer will be automagically connected to Salesforce and will be fired when `MyEvent__e` is
