@@ -21,6 +21,7 @@ class ConnectionManagerTest extends KernelTestCase
 
         $this->assertNotNull($connection);
         $this->assertEquals('default', $connection->getName());
+        $this->assertTrue($connection->isDefault());
         $this->assertNotNull($connection->getRestClient());
         $this->assertNotNull($connection->getStreamingClient());
         $this->assertNotNull($connection->getBulkClient());

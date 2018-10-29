@@ -57,30 +57,33 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
     public function prepend(ContainerBuilder $container)
     {
         foreach ($container->getExtensionConfig('doctrine_cache') as $config) {
-            $providers = array_key_exists('providers', $config) ? $config['providers'] : [];
+            $providers      = array_key_exists('providers', $config) ? $config['providers'] : [];
             $providerConfig = [];
 
             if (!array_key_exists('ae_connect_metadata', $providers)) {
                 $providerConfig['ae_connect_metadata'] = [
-                    'type' => 'file_system'
+                    'type' => 'file_system',
                 ];
             }
 
             if (!array_key_exists('ae_connect_outbound_queue', $providers)) {
                 $providerConfig['ae_connect_outbound_queue'] = [
-                    'type' => 'file_system'
+                    'type' => 'file_system',
                 ];
             }
 
             if (!array_key_exists('ae_connect_polling', $providers)) {
                 $providerConfig['ae_connect_polling'] = [
-                    'type' => 'file_system'
+                    'type' => 'file_system',
                 ];
             }
 
-            $container->prependExtensionConfig('doctrine_cache', [
-                'providers' => $providerConfig
-            ]);
+            $container->prependExtensionConfig(
+                'doctrine_cache',
+                [
+                    'providers' => $providerConfig,
+                ]
+            );
         }
     }
 
@@ -104,9 +107,9 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 $this->createBulkClientExtension($name, $container);
                 $this->createReplayExtensionService($connection, $name, $container);
                 $this->createMetadataRegistryService($connection, $name, $container);
-                $this->createConnectionService($connection, $name, $container);
+                $this->createConnectionService($name, $name === $config['default_connection'], $container);
 
-                if ($name !== "default" && $connection['is_default']) {
+                if ($name !== "default" && $name === $config['default_connection']) {
                     $container->setAlias("ae_connect.connection.default", new Alias("ae_connect.connection.$name"));
                 }
             }
@@ -130,14 +133,14 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
             ;
         } else {
             $container->register("ae_connect.connection.$connectionName.auth_provider", SoapProvider::class)
-                ->setArguments(
-                    [
-                        $config['username'],
-                        $config['password'],
-                        $config['url'],
-                    ]
-                )
-                ->setPublic(true)
+                      ->setArguments(
+                          [
+                              $config['username'],
+                              $config['password'],
+                              $config['url'],
+                          ]
+                      )
+                      ->setPublic(true)
             ;
         }
     }
@@ -227,8 +230,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
     {
         $pollObjects = $container->hasParameter('ae_connect.poll_objects')
             ? $container->getParameter('ae_connect.poll_objects')
-            : []
-        ;
+            : [];
 
         foreach ($config as $objectName) {
             if (preg_match('/__(c|C)$/', $objectName) == true
@@ -374,12 +376,16 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
     }
 
     /**
-     * @param array $config
      * @param string $connectionName
+     * @param bool $isDefault
      * @param ContainerBuilder $container
      */
-    private function createConnectionService(array $config, string $connectionName, ContainerBuilder $container): void
-    {
+    private function createConnectionService(
+        string $connectionName,
+        bool $isDefault,
+        ContainerBuilder $container
+    ):
+    void {
         $container->register("ae_connect.connection.$connectionName", Connection::class)
                   ->setArguments(
                       [
@@ -396,7 +402,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                           '$metadataRegistry' => new Reference(
                               "ae_connect.connection.$connectionName.metadata_registry"
                           ),
-                          '$isDefault'        => $config['is_default'],
+                          '$isDefault'        => $isDefault,
                       ]
                   )
                   ->setPublic(true)

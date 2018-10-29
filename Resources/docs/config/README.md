@@ -17,7 +17,7 @@ for [mapped entities](entity_mapping.md). If no paths are supplied, no entities 
 # app/config.yml (or config/ae_connect.yaml if you're using flex)
 
 ae_connect:
-    paths: ['%kernel.project_dir%/src/App/Entity/']
+    paths: ['%kernel.project_dir%/src/Entity/']
     connections:
         default:
             login:
@@ -256,9 +256,10 @@ First, let's setup our config with two different connections:
 # app/config.yml (or config/ae_connect.yaml if you're using flex)
 
 ae_connect:
-    paths: ['%kernel.project_dir%/src/App/Entity/']
+    paths: ['%kernel.project_dir%/src/Entity/']
+    default_connection: my_connection
     connections:
-        default:
+        my_connection:
             login:
                 username: someuser@mysalesforceorg.com
                 password: MYPASSWORD_my_user_token
@@ -267,7 +268,6 @@ ae_connect:
                 - Contact
                 - SomeCustomObject__c
         other_connection:
-            is_default: false
             login:
                 username: someotheruser@myothersforg.com
                 password: PASSWORD_user_token
@@ -280,8 +280,8 @@ ae_connect:
 ```
 
 The key under `connections` is the connection name. If a connection is named `default` it is always the default connection.
-If a connection is not the default connection, `is_default` must be false. No two default connections can exist in a configuration.
-The default connection does not have to be named `default`, but whatever it is named, it will have the alias of `default`.
+If a connection is not named `default`, such as `my_connection` in the example above, `default_connection` must be set to
+the name of the connection that is meant to be default.
 
 The default connection is what is used when no connection name is given. Typically, this is applicable for console commands:
 
