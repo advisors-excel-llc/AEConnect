@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Salesforce\Outbound\Compiler;
 
+use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Outbound\ReferenceIdGenerator;
@@ -103,7 +104,7 @@ class SObjectCompiler
             $changeSet = $uow->getEntityChangeSet($entity);
         }
 
-        $this->validate($entity, $connectionName);
+        $this->validate($entity, $connection);
 
         $sObject = new CompositeSObject($metadata->getSObjectType());
 
@@ -134,12 +135,18 @@ class SObjectCompiler
         return new CompilerResult($intent, $sObject, $metadata, $refId);
     }
 
-    private function validate($entity, string $connectionName)
+    private function validate($entity, ConnectionInterface $connection)
     {
+        $groups = ['ae_connect_outbound', 'ae_connect_outbound.'.$connection->getName()];
+
+        if ($connection->isDefault() && 'default' !== $connection->getName()) {
+            $groups[] = 'ae_connect_outbound.default';
+        }
+
         $messages = $this->validator->validate(
             $entity,
             null,
-            ['ae_connect_outbound', 'ae_connect_outbound.'.$connectionName]
+            $groups
         );
 
         if (count($messages) > 0) {
@@ -251,7 +258,7 @@ class SObjectCompiler
                     continue;
                 }
 
-                $value         = $fieldMetadata->getValueFromEntity($entity);
+                $value = $fieldMetadata->getValueFromEntity($entity);
                 if (null !== $value) {
                     $sObject->$field = $this->compileProperty(
                         $property,

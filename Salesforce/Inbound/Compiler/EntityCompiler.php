@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Salesforce\Inbound\Compiler;
 
+use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
 use AE\ConnectBundle\Salesforce\Transformer\Transformer;
@@ -129,7 +130,7 @@ class EntityCompiler
                     );
                 }
 
-                $this->validate($entity, $connectionName);
+                $this->validate($entity, $connection);
 
                 $entities[] = $entity;
             } catch (\RuntimeException $e) {
@@ -147,14 +148,20 @@ class EntityCompiler
 
     /**
      * @param $entity
-     * @param string $connectionName
+     * @param ConnectionInterface $connection
      */
-    private function validate($entity, string $connectionName)
+    private function validate($entity, ConnectionInterface $connection)
     {
+        $groups = ['ae_connect_inbound', 'ae_connect_inbound.'.$connection->getName()];
+
+        if ($connection->isDefault() && 'default' !== $connection->getName()) {
+            $groups[] = 'ae_connect_inbound.default';
+        }
+
         $messages = $this->validator->validate(
             $entity,
             null,
-            ['ae_connect_inbound', 'ae_connect_inbound.'.$connectionName]
+            $groups
         );
         if (count($messages) > 0) {
             $err = '';

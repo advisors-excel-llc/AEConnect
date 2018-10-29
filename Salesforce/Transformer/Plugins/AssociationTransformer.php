@@ -17,6 +17,7 @@ use Doctrine\ORM\Mapping\MappingException;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\RegistryInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class AssociationTransformer extends AbstractTransformerPlugin
 {
@@ -36,15 +37,22 @@ class AssociationTransformer extends AbstractTransformerPlugin
      */
     private $referenceGenerator;
 
+    /**
+     * @var ValidatorInterface
+     */
+    private $validator;
+
     public function __construct(
         ConnectionManagerInterface $connectionManager,
         RegistryInterface $managerRegistry,
         ReferenceIdGenerator $referenceGenerator,
+        ValidatorInterface $validator,
         ?LoggerInterface $logger = null
     ) {
         $this->connectionManager  = $connectionManager;
         $this->managerRegistry    = $managerRegistry;
         $this->referenceGenerator = $referenceGenerator;
+        $this->validator          = $validator;
 
         if (null !== $logger) {
             $this->setLogger($logger);
@@ -150,8 +158,25 @@ class AssociationTransformer extends AbstractTransformerPlugin
         $sfid               = $associatedMetadata->getFieldValue($entity, $sfidProperty);
 
         if (null === $sfid) {
-            $assocRefId = $this->referenceGenerator->create($entity, $metadata);
-            $sfid       = new ReferencePlaceholder($assocRefId);
+            $groups   = [
+                'ae_connect_outbound',
+                'ae_connect_outbound.'.$connection->getName(),
+            ];
+
+            if ($connection->isDefault() && 'default' != $connection->getName()) {
+                $groups[] = 'ae_connect_outbound.default';
+            }
+
+            $messages = $this->validator->validate(
+                $entity,
+                null,
+                $groups
+            );
+
+            if (count($messages) === 0) {
+                $assocRefId = $this->referenceGenerator->create($entity, $metadata);
+                $sfid       = new ReferencePlaceholder($assocRefId);
+            }
         }
 
         $payload->setValue($sfid);
