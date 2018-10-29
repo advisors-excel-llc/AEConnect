@@ -23,9 +23,21 @@ class Configuration implements ConfigurationInterface
                 ->arrayNode('paths')
                     ->isRequired()
                     ->scalarPrototype()->end()
-              ->end()
+                ->end()
+                ->scalarNode('default_connection')
+                    ->defaultValue('default')
+                ->end()
              ->end()
-             ->append($this->buildConnectionTree());
+             ->append($this->buildConnectionTree())
+            ->validate()
+                ->ifTrue(function ($value) {
+                    $default = $value['default_connection'];
+
+                    return !array_key_exists($default, $value['connections']);
+                })
+                ->thenInvalid('The value given for `default_connection` is not named in the `connections` array.')
+            ->end()
+        ;
 
         return $tree;
     }
@@ -37,7 +49,6 @@ class Configuration implements ConfigurationInterface
         $node = $tree->root('connections')
                 ->prototype('array')
                     ->children()
-                        ->booleanNode('is_default')->defaultTrue()->end()
                         ->append($this->buildLoginTree())
                         ->append($this->buildTopicsTree())
                         ->append($this->buildPlatformEventsTree())
@@ -46,20 +57,6 @@ class Configuration implements ConfigurationInterface
                         ->append($this->buildConfigTree())
                     ->end()
                 ->end()
-            ->validate()
-                ->ifTrue(function ($value) {
-                    $count = 0;
-
-                    foreach ($value as $values) {
-                        if ($values['is_default']) {
-                            ++$count;
-                        }
-                    }
-
-                    return count(array_keys($value)) > 0 && $count !== 1;
-                })
-                ->thenInvalid('Only one connection can be default.')
-            ->end()
         ;
 
         return $node;

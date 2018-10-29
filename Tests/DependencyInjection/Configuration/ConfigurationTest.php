@@ -58,10 +58,10 @@ class ConfigurationTest extends TestCase
                 ],
             ],
             [
-                'paths'       => ['%kernel.project_dir%/src/App/Entity'],
-                'connections' => [
+                'paths'              => ['%kernel.project_dir%/src/App/Entity'],
+                'default_connection' => 'default',
+                'connections'        => [
                     'default' => [
-                        'is_default'      => true,
                         'login'           => [
                             'key'      => 'client_key',
                             'secret'   => 'client_secret',
@@ -123,13 +123,12 @@ class ConfigurationTest extends TestCase
                             ],
                         ],
                         'non_default' => [
-                            'is_default' => false,
-                            'login'      => [
+                            'login'  => [
                                 'username' => 'username',
                                 'password' => 'password',
                                 'url'      => 'https://test.salesforce.com',
                             ],
-                            'topics'     => [
+                            'topics' => [
                                 'TestTopic'  => [
                                     'type'   => 'Account',
                                     'filter' => [
@@ -143,7 +142,7 @@ class ConfigurationTest extends TestCase
                                     ],
                                 ],
                             ],
-                            'config'     => [
+                            'config' => [
                                 'replay_start_id' => -1,
                                 'cache'           => [
                                     'metadata_provider' => 'test_metadata',
@@ -154,10 +153,10 @@ class ConfigurationTest extends TestCase
                 ],
             ],
             [
-                'paths'       => ['%kernel.project_dir%/src/App/Entity'],
-                'connections' => [
+                'paths'              => ['%kernel.project_dir%/src/App/Entity'],
+                'default_connection' => 'default',
+                'connections'        => [
                     'default'     => [
-                        'is_default'      => true,
                         'login'           => [
                             'key'      => 'client_key',
                             'secret'   => 'client_secret',
@@ -184,7 +183,6 @@ class ConfigurationTest extends TestCase
                         'generic_events'  => [],
                     ],
                     'non_default' => [
-                        'is_default'      => false,
                         'login'           => [
                             'username' => 'username',
                             'password' => 'password',
@@ -224,8 +222,9 @@ class ConfigurationTest extends TestCase
         $this->assertConfigurationIsInvalid(
             [
                 'ae_connect' => [
-                    'paths'       => ['%kernel.project_dir%/src/App/Entity'],
-                    'connections' => [
+                    'paths'             => ['%kernel.project_dir%/src/App/Entity'],
+                    'default_connecion' => 'bob',
+                    'connections'       => [
                         'default'     => [
                             'login'  => [
                                 'key'      => 'client_key',
@@ -279,8 +278,9 @@ class ConfigurationTest extends TestCase
         $this->assertConfigurationIsInvalid(
             [
                 'ae_connect' => [
-                    'paths'       => ['%kernel.project_dir%/src/App/Entity'],
-                    'connections' => [
+                    'paths'              => ['%kernel.project_dir%/src/App/Entity'],
+                    'default_connection' => 'non_default',
+                    'connections'        => [
                         'default'     => [
                             'login'  => [
                                 'key'      => 'client_key',
@@ -290,7 +290,7 @@ class ConfigurationTest extends TestCase
                             ],
                             'topics' => [
                                 'TestTopic' => [
-                                    'type'  => 'Account',
+                                    'type'   => 'Account',
                                     'filter' => [
                                         'CustomField__c' => 'Seattle',
                                     ],
@@ -298,29 +298,28 @@ class ConfigurationTest extends TestCase
                             ],
                         ],
                         'non_default' => [
-                            'is_default' => false,
-                            'login'      => [
+                            'login'  => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
                                 'username' => 'username',
                                 'password' => 'password',
                                 'url'      => 'http://test.salesforce.com',
                             ],
-                            'topics'     => [
+                            'topics' => [
                                 'TestTopic'  => [
-                                    'type'  => 'Account',
+                                    'type'   => 'Account',
                                     'filter' => [
                                         'CustomField__c' => 'Seattle',
                                     ],
                                 ],
                                 'OtherTopic' => [
-                                    'type'  => 'Contact',
+                                    'type'   => 'Contact',
                                     'filter' => [
                                         'CustomField__c' => 'Manhattan',
                                     ],
                                 ],
                             ],
-                            'config'     => [
+                            'config' => [
                                 'replay_start_id' => -4,
                             ],
                         ],
