@@ -17,6 +17,7 @@ use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Contact;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\ORM\EntityManager;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class AssociationTransformerTest extends DatabaseTestCase
 {
@@ -78,7 +79,8 @@ class AssociationTransformerTest extends DatabaseTestCase
         $transformer = new AssociationTransformer(
             $this->connectionManager,
             $this->doctrine,
-            $this->get(ReferenceIdGenerator::class)
+            $this->get(ReferenceIdGenerator::class),
+            $this->get(ValidatorInterface::class)
         );
 
         $this->assertTrue($transformer->supports($payload));
@@ -134,7 +136,8 @@ class AssociationTransformerTest extends DatabaseTestCase
         $transformer = new AssociationTransformer(
             $this->connectionManager,
             $this->doctrine,
-            $this->get(ReferenceIdGenerator::class)
+            $this->get(ReferenceIdGenerator::class),
+            $this->get(ValidatorInterface::class)
         );
 
         $this->assertTrue($transformer->supports($payload));

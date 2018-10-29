@@ -16,7 +16,7 @@ use Doctrine\Common\Annotations\Annotation\Target;
  *
  * @package AE\ConnectBundle\Annotations
  * @Annotation
- * @Target({"PROPERTY"})
+ * @Target({"ALL"})
  */
 class Field
 {
