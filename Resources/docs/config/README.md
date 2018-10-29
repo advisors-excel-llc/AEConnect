@@ -17,7 +17,7 @@ for [mapped entities](entity_mapping.md). If no paths are supplied, no entities 
 # app/config.yml (or config/ae_connect.yaml if you're using flex)
 
 ae_connect:
-    paths: ['%kernel.project_dir%/src/App/Entity/']
+    paths: ['%kernel.project_dir%/src/Entity/']
     connections:
         default:
             login:
@@ -256,7 +256,7 @@ First, let's setup our config with two different connections:
 # app/config.yml (or config/ae_connect.yaml if you're using flex)
 
 ae_connect:
-    paths: ['%kernel.project_dir%/src/App/Entity/']
+    paths: ['%kernel.project_dir%/src/Entity/']
     default_connection: my_connection
     connections:
         my_connection:
