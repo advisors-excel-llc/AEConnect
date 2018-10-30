@@ -29,7 +29,7 @@ class Field
     /**
      * @var array
      */
-    private $connections = ["default"];
+    private $connections = [];
 
     public function __construct(array $values)
     {

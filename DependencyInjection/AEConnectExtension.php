@@ -10,12 +10,12 @@ namespace AE\ConnectBundle\DependencyInjection;
 
 use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Driver\AnnotationDriver;
+use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
-use AE\SalesforceRestSdk\AuthProvider\LoginProvider;
 use AE\SalesforceRestSdk\AuthProvider\OAuthProvider;
 use AE\SalesforceRestSdk\AuthProvider\SoapProvider;
 use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
@@ -89,7 +89,13 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
     private function createAnnotationDriver(ContainerBuilder $container, array $config)
     {
-        $definition = new Definition(AnnotationDriver::class, [new Reference("annotation_reader"), $config['paths']]);
+        $definition = new Definition(
+            AnnotationDriver::class,
+            [
+                new Reference("annotation_reader"),
+                $config['paths']
+            ]
+        );
 
         $container->setDefinition("ae_connect.annotation_driver", $definition);
     }
