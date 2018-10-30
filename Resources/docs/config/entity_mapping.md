@@ -21,11 +21,7 @@ The `SObjectType` annotation is required for any Entity that has data that needs
 The annotation is only used on the `class`.
 
 If the Entity maps to more than one connection, then each connection name should be specified in the `connections={}`
-attribute of the annotation. However, if the `connections` attribute is omitted, all connections are used.
-
-> It should be known that the alias "default" is not applicable here. The actual connection name as given in your
-> yaml configuration must be used. If you named the connection "default", then say "default", if you named it
-> "larrys_awesome_org", then that's what you'll specify in the connections argument
+attribute of the annotation. If the `connections` attribute is omitted, the default connection is used.
 
 ```php
 <?php
@@ -68,7 +64,7 @@ data will effect the Entity.
 
 This is a useful way of making data **read** or **write** only.
 
-Like `SObjectType`, the `Field` annotation also supports the `connections={}` attribute, using all connections
+Like `SObjectType`, the `Field` annotation also supports the `connections={}` attribute, using the default connection
 if not specified. This is extremely helpful when an Entity maps to multiple connections where field names in each
 Salesforce org are different.
 
@@ -294,12 +290,10 @@ For any Entity that will sync with Salesforce, it's imperative that the Salesfor
 Entity's data.
 
 The `SalesforceId` annotation is used in place of `Field` and uses the `connection` (singular) attribute. When
-`connection` is omitted, the connection named "default" is used. If there isn't a connection named "default" in your
-configuration, then the mapping will fail; the connection name is not an alias.
-There should be one `SalesforceId` mapped property for each
+`connection` is omitted, the default connection is used. There should be one `SalesforceId` mapped property for each
 connection the Entity is mapped to.
 
-Like `ExternalId`, `SalesforceId` can only be used on a **property** and **not** on a getter or setter.
+Like `ExternalId`, `SalesforceId` can only be used on properties and not on a getter or setter.
 
 ```php
 <?php

@@ -10,12 +10,12 @@ namespace AE\ConnectBundle\DependencyInjection;
 
 use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Driver\AnnotationDriver;
-use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
+use AE\SalesforceRestSdk\AuthProvider\LoginProvider;
 use AE\SalesforceRestSdk\AuthProvider\OAuthProvider;
 use AE\SalesforceRestSdk\AuthProvider\SoapProvider;
 use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
@@ -89,13 +89,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
     private function createAnnotationDriver(ContainerBuilder $container, array $config)
     {
-        $definition = new Definition(
-            AnnotationDriver::class,
-            [
-                new Reference("annotation_reader"),
-                $config['paths']
-            ]
-        );
+        $definition = new Definition(AnnotationDriver::class, [new Reference("annotation_reader"), $config['paths']]);
 
         $container->setDefinition("ae_connect.annotation_driver", $definition);
     }
@@ -112,7 +106,12 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 $this->createRestClientService($name, $container);
                 $this->createBulkClientExtension($name, $container);
                 $this->createReplayExtensionService($connection, $name, $container);
-                $this->createMetadataRegistryService($connection, $name, $container);
+                $this->createMetadataRegistryService(
+                    $connection,
+                    $name,
+                    $container,
+                    $config['default_connection'] === $name
+                );
                 $this->createConnectionService($name, $name === $config['default_connection'], $container);
 
                 if ($name !== "default" && $name === $config['default_connection']) {
@@ -365,7 +364,8 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
     private function createMetadataRegistryService(
         array $config,
         string $connectionName,
-        ContainerBuilder $container
+        ContainerBuilder $container,
+        bool $isDefault
     ): void {
         $cacheProviderId = "doctrine_cache.providers.{$config['config']['cache']['metadata_provider']}";
         $container->setAlias("ae_connect.connection.$connectionName.cache.metadata_provider", $cacheProviderId);
@@ -375,6 +375,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                           new Reference("ae_connect.annotation_driver"),
                           new Reference("ae_connect.connection.$connectionName.cache.metadata_provider"),
                           $connectionName,
+                          $isDefault,
                       ]
                   )
                   ->setFactory([MetadataRegistryFactory::class, 'generate'])
