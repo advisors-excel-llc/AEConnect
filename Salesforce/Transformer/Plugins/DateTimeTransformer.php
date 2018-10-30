@@ -30,7 +30,7 @@ class DateTimeTransformer extends AbstractTransformerPlugin
         $metadata = $payload->getMetadata();
         $field    = $metadata->describeField($payload->getFieldName());
 
-        return ((is_string($value) && strlen($value) > 0) || $value instanceof \DateTimeInterface)
+        return (is_string($value) || $value instanceof \DateTimeInterface)
             && in_array(strtolower($field->getSoapType()), ['xsd:date', 'xsd:datetime', 'xsd:time']);
     }
 
@@ -72,7 +72,7 @@ class DateTimeTransformer extends AbstractTransformerPlugin
         }
 
         $payload->setValue(
-            $type->convertToPHPValue($value, $platform)
+            strlen($value) > 0 ? $type->convertToPHPValue($value, $platform) : null
         );
     }
 
