@@ -99,7 +99,6 @@ services:
     AE\ConnectBundle\Command\ConsumeCommand:
         arguments:
             $consumer: '@Enqueue\Consumption\QueueConsumer'
-            $context: '@enqueue.transport.context'
             $driver: '@enqueue.client.driver'
             $processor: '@AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor'
             $queue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
