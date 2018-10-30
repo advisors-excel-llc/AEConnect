@@ -15,6 +15,8 @@ use AE\ConnectBundle\Salesforce\Transformer\Transformer;
 use AE\SalesforceRestSdk\Model\SObject;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
+use Ramsey\Uuid\Doctrine\UuidType;
+use Ramsey\Uuid\Uuid;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -90,8 +92,12 @@ class EntityCompiler
             }
 
             foreach ($identifiers as $prop => $field) {
-                if (null !== $object->$field) {
-                    $criteria[$prop] = $object->$field;
+                $value = $object->$field;
+                if (null !== $value && is_string($value) && strlen($value) > 0) {
+                    if ($classMetadata->getTypeOfField($field) instanceof UuidType) {
+                        $value = Uuid::fromString($value);
+                    }
+                    $criteria[$prop] = $value;
                 }
             }
 
