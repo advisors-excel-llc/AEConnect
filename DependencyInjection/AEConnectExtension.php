@@ -106,7 +106,12 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 $this->createRestClientService($name, $container);
                 $this->createBulkClientExtension($name, $container);
                 $this->createReplayExtensionService($connection, $name, $container);
-                $this->createMetadataRegistryService($connection, $name, $container);
+                $this->createMetadataRegistryService(
+                    $connection,
+                    $name,
+                    $container,
+                    $config['default_connection'] === $name
+                );
                 $this->createConnectionService($name, $name === $config['default_connection'], $container);
 
                 if ($name !== "default" && $name === $config['default_connection']) {
@@ -359,7 +364,8 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
     private function createMetadataRegistryService(
         array $config,
         string $connectionName,
-        ContainerBuilder $container
+        ContainerBuilder $container,
+        bool $isDefault
     ): void {
         $cacheProviderId = "doctrine_cache.providers.{$config['config']['cache']['metadata_provider']}";
         $container->setAlias("ae_connect.connection.$connectionName.cache.metadata_provider", $cacheProviderId);
@@ -369,6 +375,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                           new Reference("ae_connect.annotation_driver"),
                           new Reference("ae_connect.connection.$connectionName.cache.metadata_provider"),
                           $connectionName,
+                          $isDefault,
                       ]
                   )
                   ->setFactory([MetadataRegistryFactory::class, 'generate'])

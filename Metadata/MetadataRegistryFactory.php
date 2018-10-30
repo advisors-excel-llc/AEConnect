@@ -17,6 +17,7 @@ class MetadataRegistryFactory
      * @param AnnotationDriver $driver
      * @param CacheProvider $cache
      * @param string $connectionName
+     * @param bool $isDefault
      *
      * @return MetadataRegistry
      * @throws \ReflectionException
@@ -24,7 +25,8 @@ class MetadataRegistryFactory
     public static function generate(
         AnnotationDriver $driver,
         CacheProvider $cache,
-        string $connectionName
+        string $connectionName,
+        bool $isDefault = false
     ): MetadataRegistry {
         $registry = new MetadataRegistry($cache);
         $classes  = $driver->getAllClassNames();
@@ -37,7 +39,7 @@ class MetadataRegistryFactory
                 } else {
                     $metadata = new Metadata($connectionName);
 
-                    $driver->loadMetadataForClass($className, $metadata);
+                    $driver->loadMetadataForClass($className, $metadata, $isDefault);
                     // Don't save to cache here, there's something left to do (@see Connection::hydrateMetadataDescribe)
                 }
 
