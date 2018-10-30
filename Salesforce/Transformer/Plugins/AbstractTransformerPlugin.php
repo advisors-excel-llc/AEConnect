@@ -32,12 +32,12 @@ abstract class AbstractTransformerPlugin implements TransformerPluginInterface
 
     protected function supportsInbound(TransformerPayload $payload): bool
     {
-        return false;
+        return true;
     }
 
     protected function supportsOutbound(TransformerPayload $payload): bool
     {
-        return false;
+        return true;
     }
 
     abstract protected function transformInbound(TransformerPayload $payload);
