@@ -34,11 +34,6 @@ class ConsumeCommand extends Command
     private $consumer;
 
     /**
-     * @var Context
-     */
-    private $context;
-
-    /**
      * @var DriverInterface
      */
     private $driver;
@@ -60,7 +55,6 @@ class ConsumeCommand extends Command
     ) {
         parent::__construct(null);
         $this->consumer      = $consumer;
-        $this->context       = $context;
         $this->driver        = $driver;
         $this->processor     = $processor;
         $this->outboundQueue = $queue;
