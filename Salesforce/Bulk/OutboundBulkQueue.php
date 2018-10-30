@@ -88,7 +88,9 @@ class OutboundBulkQueue
         $metadata = $connection->getMetadataRegistry()->findMetadataByClass($class);
 
         if (null === $metadata
-            || !$metadata->getDescribe()->isCreateable() || !$metadata->getDescribe()->isUpdateable()
+            || !$metadata->getDescribe()->isCreateable()
+            || !$metadata->getDescribe()->isUpdateable()
+            || $metadata->getIdentifiers()->count() === 0
         ) {
             return;
         }
@@ -99,6 +101,11 @@ class OutboundBulkQueue
         $objectType    = $metadata->getSObjectType();
         /** @var FieldMetadata $externalIdFieldMetadata */
         $externalIdFieldMetadata = $metadata->getIdentifiers()->first();
+
+        if (false === $externalIdFieldMetadata) {
+            $externalIdFieldMetadata = $metadata->getMetadataForField('Id');
+        }
+
         $job                     = $client->createJob(
             $objectType,
             JobInfo::UPSERT,
