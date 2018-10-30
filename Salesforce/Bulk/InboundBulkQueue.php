@@ -18,6 +18,8 @@ use AE\SalesforceRestSdk\Psr7\CsvStream;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Ramsey\Uuid\Doctrine\UuidType;
+use Ramsey\Uuid\Uuid;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class InboundBulkQueue
@@ -157,7 +159,7 @@ class InboundBulkQueue
         bool $updateEntities
     ) {
         $fields = [];
-        $count = 0;
+        $count  = 0;
 
         while (false != ($row = $result->read())) {
             if (empty($fields)) {
@@ -189,13 +191,19 @@ class InboundBulkQueue
         $values           = [];
 
         foreach ($metadataRegistry->findMetadataBySObjectType($object->Type) as $metadata) {
-            $class       = $metadata->getClassName();
-            $manager     = $this->registry->getManagerForClass($class);
-            $identifiers = $metadata->getIdentifiers();
-            $ids         = [];
+            $class         = $metadata->getClassName();
+            $manager       = $this->registry->getManagerForClass($class);
+            $classMetadata = $manager->getClassMetadata($class);
+            $ids           = [];
 
-            foreach ($identifiers as $identifier) {
-                $ids[$identifier->getProperty()] = $identifier->getField();
+            foreach ($metadata->getIdentifyingFields() as $prop => $field) {
+                $value      = $object->$field;
+                if (null !== $value && is_string($value) && strlen($value) > 0) {
+                    if ($classMetadata->getTypeOfField($prop) instanceof UuidType) {
+                        $value = Uuid::fromString($value);
+                    }
+                }
+                $ids[$prop] = $value;
             }
 
             $entity = $manager->getRepository($class)->findOneBy($ids);
