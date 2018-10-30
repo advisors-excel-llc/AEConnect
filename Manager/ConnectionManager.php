@@ -43,7 +43,7 @@ class ConnectionManager implements ConnectionManagerInterface
      */
     public function getConnection(?string $name = null): ?ConnectionInterface
     {
-        if (null === $name) {
+        if (null === $name || 'default' === $name) {
             if ($this->connections->containsKey('default')) {
                 return $this->connections->get('default');
             }

@@ -83,7 +83,9 @@ class EntityCompiler
             $identifiers   = $metadata->getIdentifyingFields();
             $criteria      = [];
 
-            if (count(array_intersect($object->getFields(), $identifiers)) !== count($identifiers)) {
+            if (empty($identifiers)
+                || count(array_intersect($object->getFields(), $identifiers)) !== count($identifiers)
+            ) {
                 $identifiers = [$metadata->getIdFieldProperty() => 'Id'];
             }
 
@@ -124,8 +126,8 @@ class EntityCompiler
                     throw new \RuntimeException(
                         sprintf(
                             "The record type given, %s, does not match that of the entity, %s.",
-                            $recordType->getValueFromEntity($entity),
-                            $recordTypeName
+                            $recordTypeName,
+                            $recordType->getValueFromEntity($entity)
                         )
                     );
                 }
