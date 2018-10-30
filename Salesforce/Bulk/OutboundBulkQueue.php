@@ -106,14 +106,14 @@ class OutboundBulkQueue
             $externalIdFieldMetadata = $metadata->getMetadataForField('Id');
         }
 
-        $job                     = $client->createJob(
+        $job       = $client->createJob(
             $objectType,
             JobInfo::UPSERT,
             JobInfo::TYPE_JSON,
             $externalIdFieldMetadata->getField()
         );
-        $batches                 = [];
-        $completed               = [];
+        $batches   = [];
+        $completed = [];
 
         $this->logger->info(
             'Bulk Job (ID# {job}) is now open',
@@ -163,7 +163,7 @@ class OutboundBulkQueue
 
         while (count($batches) > 0) {
             foreach (array_keys($batches) as $batchId) {
-                $batchStatus = $client->getBatchStatus($job->getId(), $batchId);
+                $batchStatus = $client->getBatchStatus($job, $batchId);
 
                 if ($batchStatus->getState() === BatchInfo::STATE_COMPLETED) {
                     $this->logger->info(
@@ -175,7 +175,7 @@ class OutboundBulkQueue
 
                     $completed[$batchId] = $batches[$batchId];
                     unset($batches[$batchId]);
-                    $results = $client->getBatchResults($job->getId(), $batchId);
+                    $results = $client->getBatchResults($job, $batchId);
 
                     $this->processResults($results, $class, $metadata, $completed[$batchId]);
                 } elseif ($batchStatus->getState() === "Failed") {
@@ -188,7 +188,7 @@ class OutboundBulkQueue
 
                     unset($batches[$batchId]);
 
-                    $results = $client->getBatchResults($job->getId(), $batchId);
+                    $results = $client->getBatchResults($job, $batchId);
                     $this->processResults($results, $class, $metadata, $completed[$batchId]);
                 }
             }
@@ -196,7 +196,7 @@ class OutboundBulkQueue
             sleep(10);
         }
 
-        $client->closeJob($job->getId());
+        $client->closeJob($job);
 
         $this->logger->info('Job (ID# {job}) is now closed', ['job' => $job->getId()]);
     }
