@@ -48,7 +48,6 @@ class ConsumeCommand extends Command
 
     public function __construct(
         QueueConsumer $consumer,
-        Context $context,
         DriverInterface $driver,
         OutboundProcessor $processor,
         OutboundQueue $queue
