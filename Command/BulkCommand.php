@@ -61,13 +61,21 @@ class BulkCommand extends Command
                  .' This is really meant to prevent stress on application servers that could cause crashes.',
                  2000
              )
+             ->addOption(
+                 'clear-sfids',
+                 'c',
+                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_NONE,
+                 'Clear the preexisting Salesforce Ids in the local database. Helpful if connecting to a new '.
+                 'Salesforce Org or Sandbox'
+             )
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $updateFlag = ($input->hasOption('update-inbound') & BulkDataProcessor::UPDATE_INCOMING) |
-            ($input->hasOption('update-outbound') & BulkDataProcessor::UPDATE_OUTGOING);
+            ($input->hasOption('update-outbound') & BulkDataProcessor::UPDATE_OUTGOING) |
+            ($input->hasOption('clear-sfids') & BulkDataProcessor::UPDATE_SFIDS);
         $types      = $input->getOption('types');
 
         $output->writeln(
@@ -83,34 +91,33 @@ class BulkCommand extends Command
 
         if ($updateFlag & BulkDataProcessor::UPDATE_INCOMING) {
             $output->writeln(
-                sprintf(
-                    '<comment>Local entities will be updated with data from Salesforce.</comment>'
-                )
+                '<comment>Local entities will be updated with data from Salesforce.</comment>'
             );
         } else {
             $output->writeln(
-                sprintf(
-                    '<comment>Only new entities will be created with data from Salesforce.</comment>'
-                )
+                '<comment>Only new entities will be created with data from Salesforce.</comment>'
             );
         }
 
         if ($updateFlag & BulkDataProcessor::UPDATE_OUTGOING) {
             $output->writeln(
-                sprintf(
-                    '<comment>Salesforce will be updated with data from the local database.</comment>'
-                )
+                '<comment>Salesforce will be updated with data from the local database.</comment>'
             );
         } else {
             $output->writeln(
-                sprintf(
-                    '<comment>Only new records will be created with in Salesforce.</comment>'
-                )
+                '<comment>Only new records will be created with in Salesforce.</comment>'
+            );
+        }
+
+        if ($updateFlag & BulkDataProcessor::UPDATE_SFIDS) {
+            $output->writeln(
+                '<comment>Clear all Salesforce IDs from the database. '
+                .'External Ids will be used to match existing records.</comment>'
             );
         }
 
         /** @var QuestionHelper $helper */
-        $helper = $this->getHelper('question');
+        $helper           = $this->getHelper('question');
         $consumerQuestion = new ConfirmationQuestion(
             'Have you stopped all ae_connect:consume and ae_connect:listen processes? (y/n) '
         );

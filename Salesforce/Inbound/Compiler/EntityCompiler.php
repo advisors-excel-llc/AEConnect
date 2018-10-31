@@ -85,9 +85,13 @@ class EntityCompiler
             $identifiers   = $metadata->getIdentifyingFields();
             $criteria      = [];
 
-            if (empty($identifiers)
-                || count(array_intersect($object->getFields(), $identifiers)) !== count($identifiers)
-            ) {
+            if (empty($identifiers) ||
+                array_values(
+                    array_intersect(
+                        array_keys($object->getFields()),
+                        array_values($identifiers)
+                    )
+                ) !== array_values($identifiers)) {
                 $identifiers = [$metadata->getIdFieldProperty() => 'Id'];
             }
 
@@ -101,7 +105,9 @@ class EntityCompiler
                 }
             }
 
-            if (empty($criteria)) {
+            if (empty($criteria) && strlen($object->Id) > 0) {
+                $criteria[$metadata->getIdFieldProperty()] = $object->Id;
+            } elseif (empty($criteria)) {
                 continue;
             }
 
