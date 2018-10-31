@@ -20,6 +20,7 @@ class BulkDataProcessor
     public const UPDATE_INCOMING = 1;
     public const UPDATE_OUTGOING = 2;
     public const UPDATE_BOTH     = 3;
+    public const UPDATE_SFIDS    = 4;
 
     /**
      * @var ConnectionManagerInterface
@@ -77,7 +78,9 @@ class BulkDataProcessor
         $this->connector->disable();
 
         foreach ($connections as $connection) {
-            $this->clearSalesforceIds($connection);
+            if ($updateFlag & self::UPDATE_SFIDS) {
+                $this->clearSalesforceIds($connection);
+            }
             $this->inboundQueue->process($connection, $types, self::UPDATE_INCOMING & $updateFlag);
             $this->outboundQueue->process($connection, $types, $outboundBatchSize, self::UPDATE_OUTGOING & $updateFlag);
         }

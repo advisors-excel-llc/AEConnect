@@ -146,9 +146,13 @@ Instead, the `connections` attribute from the related `Field` annotation for the
 The `ExternalId` annotation can only be used with properties and not on a getter or setter. This applies
 to the associated `Field` annotation as well.
 
-> An easy way to use an External ID is to create a 36 character, case-sensitive text field on your object in Salesforce
-> marked as "External." Then, use Doctrine's `HasLifecycleCallbacks()` annotation in conjunction with a `PrePersist()`
-> method to create a `Uuid:uuid4()` using the Ramsey UUID library, or the one packaged with the Enqueue library.
+> An easy way to use External Ids is to create a 36-character, unique, case sensitive text field in Salesforce
+> (Also check the External checkbox).
+> Then, using the [Uuid Doctrine](https://github.com/ramsey/uuid-doctrine) extension, use the column type `uuid`
+> for your `@Column` mapping with the unique flag set to true. AE Connect will handle the rest!
+
+> If your object is a system level object and you cannot add a custom field to it, use what Salesforce uses
+> to uniquely identify the record. Usually this is something like `DeveloperName`.
 
 ```php
 <?php
