@@ -101,6 +101,10 @@ class EntityCompiler
                 }
             }
 
+            if (empty($criteria)) {
+                continue;
+            }
+
             $entity = $manager->getRepository($class)->findOneBy($criteria) ?: new $class();
 
             foreach ($object->getFields() as $field => $value) {
@@ -114,11 +118,15 @@ class EntityCompiler
                                              ->setMetadata($metadata)
                                              ->setFieldName($field)
                                              ->setPropertyName($fieldMetadata->getProperty())
-                                             ->setValue($value)
+                                             ->setValue(is_string($value) && strlen($value) === 0 ? null : $value)
                 ;
 
                 $this->transformer->transform($payload);
-                $fieldMetadata->setValueForEntity($entity, $payload->getValue());
+                $newValue = $payload->getValue();
+
+                if (null !== $newValue) {
+                    $fieldMetadata->setValueForEntity($entity, $newValue);
+                }
             }
 
             try {

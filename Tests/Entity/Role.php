@@ -50,6 +50,13 @@ class Role
     private $developerName;
 
     /**
+     * @var Role
+     * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\Role")
+     * @Field("ParentRoleId")
+     */
+    private $parent;
+
+    /**
      * @var string
      * @ORM\Column(length=18, unique=true, nullable=true)
      * @SalesforceId()
@@ -132,6 +139,26 @@ class Role
     public function setSfid(string $sfid): Role
     {
         $this->sfid = $sfid;
+
+        return $this;
+    }
+
+    /**
+     * @return Role
+     */
+    public function getParent(): ?Role
+    {
+        return $this->parent;
+    }
+
+    /**
+     * @param Role $parent
+     *
+     * @return Role
+     */
+    public function setParent(?Role $parent): Role
+    {
+        $this->parent = $parent;
 
         return $this;
     }
