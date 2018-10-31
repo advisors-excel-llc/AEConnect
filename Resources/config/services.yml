@@ -60,6 +60,10 @@ services:
             $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         tags: ['doctrine.event_subscriber']
+    AE\ConnectBundle\Doctrine\Subscriber\UuidSubscriber:
+        arguments:
+            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        tags: ['doctrine.event_subscriber']
     AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'

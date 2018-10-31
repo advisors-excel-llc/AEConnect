@@ -66,8 +66,8 @@ class BulkCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $updateFlag = ($input->hasArgument('update-inbound') & BulkDataProcessor::UPDATE_INCOMING) |
-            ($input->hasArgument('update-outbound') & BulkDataProcessor::UPDATE_OUTGOING);
+        $updateFlag = ($input->hasOption('update-inbound') & BulkDataProcessor::UPDATE_INCOMING) |
+            ($input->hasOption('update-outbound') & BulkDataProcessor::UPDATE_OUTGOING);
         $types      = $input->getOption('types');
 
         $output->writeln(
@@ -112,7 +112,7 @@ class BulkCommand extends Command
         /** @var QuestionHelper $helper */
         $helper = $this->getHelper('question');
         $consumerQuestion = new ConfirmationQuestion(
-            'Have you stopped all ae_connect:consume and ae_connect:listen processes?'
+            'Have you stopped all ae_connect:consume and ae_connect:listen processes? (y/n) '
         );
 
         if (!$helper->ask($input, $output, $consumerQuestion)) {
@@ -124,7 +124,7 @@ class BulkCommand extends Command
         }
 
         $confirmQuestion = new ConfirmationQuestion(
-            'Is your data backed up and are the settings correct to continue?'
+            'Is your data backed up and are the settings correct to continue? (y/n) '
         );
 
         if (!$helper->ask($input, $output, $confirmQuestion)) {

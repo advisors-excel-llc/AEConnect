@@ -60,6 +60,12 @@ class SObjectTreeMaker extends AbstractTreeBuilder
 
                 if (null !== $depMetadata) {
                     $depType        = $depMetadata->getSObjectType();
+
+                    // self-referencing fields cause redundancy errors
+                    if ($depType === $metadata->getSObjectType()) {
+                        continue;
+                    }
+
                     $deps[$depType] = array_merge_recursive(
                         array_key_exists($depType, $deps)
                             ? $deps[$depType]
