@@ -9,7 +9,6 @@
 namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
-use AE\ConnectBundle\Salesforce\Outbound\ReferenceIdGenerator;
 use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
@@ -33,11 +32,6 @@ class AssociationTransformer extends AbstractTransformerPlugin
     private $managerRegistry;
 
     /**
-     * @var ReferenceIdGenerator
-     */
-    private $referenceGenerator;
-
-    /**
      * @var ValidatorInterface
      */
     private $validator;
@@ -45,13 +39,11 @@ class AssociationTransformer extends AbstractTransformerPlugin
     public function __construct(
         ConnectionManagerInterface $connectionManager,
         RegistryInterface $managerRegistry,
-        ReferenceIdGenerator $referenceGenerator,
         ValidatorInterface $validator,
         ?LoggerInterface $logger = null
     ) {
         $this->connectionManager  = $connectionManager;
         $this->managerRegistry    = $managerRegistry;
-        $this->referenceGenerator = $referenceGenerator;
         $this->validator          = $validator;
 
         if (null !== $logger) {
@@ -174,7 +166,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
             );
 
             if (count($messages) === 0) {
-                $assocRefId = $this->referenceGenerator->create($entity, $metadata);
+                $assocRefId = spl_object_hash($entity);
                 $sfid       = new ReferencePlaceholder($assocRefId);
             }
         }

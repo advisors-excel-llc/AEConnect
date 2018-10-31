@@ -7,7 +7,6 @@ services:
     AE\ConnectBundle\Salesforce\Transformer\Plugins\AssociationTransformer:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $managerRegistry: '@Symfony\Bridge\Doctrine\RegistryInterface'
-        $referenceGenerator: '@AE\ConnectBundle\Salesforce\Outbound\ReferenceIdGenerator'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\DateTimeTransformer:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
