@@ -11,7 +11,6 @@ namespace AE\ConnectBundle\Salesforce\Outbound\Compiler;
 use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Metadata\Metadata;
-use AE\ConnectBundle\Salesforce\Outbound\ReferenceIdGenerator;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
 use AE\ConnectBundle\Salesforce\Transformer\Transformer;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
@@ -48,24 +47,17 @@ class SObjectCompiler
      */
     private $validator;
 
-    /**
-     * @var ReferenceIdGenerator
-     */
-    private $referenceGenerator;
-
     public function __construct(
         ConnectionManagerInterface $connectionManager,
         RegistryInterface $registry,
         Transformer $transformer,
         ValidatorInterface $validator,
-        ReferenceIdGenerator $referenceGenerator,
         ?LoggerInterface $logger = null
     ) {
         $this->connectionManager  = $connectionManager;
         $this->registry           = $registry;
         $this->transformer        = $transformer;
         $this->validator          = $validator;
-        $this->referenceGenerator = $referenceGenerator;
 
         if (null !== $logger) {
             $this->setLogger($logger);
@@ -130,7 +122,7 @@ class SObjectCompiler
                 $this->compileForDelete($entity, $metadata, $classMetadata, $sObject);
         }
 
-        $refId = $this->referenceGenerator->create($entity, $metadata);
+        $refId = spl_object_hash($entity);
 
         return new CompilerResult($intent, $sObject, $metadata, $refId);
     }

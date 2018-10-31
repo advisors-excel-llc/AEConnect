@@ -34,7 +34,6 @@ services:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $transformer: '@AE\ConnectBundle\Salesforce\Transformer\Transformer'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
-        $referenceGenerator: '@AE\ConnectBundle\Salesforce\Outbound\ReferenceIdGenerator'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\SalesforceConnector:
         $sObjectCompiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
@@ -43,8 +42,6 @@ services:
         $serializer: '@JMS\Serializer\SerializerInterface'
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $logger: '@Psr\Log\LoggerInterface'
-    AE\ConnectBundle\Salesforce\Outbound\ReferenceIdGenerator:
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor:
         arguments:
             $queue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'

@@ -20,6 +20,7 @@ use AE\ConnectBundle\Tests\Entity\Contact;
 use AE\ConnectBundle\Tests\Entity\Order;
 use AE\ConnectBundle\Tests\Entity\OrderProduct;
 use AE\ConnectBundle\Tests\Entity\Product;
+use AE\ConnectBundle\Tests\Entity\Role;
 use AE\ConnectBundle\Tests\Entity\Task;
 use AE\ConnectBundle\Tests\Entity\TestObject;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
@@ -62,6 +63,7 @@ class RequestBuilderTest extends DatabaseTestCase
             Product::class,
             Task::class,
             TestObject::class,
+            Role::class,
         ];
     }
 

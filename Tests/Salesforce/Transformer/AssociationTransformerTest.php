@@ -9,7 +9,6 @@
 namespace AE\ConnectBundle\Tests\Salesforce\Transformer;
 
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
-use AE\ConnectBundle\Salesforce\Outbound\ReferenceIdGenerator;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\AssociationTransformer;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
@@ -79,7 +78,6 @@ class AssociationTransformerTest extends DatabaseTestCase
         $transformer = new AssociationTransformer(
             $this->connectionManager,
             $this->doctrine,
-            $this->get(ReferenceIdGenerator::class),
             $this->get(ValidatorInterface::class)
         );
 
@@ -136,7 +134,6 @@ class AssociationTransformerTest extends DatabaseTestCase
         $transformer = new AssociationTransformer(
             $this->connectionManager,
             $this->doctrine,
-            $this->get(ReferenceIdGenerator::class),
             $this->get(ValidatorInterface::class)
         );
 
