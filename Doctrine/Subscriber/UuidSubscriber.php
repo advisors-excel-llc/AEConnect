@@ -49,8 +49,8 @@ class UuidSubscriber implements EventSubscriber
      */
     public function prePersist(LifecycleEventArgs $event)
     {
-        $entity   = $event->getEntity();
-        $class    = ClassUtils::getClass($entity);
+        $entity = $event->getEntity();
+        $class  = ClassUtils::getClass($entity);
         $this->populateUuids($entity, $event->getEntityManager()->getClassMetadata($class));
     }
 
@@ -82,9 +82,15 @@ class UuidSubscriber implements EventSubscriber
             }
 
             foreach ($metadata->getIdentifiers() as $fieldMetadata) {
-                $type     = $classMetadata->getTypeOfField($fieldMetadata->getProperty());
-                $nullable = $classMetadata->isNullable($fieldMetadata->getProperty());
-                $value    = $fieldMetadata->getValueFromEntity($entity);
+                $field    = $fieldMetadata->getProperty();
+                $type     = $classMetadata->getTypeOfField($field);
+                $nullable = $classMetadata->isNullable($field);
+
+                if ($classMetadata->isIdentifier($field) && $classMetadata->usesIdGenerator()) {
+                    continue;
+                }
+
+                $value = $fieldMetadata->getValueFromEntity($entity);
 
                 // No need to worry about it if nulls are A-OK
                 if ($nullable && null === $value) {

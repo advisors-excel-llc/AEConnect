@@ -15,4 +15,3 @@ services:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\RecordTypeTransformer: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\UuidTransformerPlugin: ~
-    AE\ConnectBundle\Salesforce\Transformer\Plugins\BooleanTransformerPlugin: ~
