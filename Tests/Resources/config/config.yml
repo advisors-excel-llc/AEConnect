@@ -43,11 +43,17 @@ services:
 
 doctrine:
     dbal:
+        types:
+             uuid:  Ramsey\Uuid\Doctrine\UuidType
+             uuid_binary: Ramsey\Uuid\Doctrine\UuidBinaryType
         connections:
             default:
                 driver: pdo_sqlite
                 memory: true
                 charset: UTF8
+                mapping_types:
+                     uuid_binary: binary
+
     orm:
         auto_generate_proxy_classes: '%kernel.debug%'
         entity_managers:

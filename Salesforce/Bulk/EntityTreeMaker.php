@@ -53,6 +53,12 @@ class EntityTreeMaker extends AbstractTreeBuilder
         foreach ($fields as $field) {
             if ($classMetadata->isSingleValuedAssociation($field)) {
                 $depClass    = $classMetadata->getAssociationTargetClass($field);
+
+                // Self-referencing fields cause redundancy errors
+                if ($depClass === $class) {
+                    continue;
+                }
+
                 $depMetadata = $metadataRegistry->findMetadataByClass($depClass);
 
                 if (null !== $depMetadata) {

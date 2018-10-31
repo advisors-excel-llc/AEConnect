@@ -161,7 +161,8 @@ class InboundBulkQueue
         $fields = [];
         $count  = 0;
 
-        while (false != ($row = $result->read())) {
+        while (!$result->eof()) {
+            $row = $result->read();
             if (empty($fields)) {
                 $fields = $row;
                 continue;

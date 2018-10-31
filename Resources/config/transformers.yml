@@ -14,3 +14,4 @@ services:
     AE\ConnectBundle\Salesforce\Transformer\Plugins\MultiValuePickListTransformer:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\RecordTypeTransformer: ~
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\UuidTransformerPlugin: ~

@@ -10,6 +10,7 @@ namespace AE\ConnectBundle\Metadata;
 
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Util\ClassUtils;
 
 /**
  * Class MetadataRegistry
@@ -108,6 +109,18 @@ class MetadataRegistry
     public function findMetadataByClass(string $className): ?Metadata
     {
         return $this->metadata->get($className);
+    }
+
+    /**
+     * @param object $entity
+     *
+     * @return Metadata|null
+     */
+    public function findMetadataForEntity($entity): ?Metadata
+    {
+        $class = ClassUtils::getClass($entity);
+
+        return $this->findMetadataByClass($class);
     }
 
     /**

@@ -16,7 +16,6 @@ use Ramsey\Uuid\Uuid;
  * @AEConnect\SObjectType(name="Account")
  * @ORM\Entity()
  * @ORM\Table("account")
- * @ORM\HasLifecycleCallbacks()
  */
 class Account
 {
@@ -32,7 +31,7 @@ class Account
      * @var string
      * @AEConnect\Field("S3F__hcid__c")
      * @AEConnect\ExternalId()
-     * @ORM\Column(type="guid", length=36, nullable=false, unique=true)
+     * @ORM\Column(type="uuid", nullable=false, unique=true)
      */
     private $extId;
 
@@ -155,16 +154,5 @@ class Account
         $this->sfid = $sfid;
 
         return $this;
-    }
-
-    /**
-     * @throws \Exception
-     * @ORM\PrePersist()
-     */
-    public function prePersist()
-    {
-        if (null === $this->extId || strlen($this->extId) === 0) {
-            $this->extId = Uuid::uuid4()->toString();
-        }
     }
 }
