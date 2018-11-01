@@ -15,6 +15,7 @@ use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\MappingException;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -46,9 +47,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
         $this->managerRegistry    = $managerRegistry;
         $this->validator          = $validator;
 
-        if (null !== $logger) {
-            $this->setLogger($logger);
-        }
+        $this->setLogger($logger ?: new NullLogger());
     }
 
     /**
@@ -94,15 +93,13 @@ class AssociationTransformer extends AbstractTransformerPlugin
 
             return true;
         } catch (MappingException $e) {
-            if (null !== $this->logger) {
-                $this->logger->error(
-                    '{msg}'.PHP_EOL.'{trace}',
-                    [
-                        'msg'   => $e->getMessage(),
-                        'trace' => $e->getTraceAsString(),
-                    ]
-                );
-            }
+            $this->logger->error(
+                '{msg}'.PHP_EOL.'{trace}',
+                [
+                    'msg'   => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]
+            );
 
             return false;
         }

@@ -16,6 +16,7 @@ use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeResponse;
 use Doctrine\Common\Cache\CacheProvider;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class OutboundQueue
@@ -60,9 +61,7 @@ class OutboundQueue
             $this->messages = [];
         }
 
-        if (null !== $logger) {
-            $this->setLogger($logger);
-        }
+        $this->setLogger($logger ?: new NullLogger());
     }
 
     public function add(CompilerResult $result)
@@ -117,19 +116,15 @@ class OutboundQueue
             self::handleResponses($connection, $responses, $queue[CompilerResult::UPDATE], CompilerResult::UPDATE);
             self::handleResponses($connection, $responses, $queue[CompilerResult::DELETE], CompilerResult::DELETE);
         } catch (\GuzzleHttp\Exception\GuzzleException $e) {
-            if (null !== $this->logger) {
-                $this->logger->critical(
-                    'An exception occurred while trying to send queue.'
-                );
-                $this->logger->debug($e->getTraceAsString());
-            }
+            $this->logger->critical(
+                'An exception occurred while trying to send queue.'
+            );
+            $this->logger->debug($e->getTraceAsString());
         } catch (\Exception $e) {
-            if (null !== $this->logger) {
-                $this->logger->critical(
-                    'An exception occurred while trying to send queue.'
-                );
-                $this->logger->debug($e->getTraceAsString());
-            }
+            $this->logger->critical(
+                'An exception occurred while trying to send queue.'
+            );
+            $this->logger->debug($e->getTraceAsString());
         }
     }
 
@@ -156,18 +151,16 @@ class OutboundQueue
                     unset($payloads[$item->getReferenceId()]);
                 }
 
-                if (null !== $this->logger) {
-                    /** @var CollectionResponse[] $errors */
-                    $errors = $result->getBody();
-                    foreach ($errors as $error) {
-                        $this->logger->error(
-                            'AE_CONNECT error from SalesForce: ({code}) {msg}',
-                            [
-                                'code' => $error->getErrorCode(),
-                                'msg'  => $error->getMessage(),
-                            ]
-                        );
-                    }
+                /** @var CollectionResponse[] $errors */
+                $errors = $result->getBody();
+                foreach ($errors as $error) {
+                    $this->logger->error(
+                        'AE_CONNECT error from SalesForce: ({code}) {msg}',
+                        [
+                            'code' => $error->getErrorCode(),
+                            'msg'  => $error->getMessage(),
+                        ]
+                    );
                 }
             } else {
                 /** @var CollectionResponse[] $messages */
@@ -185,7 +178,7 @@ class OutboundQueue
 
                     if ($res->isSuccess() && CompilerResult::INSERT === $intent) {
                         $this->updateCreatedEntity($item, $res);
-                    } elseif (!$res->isSuccess() && null !== $this->logger) {
+                    } elseif (!$res->isSuccess()) {
                         foreach ($res->getErrors() as $error) {
                             $this->logger->error(
                                 'AE_CONNECT error from SalesForce: ({code}) {msg}',

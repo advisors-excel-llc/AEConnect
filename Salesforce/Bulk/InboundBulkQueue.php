@@ -51,11 +51,7 @@ class InboundBulkQueue
         $this->connector = $connector;
         $this->registry  = $registry;
 
-        if (null !== $logger) {
-            $this->setLogger($logger);
-        } else {
-            $this->setLogger(new NullLogger());
-        }
+        $this->setLogger($logger ?: new NullLogger());
     }
 
     public function process(ConnectionInterface $connection, array $types = [], bool $updateEntities = false)

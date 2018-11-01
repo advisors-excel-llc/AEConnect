@@ -59,11 +59,7 @@ class OutboundBulkQueue
         $this->compiler      = $compiler;
         $this->outboundQueue = $outboundQueue;
 
-        if (null === $logger) {
-            $this->setLogger(new NullLogger());
-        } else {
-            $this->setLogger($logger);
-        }
+        $this->setLogger($logger ?: new NullLogger());
     }
 
     public function process(
