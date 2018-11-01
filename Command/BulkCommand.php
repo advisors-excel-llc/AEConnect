@@ -44,13 +44,13 @@ class BulkCommand extends Command
              ->addOption(
                  'update-inbound',
                  'i',
-                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_NONE,
+                 InputOption::VALUE_NONE,
                  'Update existing records in the local database when saving inbound records from Salesforce'
              )
              ->addOption(
                  'update-outbound',
                  'o',
-                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_NONE,
+                 InputOption::VALUE_NONE,
                  'Update existing records in the Salesforce when sending data from local database'
              )
              ->addOption(
@@ -64,7 +64,7 @@ class BulkCommand extends Command
              ->addOption(
                  'clear-sfids',
                  'c',
-                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_NONE,
+                 InputOption::VALUE_NONE,
                  'Clear the preexisting Salesforce Ids in the local database. Helpful if connecting to a new '.
                  'Salesforce Org or Sandbox'
              )
@@ -73,10 +73,21 @@ class BulkCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $updateFlag = ($input->hasOption('update-inbound') & BulkDataProcessor::UPDATE_INCOMING) |
-            ($input->hasOption('update-outbound') & BulkDataProcessor::UPDATE_OUTGOING) |
-            ($input->hasOption('clear-sfids') & BulkDataProcessor::UPDATE_SFIDS);
-        $types      = $input->getOption('types');
+        $updateFlag = 0;
+
+        if ($input->getOption('update-inbound')) {
+            $updateFlag |= BulkDataProcessor::UPDATE_INCOMING;
+        }
+
+        if ($input->getOption('update-outbound')) {
+            $updateFlag |= BulkDataProcessor::UPDATE_OUTGOING;
+        }
+
+        if ($input->getOption('clear-sfids')) {
+            $updateFlag |= BulkDataProcessor::UPDATE_SFIDS;
+        }
+
+        $types = $input->getOption('types');
 
         $output->writeln(
             sprintf(
@@ -105,7 +116,7 @@ class BulkCommand extends Command
             );
         } else {
             $output->writeln(
-                '<comment>Only new records will be created with in Salesforce.</comment>'
+                '<comment>Only new records will be created in Salesforce.</comment>'
             );
         }
 

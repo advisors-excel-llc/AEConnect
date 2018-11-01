@@ -10,18 +10,27 @@ namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 
 use Ramsey\Uuid\Doctrine\UuidType;
 use Ramsey\Uuid\Uuid;
+use Ramsey\Uuid\UuidInterface;
 
-class UuidTransformerPlugin implements TransformerPluginInterface
+class UuidTransformerPlugin extends AbstractTransformerPlugin
 {
-    public function supports(TransformerPayload $payload): bool
+    public function supportsInbound(TransformerPayload $payload): bool
     {
-        return $payload->getDirection() === TransformerPayload::INBOUND
-            && is_string($payload->getValue())
+        return is_string($payload->getValue())
             && $payload->getClassMetadata()->getTypeOfField($payload->getPropertyName()) instanceof UuidType
             ;
     }
 
-    public function transform(TransformerPayload $payload)
+    protected function supportsOutbound(TransformerPayload $payload): bool
+    {
+        return $payload->getValue() instanceof UuidInterface
+            && $payload->getMetadata()->getMetadataForField($payload->getFieldName())
+                                      ->describe()
+                                      ->getSoapType() === 'xsd:string'
+            ;
+    }
+
+    public function transformInbound(TransformerPayload $payload)
     {
         $value = $payload->getValue();
 
@@ -32,5 +41,13 @@ class UuidTransformerPlugin implements TransformerPluginInterface
                 Uuid::fromString($value)
             );
         }
+    }
+
+    protected function transformOutbound(TransformerPayload $payload)
+    {
+        /** @var UuidInterface $value */
+        $value = $payload->getValue();
+
+        $payload->setValue($value->toString());
     }
 }

@@ -109,7 +109,7 @@ class SObjectCompiler
 
         $intent = UnitOfWork::STATE_REMOVED === $uow->getEntityState($entity)
             ? CompilerResult::DELETE
-            : (null === $sObject->Id ? CompilerResult::INSERT : CompilerResult::UPDATE);
+            : (null === $sObject->Id || empty($changeSet) ? CompilerResult::INSERT : CompilerResult::UPDATE);
 
         switch ($intent) {
             case CompilerResult::INSERT:

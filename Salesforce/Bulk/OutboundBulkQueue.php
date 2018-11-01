@@ -11,7 +11,9 @@ namespace AE\ConnectBundle\Salesforce\Bulk;
 use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Metadata\Metadata;
+use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
+use AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue;
 use AE\SalesforceRestSdk\Bulk\BatchInfo;
 use AE\SalesforceRestSdk\Bulk\JobInfo;
 use Doctrine\ORM\QueryBuilder;
@@ -40,15 +42,22 @@ class OutboundBulkQueue
      */
     private $compiler;
 
+    /**
+     * @var OutboundQueue
+     */
+    private $outboundQueue;
+
     public function __construct(
         RegistryInterface $registry,
         EntityTreeMaker $treeMaker,
         SObjectCompiler $compiler,
+        OutboundQueue $outboundQueue,
         ?LoggerInterface $logger = null
     ) {
-        $this->registry  = $registry;
-        $this->treeMaker = $treeMaker;
-        $this->compiler  = $compiler;
+        $this->registry      = $registry;
+        $this->treeMaker     = $treeMaker;
+        $this->compiler      = $compiler;
+        $this->outboundQueue = $outboundQueue;
 
         if (null === $logger) {
             $this->setLogger(new NullLogger());
@@ -60,30 +69,33 @@ class OutboundBulkQueue
     public function process(
         ConnectionInterface $connection,
         array $types = [],
-        int $batchSize = 2000,
         bool $updateExisting
         = false
     ) {
-        $map              = empty($types) ? $this->treeMaker->buildFlatMap($connection) : $types;
+        $map              = $this->treeMaker->buildFlatMap($connection);
         $metadataRegistry = $connection->getMetadataRegistry();
 
-        // remove any classes from the map that aren't associated to any specific SOBject types provided (if any were)
-        foreach ($types as $type) {
-            $metadata = $metadataRegistry->findMetadataByClass($type);
-            if (null === $metadata) {
-                $index = array_search($type, $map);
-                if (false !== $index) {
-                    unset($map[$index]);
+        if (!empty($types)) {
+            $map = [];
+            // remove any classes from the map that aren't associated to any specific SOBject types
+            // provided (if any were)
+            foreach ($types as $type) {
+                foreach ($metadataRegistry->findMetadataBySObjectType($type) as $metadata) {
+                    $class = $metadata->getClassName();
+                    $index = array_search($class, $map);
+                    if (false === $index) {
+                        $map[] = $class;
+                    }
                 }
             }
         }
 
         foreach ($map as $class) {
-            $this->startJob($connection, $class, $batchSize, $updateExisting);
+            $this->startJob($connection, $class, $updateExisting);
         }
     }
 
-    private function startJob(ConnectionInterface $connection, string $class, int $batchSize, bool $updateExisting)
+    private function startJob(ConnectionInterface $connection, string $class, bool $updateExisting)
     {
         $metadata = $connection->getMetadataRegistry()->findMetadataByClass($class);
 
@@ -95,148 +107,44 @@ class OutboundBulkQueue
             return;
         }
 
-        $client        = $connection->getBulkClient();
-        $manager       = $this->registry->getManagerForClass($class);
-        $classMetadata = $manager->getClassMetadata($class);
-        $objectType    = $metadata->getSObjectType();
-        /** @var FieldMetadata $externalIdFieldMetadata */
-        $externalIdFieldMetadata = $metadata->getIdentifiers()->first();
-
-        if (false === $externalIdFieldMetadata) {
-            $externalIdFieldMetadata = $metadata->getMetadataForField('Id');
-        }
-
-        $job       = $client->createJob(
-            $objectType,
-            JobInfo::UPSERT,
-            JobInfo::TYPE_JSON,
-            $externalIdFieldMetadata->getField()
-        );
-        $batches   = [];
-        $completed = [];
-
-        $this->logger->info(
-            'Bulk Job (ID# {job}) is now open',
-            [
-                'job' => $job->getId(),
-            ]
-        );
-
-        $offset = 0;
-        $qb     = new QueryBuilder($manager);
+        $manager = $this->registry->getManagerForClass($class);
+        $offset  = 0;
+        $qb      = new QueryBuilder($manager);
         $qb->from($class, 'e')
            ->select('e')
            ->setFirstResult($offset)
-           ->setMaxResults($batchSize)
+           ->setMaxResults(200)
         ;
 
         if (!$updateExisting) {
             $qb->andWhere($qb->expr()->isNull('e.'.$metadata->getIdFieldProperty()));
         }
 
-        $pager = new Paginator($qb->getQuery(), false);
+        $pager = new Paginator($qb->getQuery());
 
         while (count(($results = $pager->getIterator()->getArrayCopy())) > 0) {
-            $objects   = [];
-            $entityIds = [];
-
             foreach ($results as $result) {
-                $entityIds[] = $classMetadata->getIdentifierValues($result);
-                $objects[]   = $this->compiler->compile($result, $connection->getName())->getSObject();
+                $object = $this->compiler->compile($result, $connection->getName());
+                $object->setIntent(
+                    null === $object->getSObject()->Id
+                        ? CompilerResult::INSERT
+                        : CompilerResult::UPDATE
+                );
+                $this->outboundQueue->add($object);
             }
-
-            $batch                    = $client->addBatch($job, $objects);
-            $batches[$batch->getId()] = $entityIds;
-
-            $this->logger->info(
-                'Added Batch (ID# {batch}) to Job (ID# {job})',
-                [
-                    'batch' => $batch->getId(),
-                    'job'   => $batch->getJobId() ?: $job->getId(),
-                ]
-            );
 
             $offset += count($results);
             $qb->setFirstResult($offset);
             $pager = new Paginator($qb->getQuery(), false);
-        }
 
-        while (count($batches) > 0) {
-            foreach (array_keys($batches) as $batchId) {
-                $batchStatus = $client->getBatchStatus($job, $batchId);
-
-                if ($batchStatus->getState() === BatchInfo::STATE_COMPLETED) {
-                    $this->logger->info(
-                        'Batch (ID# {batch}) has completed.',
-                        [
-                            'batch' => $batchId,
-                        ]
-                    );
-
-                    $completed[$batchId] = $batches[$batchId];
-                    unset($batches[$batchId]);
-                    $results = $client->getBatchResults($job, $batchId);
-
-                    $this->processResults($results, $class, $metadata, $completed[$batchId]);
-                } elseif ($batchStatus->getState() === "Failed") {
-                    $this->logger->error(
-                        "Batch (ID# {batch}) failed.",
-                        [
-                            'batch' => $batchId,
-                        ]
-                    );
-
-                    unset($batches[$batchId]);
-
-                    $results = $client->getBatchResults($job, $batchId);
-                    $this->processResults($results, $class, $metadata, $completed[$batchId]);
-                }
-            }
-
-            sleep(10);
-        }
-
-        $client->closeJob($job);
-
-        $this->logger->info('Job (ID# {job}) is now closed', ['job' => $job->getId()]);
-    }
-
-    private function processResults(array $results, string $class, Metadata $metadata, array &$entityIds)
-    {
-        $manager  = $this->registry->getManagerForClass($class);
-        $idFields = array_splice($entityIds, 0, count($results));
-        $count    = 0;
-        $errored  = 0;
-
-        foreach ($results as $i => $result) {
-            if (true === $result['success']) {
-                $fields = $idFields[$i];
-                $entity = $manager->getRepository($class)->findOneBy($fields);
-                $metadata->getMetadataForField('Id')->setValueForEntity($entity, $result['id']);
-                ++$count;
-            } else {
-                foreach ($result['errors'] as $error) {
-                    $this->logger->error(
-                        'An error occurred when upserting bulk data for {type}: ({code}) {message}',
-                        [
-                            'type'    => $class,
-                            'code'    => $error['errorCode'],
-                            'message' => $error['message'],
-                        ]
-                    );
-                }
+            if ($offset > 4800) {
+                $this->outboundQueue->send($connection->getName());
             }
         }
 
-        $manager->flush();
+        // Send anything that hasn't already been sent
+        $this->outboundQueue->send($connection->getName());
 
-        $this->logger->info(
-            'Updated {count} {type} entities. {errored} failed to upsert to Salesforce.',
-            [
-                'type'    => $class,
-                'count'   => $count,
-                'errored' => $errored,
-            ]
-        );
+        $this->logger->info('Synced {count} objects of {type} type', ['count' => $offset, 'type' => $class]);
     }
 }

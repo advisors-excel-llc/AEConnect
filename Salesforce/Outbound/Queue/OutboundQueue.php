@@ -67,7 +67,7 @@ class OutboundQueue
 
     public function add(CompilerResult $result)
     {
-        $connectionName = $result->getMetadata()->getConnectionName();
+        $connectionName                                             = $result->getMetadata()->getConnectionName();
         $this->messages[$connectionName][$result->getReferenceId()] = $result;
     }
 
@@ -172,14 +172,14 @@ class OutboundQueue
             } else {
                 /** @var CollectionResponse[] $messages */
                 $messages = $result->getBody();
-                $items = array_values($queue[$refId]->toArray());
+                $items    = array_values($queue[$refId]->toArray());
                 foreach ($messages as $i => $res) {
                     if (!array_key_exists($i, $items)) {
                         continue;
                     }
                     /** @var CompilerResult $item */
-                    $item  = $items[$i];
-                    $ref = $item->getReferenceId();
+                    $item = $items[$i];
+                    $ref  = $item->getReferenceId();
 
                     unset($payloads[$ref]);
 
@@ -207,14 +207,11 @@ class OutboundQueue
      */
     private function updateCreatedEntity(CompilerResult $payload, CollectionResponse $result): void
     {
-        $object = $payload->getSobject();
-        $idProp = $payload->getMetadata()->getIdFieldProperty();
-
-        if (null === $idProp) {
+        if (null === $payload->getMetadata()->getIdFieldProperty()) {
             return;
         }
 
-        $idMethod          = "set".ucwords($idProp);
+        $object            = $payload->getSobject();
         $id                = $result->getId();
         $idMap             = [];
         $identifyingFields = $payload->getMetadata()->getIdentifyingFields();
@@ -223,14 +220,12 @@ class OutboundQueue
             $idMap[$prop] = $object->$idProp;
         }
 
-        $manager = $this->registry->getManagerForClass(
-            $payload->getMetadata()->getClassName()
-        );
+        $manager = $this->registry->getManagerForClass($payload->getMetadata()->getClassName());
         $repo    = $manager->getRepository($payload->getMetadata()->getClassName());
         $entity  = $repo->findOneBy($idMap);
 
         if (null !== $entity) {
-            $entity->$idMethod($id);
+            $payload->getMetadata()->getMetadataForField('Id')->setValueForEntity($entity, $id);
             $manager->flush();
         }
     }
