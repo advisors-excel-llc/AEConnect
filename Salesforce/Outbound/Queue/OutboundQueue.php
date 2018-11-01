@@ -14,6 +14,7 @@ use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CollectionResponse;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeResponse;
 use Doctrine\Common\Cache\CacheProvider;
+use Doctrine\Common\Collections\Collection;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -178,7 +179,13 @@ class OutboundQueue
             } else {
                 /** @var CollectionResponse[] $messages */
                 $messages = $result->getBody();
-                $items    = array_values($queue[$refId]);
+                $refQ    = $queue[$refId];
+
+                if ($refQ instanceof Collection) {
+                    $refQ = $refQ->toArray();
+                }
+
+                $items    = array_values($refQ);
                 foreach ($messages as $i => $res) {
                     if (!array_key_exists($i, $items)) {
                         continue;
