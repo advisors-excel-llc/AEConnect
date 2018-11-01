@@ -74,10 +74,9 @@ class RequestBuilder
                 $subrequest->addRecord($item->getSObject());
             }
 
-            $builder->createSObjectCollection(
-                $ref,
-                $subrequest
-            );
+            if (!empty($subrequest->getRecords())) {
+                $builder->createSObjectCollection($ref, $subrequest);
+            }
         }
 
         foreach ($updates as $ref => $items) {
@@ -87,7 +86,9 @@ class RequestBuilder
                 $subrequest->addRecord($item->getSObject());
             }
 
-            $builder->updateSObjectCollection($ref, $subrequest);
+            if (!empty($subrequest->getRecords())) {
+                $builder->updateSObjectCollection($ref, $subrequest);
+            }
         }
 
         foreach ($deletes as $ref => $items) {
@@ -97,7 +98,9 @@ class RequestBuilder
                 $subrequest->addRecord($item->getSObject());
             }
 
-            $builder->deleteSObjectCollection($ref, $subrequest);
+            if (!empty($subrequest->getRecords())) {
+                $builder->deleteSObjectCollection($ref, $subrequest);
+            }
         }
 
         return $builder->build();
