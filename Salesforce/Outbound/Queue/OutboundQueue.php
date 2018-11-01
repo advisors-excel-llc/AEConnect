@@ -105,11 +105,18 @@ class OutboundQueue
         $queue  = RequestBuilder::build($this->messages[$connection->getName()]);
 
         try {
-            $request   = RequestBuilder::buildRequest(
+            $request = RequestBuilder::buildRequest(
                 $queue[CompilerResult::INSERT],
                 $queue[CompilerResult::UPDATE],
                 $queue[CompilerResult::DELETE]
             );
+
+            if (empty($request->getCompositeRequest())) {
+                $this->logger->info('No more messages in queue.');
+
+                return;
+            }
+
             $responses = $client->sendCompositeRequest($request);
 
             self::handleResponses($connection, $responses, $queue[CompilerResult::INSERT], CompilerResult::INSERT);
@@ -165,7 +172,7 @@ class OutboundQueue
             } else {
                 /** @var CollectionResponse[] $messages */
                 $messages = $result->getBody();
-                $items    = array_values($queue[$refId]->toArray());
+                $items    = array_values($queue[$refId]);
                 foreach ($messages as $i => $res) {
                     if (!array_key_exists($i, $items)) {
                         continue;
