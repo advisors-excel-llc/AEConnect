@@ -105,7 +105,7 @@ class UuidSubscriber implements EventSubscriber
                 if (($type instanceof UuidType || $type instanceof UuidBinaryType
                     || $type instanceof UuidBinaryOrderedTimeType)
                 ) {
-                    if (is_string($value) && strlen(0)) {
+                    if (is_string($value) && strlen($value) === 0) {
                         $value = null;
                     }
 
