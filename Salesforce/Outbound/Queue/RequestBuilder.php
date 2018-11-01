@@ -74,7 +74,7 @@ class RequestBuilder
                 $subrequest->addRecord($item->getSObject());
             }
 
-            if (!empty($subrequest->getRecords())) {
+            if (!$subrequest->getRecords()->isEmpty()) {
                 $builder->createSObjectCollection($ref, $subrequest);
             }
         }
@@ -86,7 +86,7 @@ class RequestBuilder
                 $subrequest->addRecord($item->getSObject());
             }
 
-            if (!empty($subrequest->getRecords())) {
+            if (!$subrequest->getRecords()->isEmpty()) {
                 $builder->updateSObjectCollection($ref, $subrequest);
             }
         }
@@ -98,7 +98,7 @@ class RequestBuilder
                 $subrequest->addRecord($item->getSObject());
             }
 
-            if (!empty($subrequest->getRecords())) {
+            if (!$subrequest->getRecords()->isEmpty()) {
                 $builder->deleteSObjectCollection($ref, $subrequest);
             }
         }
