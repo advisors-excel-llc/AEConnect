@@ -103,6 +103,11 @@ class OutboundQueue
     private function sendMessages(ConnectionInterface $connection): void
     {
         $client = $connection->getRestClient()->getCompositeClient();
+
+        if (!array_key_exists($connection->getName(), $this->messages)) {
+            return;
+        }
+
         $queue  = RequestBuilder::build($this->messages[$connection->getName()]);
 
         try {
