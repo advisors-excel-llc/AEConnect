@@ -4,6 +4,7 @@ services:
             tags:
                 - {name: "ae_connect.transformer_plugin"}
     AE\ConnectBundle\Salesforce\Transformer\Transformer: ~
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\CompoundFieldTransformerPlugin: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\AssociationTransformer:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $managerRegistry: '@Symfony\Bridge\Doctrine\RegistryInterface'

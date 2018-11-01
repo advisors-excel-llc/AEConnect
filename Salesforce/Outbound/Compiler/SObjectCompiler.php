@@ -20,6 +20,7 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\UnitOfWork;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -59,9 +60,7 @@ class SObjectCompiler
         $this->transformer        = $transformer;
         $this->validator          = $validator;
 
-        if (null !== $logger) {
-            $this->setLogger($logger);
-        }
+        $this->setLogger($logger ?: new NullLogger());
     }
 
     /**
@@ -109,7 +108,7 @@ class SObjectCompiler
 
         $intent = UnitOfWork::STATE_REMOVED === $uow->getEntityState($entity)
             ? CompilerResult::DELETE
-            : (null === $sObject->Id ? CompilerResult::INSERT : CompilerResult::UPDATE);
+            : (null === $sObject->Id || empty($changeSet) ? CompilerResult::INSERT : CompilerResult::UPDATE);
 
         switch ($intent) {
             case CompilerResult::INSERT:
@@ -147,14 +146,12 @@ class SObjectCompiler
                 $err .= $message.PHP_EOL;
             }
 
-            if (null !== $this->logger) {
-                $this->logger->alert(
-                    "The entity does not meet the following validations:".PHP_EOL."{err}",
-                    [
-                        'err' => $err,
-                    ]
-                );
-            }
+            $this->logger->alert(
+                "The entity does not meet the following validations:".PHP_EOL."{err}",
+                [
+                    'err' => $err,
+                ]
+            );
 
             throw new \RuntimeException(
                 "The entity does not meet the following validations:".PHP_EOL.$err

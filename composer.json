@@ -3,6 +3,7 @@
     "description": "Synchronize Doctrine Entities with Salesforce",
     "type": "library",
     "minimum-stability": "stable",
+    "license": "MIT",
     "repositories": [
         {
             "type": "vcs",

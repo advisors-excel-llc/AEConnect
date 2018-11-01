@@ -47,7 +47,7 @@ class OutboundBulkQueueTest extends DatabaseTestCase
         /** @var OutboundBulkQueue $outboundQueue */
         $outboundQueue = $this->get(OutboundBulkQueue::class);
 
-        $outboundQueue->process($connection, [Account::class], true);
+        $outboundQueue->process($connection, ['Account'], true);
 
         $accounts = $this->doctrine->getRepository(Account::class)->findAll();
 

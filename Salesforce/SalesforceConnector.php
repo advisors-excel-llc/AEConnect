@@ -20,6 +20,7 @@ use Enqueue\Client\ProducerInterface;
 use JMS\Serializer\SerializerInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class SalesforceConnector
@@ -70,9 +71,7 @@ class SalesforceConnector
         $this->serializer      = $serializer;
         $this->registry        = $registry;
 
-        if (null !== $logger) {
-            $this->setLogger($logger);
-        }
+        $this->setLogger($logger ?: new NullLogger());
     }
 
     /**
@@ -138,9 +137,7 @@ class SalesforceConnector
 
             $manager->flush();
 
-            if (null !== $this->logger) {
-                $this->logger->info('{intent} entity of type {type}', ['intent' => $intent, 'type' => $class]);
-            }
+            $this->logger->info('{intent} entity of type {type}', ['intent' => $intent, 'type' => $class]);
         }
 
         return true;
