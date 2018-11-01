@@ -36,6 +36,12 @@ class Contact
 
     /**
      * @var string
+     * @ORM\Column(length=120, nullable=true)
+     */
+    private $name;
+
+    /**
+     * @var string
      * @ORM\Column(length=80, nullable=true)
      * @Field(name="FirstName")
      */
@@ -86,6 +92,27 @@ class Contact
     public function setId(?int $id): Contact
     {
         $this->id = $id;
+
+        return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    /**
+     * @param string|null $name
+     * @Field("Name")
+     *
+     * @return Contact
+     */
+    public function setName(?string $name): Contact
+    {
+        $this->name = $name;
 
         return $this;
     }
