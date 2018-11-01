@@ -152,6 +152,12 @@ class OutboundQueue
         foreach ($queue as $refId => $requests) {
             $result = $response->findResultByReferenceId($refId);
 
+            // Since we're filtering out empty requests, it's possible that we may be looking for a refId that
+            // was mapped to an empty queue. In that case, the result would be null
+            if (null === $result) {
+                continue;
+            }
+
             if (200 != $result->getHttpStatusCode()) {
                 /** @var CompilerResult $item */
                 foreach ($requests as $item) {
