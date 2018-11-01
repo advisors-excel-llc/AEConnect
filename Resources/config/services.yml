@@ -86,6 +86,7 @@ services:
         $compiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\EntityTreeMaker'
+        $outboundQueue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'

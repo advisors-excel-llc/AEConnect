@@ -15,6 +15,7 @@ use AE\ConnectBundle\Salesforce\Transformer\Transformer;
 use AE\SalesforceRestSdk\Model\SObject;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Ramsey\Uuid\Doctrine\UuidType;
 use Ramsey\Uuid\Uuid;
 use Symfony\Bridge\Doctrine\RegistryInterface;
@@ -56,9 +57,7 @@ class EntityCompiler
         $this->transformer       = $transformer;
         $this->validator         = $validator;
 
-        if (null !== $logger) {
-            $this->setLogger($logger);
-        }
+        $this->setLogger($logger ?: new NullLogger());
     }
 
     /**
@@ -158,10 +157,8 @@ class EntityCompiler
             } catch (\RuntimeException $e) {
                 $manager->detach($entity);
 
-                if (null !== $this->logger) {
-                    $this->logger->alert($e->getMessage());
-                    $this->logger->debug($e->getTraceAsString());
-                }
+                $this->logger->alert($e->getMessage());
+                $this->logger->debug($e->getTraceAsString());
             }
         }
 
