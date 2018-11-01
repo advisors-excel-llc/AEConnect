@@ -54,14 +54,6 @@ class BulkCommand extends Command
                  'Update existing records in the Salesforce when sending data from local database'
              )
              ->addOption(
-                 'batch-limit',
-                 'l',
-                 InputOption::VALUE_OPTIONAL,
-                 'The maximum number of records to send to Salesforce in a single batch.'
-                 .' This is really meant to prevent stress on application servers that could cause crashes.',
-                 2000
-             )
-             ->addOption(
                  'clear-sfids',
                  'c',
                  InputOption::VALUE_NONE,
@@ -159,8 +151,7 @@ class BulkCommand extends Command
         $this->bulkDataProcessor->process(
             $input->getFirstArgument(),
             $types,
-            $updateFlag,
-            $input->getOption('batch-limit')
+            $updateFlag
         );
 
         $output->writeln('Bulk sync is now complete.');

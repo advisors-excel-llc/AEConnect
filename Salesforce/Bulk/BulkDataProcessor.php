@@ -64,8 +64,7 @@ class BulkDataProcessor
     public function process(
         ?string $connectionName,
         array $types = [],
-        int $updateFlag = self::UPDATE_NONE,
-        int $outboundBatchSize = 2000
+        int $updateFlag = self::UPDATE_NONE
     ) {
         $connections = $this->connectionManager->getConnections();
 
@@ -82,7 +81,7 @@ class BulkDataProcessor
                 $this->clearSalesforceIds($connection);
             }
             $this->inboundQueue->process($connection, $types, self::UPDATE_INCOMING & $updateFlag);
-            $this->outboundQueue->process($connection, $types, $outboundBatchSize, self::UPDATE_OUTGOING & $updateFlag);
+            $this->outboundQueue->process($connection, $types, self::UPDATE_OUTGOING & $updateFlag);
         }
 
         $this->connector->enable();
