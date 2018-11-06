@@ -86,7 +86,14 @@ class SalesforceConnector
             return false;
         }
 
-        $result  = $this->sObjectCompiler->compile($entity, $connectionName);
+        try {
+            $result  = $this->sObjectCompiler->compile($entity, $connectionName);
+        } catch (\RuntimeException $e) {
+            $this->logger->warning($e->getMessage());
+
+            return false;
+        }
+
         $intent  = $result->getIntent();
         $sObject = $result->getSObject();
 

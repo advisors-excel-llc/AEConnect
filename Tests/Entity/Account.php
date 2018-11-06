@@ -60,6 +60,7 @@ class Account
     /**
      * @var string
      * @AEConnect\Connection(connections={"*"})
+     * @ORM\Column(length=40, nullable=true)
      */
     private $connection = "default";
 

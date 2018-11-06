@@ -12,6 +12,7 @@ use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Connection\Dbal\AuthCredentialsInterface;
 use AE\ConnectBundle\Connection\Dbal\ConnectionProxy;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
+use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService;
@@ -134,9 +135,27 @@ class DbalConnectionDriver
                             $metadata = new Metadata($entity->getName());
                             $metadata->setClassName($proxyMetadata->getClassName());
                             $metadata->setSObjectType($proxyMetadata->getSObjectType());
-                            $metadata->setFieldMetadata(
-                                new ArrayCollection($proxyMetadata->getFieldMetadata()->toArray())
-                            );
+
+                            foreach ($proxyMetadata->getFieldMetadata() as $proxyFieldMeta) {
+                                $metadata->addFieldMetadata(
+                                    new FieldMetadata(
+                                        $metadata,
+                                        $proxyFieldMeta->getProperty(),
+                                        $proxyFieldMeta->getField(),
+                                        $proxyFieldMeta->isIdentifier()
+                                    )
+                                );
+                            }
+
+                            if (null !== $proxyMetadata->getConnectionNameField()) {
+                                $metadata->setConnectionNameField(
+                                    new FieldMetadata(
+                                        $metadata,
+                                        $proxyMetadata->getConnectionNameField()->getProperty()
+                                    )
+                                );
+                            }
+
                             $metadataCache->save($cacheId, $metadata);
                         }
 

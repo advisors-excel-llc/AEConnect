@@ -59,6 +59,7 @@ class Metadata
 
     /**
      * @var FieldMetadata|null
+     * @Serializer\Type("AE\ConnectBundle\Metadata\FieldMetadata")
      */
     private $connectionNameField;
 
