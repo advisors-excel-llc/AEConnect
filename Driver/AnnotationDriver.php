@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Driver;
 
+use AE\ConnectBundle\Annotations\Connection;
 use AE\ConnectBundle\Annotations\ExternalId;
 use AE\ConnectBundle\Annotations\Field;
 use AE\ConnectBundle\Annotations\RecordType;
@@ -19,7 +20,6 @@ use AE\ConnectBundle\Metadata\RecordTypeMetadata;
 use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
-use Doctrine\Common\Collections\ArrayCollection;
 
 class AnnotationDriver
 {
@@ -65,6 +65,7 @@ class AnnotationDriver
             ExternalId::class,
             SalesforceId::class,
             RecordType::class,
+            Connection::class,
         ];
 
     public function __construct(Reader $reader, $paths = null)
@@ -101,7 +102,7 @@ class AnnotationDriver
                     continue;
                 }
 
-                $metadata->setClassName($class->getName());
+                $metadata->setClassName($className);
                 $metadata->setSObjectType($sourceAnnotation->getName());
                 $properties = $this->getAnnotatedProperties(
                     $class,
@@ -111,6 +112,7 @@ class AnnotationDriver
                         Field::class,
                         SalesforceId::class,
                         RecordType::class,
+                        Connection::class,
                     ]
                 );
 
@@ -130,6 +132,14 @@ class AnnotationDriver
                         }
 
                         $meta->setProperty($name);
+                    } elseif ($item instanceof Connection) {
+                        $metadata->setConnectionNameField(
+                            new FieldMetadata(
+                                $metadata,
+                                $name,
+                                null
+                            )
+                        );
                     } else {
                         $metadata->addFieldMetadata(
                             new FieldMetadata(
@@ -148,6 +158,7 @@ class AnnotationDriver
                     [
                         Field::class,
                         RecordType::class,
+                        Connection::class,
                     ]
                 );
 
@@ -178,12 +189,30 @@ class AnnotationDriver
                         } elseif (substr($name, 0, 3) === "set") {
                             $meta->setSetter($name);
                         }
-                    } elseif ($method instanceof Field) {
+                    } elseif ($method instanceof Connection) {
                         $meta = $metadata->getMetadataForProperty($propName);
 
                         if (null === $meta) {
+                            $field = null;
+                            if (!($method instanceof Connection)) {
+                                $field = $method->getName();
+                            }
+
+                            $metadata->setConnectionNameField(
+                                ($meta = new FieldMetadata($metadata, $propName, $field))
+                            );
+                        }
+                    } else {
+                        $meta = $metadata->getMetadataForProperty($propName);
+
+                        if (null === $meta) {
+                            $field = null;
+                            if (!($method instanceof Connection)) {
+                                $field = $method->getName();
+                            }
+
                             $metadata->addFieldMetadata(
-                                ($meta = new FieldMetadata($metadata, $propName, $method->getName()))
+                                ($meta = new FieldMetadata($metadata, $propName, $field))
                             );
                         }
                     }
@@ -246,17 +275,12 @@ class AnnotationDriver
     ) {
         $properties = [];
         foreach ($class->getProperties() as $property) {
-            foreach ($annotations as $annotation) {
-                $propAnnot = $this->reader->getPropertyAnnotation($property, $annotation);
-                if ($propAnnot instanceof RecordType) {
-                    if ($this->hasConnectionName($propAnnot, $connectionName, $isDefault)) {
-                        $properties[$property->getName()] = $propAnnot;
-                    }
-                } elseif ($propAnnot instanceof Field) {
-                    if ($this->hasConnectionName($propAnnot, $connectionName, $isDefault)) {
-                        $properties[$property->getName()] = $propAnnot;
-                    }
-                } elseif ($propAnnot instanceof SalesforceId) {
+            foreach ($this->reader->getPropertyAnnotations($property) as $propAnnot) {
+                if (!in_array(get_class($propAnnot), $annotations)) {
+                    continue;
+                }
+
+                if ($this->usesConnections($propAnnot)) {
                     if ($this->hasConnectionName($propAnnot, $connectionName, $isDefault)) {
                         $properties[$property->getName()] = $propAnnot;
                     }
@@ -285,13 +309,12 @@ class AnnotationDriver
     ) {
         $methods = [];
         foreach ($class->getMethods() as $method) {
-            foreach ($annotations as $annotation) {
-                $annot = $this->reader->getMethodAnnotation($method, $annotation);
-                if ($annot instanceof RecordType) {
-                    if ($this->hasConnectionName($annot, $connectionName, $isDefault)) {
-                        $methods[$method->getName()] = $annot;
-                    }
-                } elseif ($annot instanceof Field) {
+            foreach ($this->reader->getMethodAnnotations($method) as $annot) {
+                if (!in_array(get_class($annot), $annotations)) {
+                    continue;
+                }
+
+                if ($this->usesConnections($annot)) {
                     if ($this->hasConnectionName($annot, $connectionName, $isDefault)) {
                         $methods[$method->getName()] = $annot;
                     }
@@ -533,6 +556,11 @@ class AnnotationDriver
         return $namespace;
     }
 
+    private function usesConnections($object): bool
+    {
+        return method_exists($object, 'getConnections') || method_exists($object, 'getConnection');
+    }
+
     private function hasConnectionName($object, string $connectionName, bool $isDefault): bool
     {
         if (method_exists($object, 'getConnections')) {
@@ -543,6 +571,8 @@ class AnnotationDriver
             return false;
         }
 
-        return ($isDefault && in_array("default", $connections)) || in_array($connectionName, $connections);
+        return in_array('*', $connections) // Allow for wildcards
+            || ($isDefault && in_array("default", $connections))
+            || in_array($connectionName, $connections);
     }
 }

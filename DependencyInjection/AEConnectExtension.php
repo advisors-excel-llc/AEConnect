@@ -8,7 +8,7 @@
 
 namespace AE\ConnectBundle\DependencyInjection;
 
-use AE\ConnectBundle\Connection\ConnectionInterface;
+use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Connection\Dbal\ConnectionProxy;
 use AE\ConnectBundle\Driver\AnnotationDriver;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
@@ -16,7 +16,6 @@ use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
-use AE\SalesforceRestSdk\AuthProvider\LoginProvider;
 use AE\SalesforceRestSdk\AuthProvider\OAuthProvider;
 use AE\SalesforceRestSdk\AuthProvider\SoapProvider;
 use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
@@ -75,12 +74,6 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
             if (!array_key_exists('ae_connect_polling', $providers)) {
                 $providerConfig['ae_connect_polling'] = [
-                    'type' => 'file_system',
-                ];
-            }
-
-            if (!array_key_exists('ae_connect_dbal_connections', $providers)) {
-                $providerConfig['ae_connect_dbal_connections'] = [
                     'type' => 'file_system',
                 ];
             }
@@ -417,9 +410,8 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
         string $connectionName,
         bool $isDefault,
         ContainerBuilder $container
-    ):
-    void {
-        $container->register("ae_connect.connection.$connectionName", ConnectionInterface::class)
+    ): void {
+        $container->register("ae_connect.connection.$connectionName", Connection::class)
                   ->setArguments(
                       [
                           '$name'             => $connectionName,

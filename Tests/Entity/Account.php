@@ -13,7 +13,7 @@ use Ramsey\Uuid\Uuid;
 
 /**
  * Class Account
- * @AEConnect\SObjectType(name="Account")
+ * @AEConnect\SObjectType(name="Account", connections={"*"})
  * @ORM\Entity()
  * @ORM\Table("account")
  */
@@ -29,7 +29,8 @@ class Account
 
     /**
      * @var string
-     * @AEConnect\Field("S3F__hcid__c")
+     * @AEConnect\Field("S3F__hcid__c", connections={"default"})
+     * @AEConnect\Field("AE_Connect_Id__c", connections={"db_test"})
      * @AEConnect\ExternalId()
      * @ORM\Column(type="uuid", nullable=false, unique=true)
      */
@@ -37,7 +38,7 @@ class Account
 
     /**
      * @var string
-     * @AEConnect\Field("Name")
+     * @AEConnect\Field("Name", connections={"*"})
      * @ORM\Column(length=80, nullable=false)
      */
     private $name;
@@ -45,16 +46,22 @@ class Account
     /**
      * @var array
      * @ORM\Column(type="array")
-     * @AEConnect\Field("S3F__Test_Picklist__c")
+     * @AEConnect\Field("S3F__Test_Picklist__c", connections={"default"})
      */
     private $testPicklist;
 
     /**
      * @var string
-     * @AEConnect\SalesforceId()
+     * @AEConnect\SalesforceId(connection="*")
      * @ORM\Column(length=18, nullable=true, unique=true)
      */
     private $sfid;
+
+    /**
+     * @var string
+     * @AEConnect\Connection(connections={"*"})
+     */
+    private $connection = "default";
 
     /**
      * @return mixed
@@ -152,6 +159,26 @@ class Account
     public function setSfid(?string $sfid): Account
     {
         $this->sfid = $sfid;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getConnection(): ?string
+    {
+        return $this->connection;
+    }
+
+    /**
+     * @param string $connection
+     *
+     * @return Account
+     */
+    public function setConnection(?string $connection): Account
+    {
+        $this->connection = $connection;
 
         return $this;
     }

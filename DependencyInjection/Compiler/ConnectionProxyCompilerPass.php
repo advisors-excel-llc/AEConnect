@@ -9,9 +9,9 @@
 namespace AE\ConnectBundle\DependencyInjection\Compiler;
 
 use AE\ConnectBundle\Driver\DbalConnectionDriver;
-use AE\SalesforceRestSdk\Rest\Composite\Builder\Reference;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Reference;
 
 class ConnectionProxyCompilerPass implements CompilerPassInterface
 {

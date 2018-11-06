@@ -83,6 +83,15 @@ class ConnectionProxy
     public function setMetadataRegistry(MetadataRegistry $metadataRegistry): ConnectionProxy
     {
         $this->metadataRegistry = $metadataRegistry;
+        $cache = $this->metadataRegistry->getCache();
+
+        foreach ($this->metadataRegistry->getMetadata() as $metadata) {
+            $cacheId = "{$this->name}__{$metadata->getClassName()}";
+
+            if (!$cache->contains($cacheId)) {
+                $cache->save($cacheId, $metadata);
+            }
+        }
 
         return $this;
     }

@@ -37,6 +37,7 @@ class FieldMetadata extends AbstractFieldMetadata
     /**
      * FieldMetadata constructor.
      *
+     * @param Metadata $metadata
      * @param null|string $property
      * @param null|string $field
      * @param bool $isIdentifying
@@ -54,19 +55,19 @@ class FieldMetadata extends AbstractFieldMetadata
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getField(): string
+    public function getField(): ?string
     {
         return $this->field;
     }
 
     /**
-     * @param string $field
+     * @param string|null $field
      *
      * @return FieldMetadata
      */
-    public function setField(string $field)
+    public function setField(?string $field)
     {
         $this->field = $field;
 
@@ -100,8 +101,7 @@ class FieldMetadata extends AbstractFieldMetadata
     {
         return null !== $this->field
             ? $this->metadata->describeField($this->field)
-            : $this->metadata->describeFieldByProperty($this->property)
-            ;
+            : $this->metadata->describeFieldByProperty($this->property);
     }
 
     /**

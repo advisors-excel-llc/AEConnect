@@ -31,6 +31,7 @@ use AE\SalesforceRestSdk\Rest\Client as RestClient;
 use AE\SalesforceRestSdk\Bulk\Client as BulkClient;
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\DBAL\Exception\TableNotFoundException;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -61,11 +62,6 @@ class DbalConnectionDriver
     private $pollingService;
 
     /**
-     * @var CacheProvider
-     */
-    private $cache;
-
-    /**
      * @var array|ConnectionProxy[]
      */
     private $proxies = [];
@@ -76,20 +72,17 @@ class DbalConnectionDriver
      * @param ConnectionManagerInterface $connectionManager
      * @param RegistryInterface $registry
      * @param PollingService $pollingService
-     * @param CacheProvider $cache
      * @param null|LoggerInterface $logger
      */
     public function __construct(
         ConnectionManagerInterface $connectionManager,
         RegistryInterface $registry,
         PollingService $pollingService,
-        CacheProvider $cache,
         ?LoggerInterface $logger = null
     ) {
         $this->connectionManager = $connectionManager;
         $this->registry          = $registry;
         $this->pollingService    = $pollingService;
-        $this->cache             = $cache;
 
         $this->setLogger($logger ?: new NullLogger());
     }
@@ -109,65 +102,63 @@ class DbalConnectionDriver
     public function loadConnections()
     {
         foreach ($this->proxies as $proxy) {
-            $config  = $proxy->getConfig();
-            $class   = $config['entity'];
-            $manager = $this->registry->getManagerForClass($class);
-            /** @var AuthCredentialsInterface[] $entities */
-            $entities = $manager->getRepository($class)->findAll();
+            $config        = $proxy->getConfig();
+            $class         = $config['login']['entity'];
+            $manager       = $this->registry->getManagerForClass($class);
+            $proxyRegistry = $proxy->getMetadataRegistry();
+            $metadataCache = $proxyRegistry->getCache();
 
-            foreach ($entities as $entity) {
-                if (!($entity instanceof AuthCredentialsInterface)) {
-                    throw new \RuntimeException("The class $class must implement ".AuthCredentialsInterface::class);
-                }
+            try {
+                /** @var AuthCredentialsInterface[] $entities */
+                $entities = $manager->getRepository($class)->findAll();
 
-                // Check the cache to see if the connection has been created
-                if ($this->cache->contains($entity->getName())) {
-                    $connection = $this->cache->fetch($entity->getName());
-                    $this->connectionManager->registerConnection($connection);
-
-                    continue;
-                }
-
-                $authProvider    = $this->createLoginProvider($entity);
-                $restClient      = $this->createRestClient($authProvider);
-                $bulkClient      = $this->createBulkClient($authProvider);
-                $streamingClient = $this->createStreamingClient($config, $authProvider, $entity->getName());
-
-                // Build a MetadataRegistry for the new connection based on the proxy registry
-                $proxyRegistry    = $proxy->getMetadataRegistry();
-                $metadataCache    = $proxyRegistry->getCache();
-                $metadataRegistry = new MetadataRegistry($metadataCache);
-
-                foreach ($proxyRegistry->getMetadata() as $proxyMetadata) {
-                    $cacheId = "{$entity->getName()}__{$proxyMetadata->getClassName()}";
-                    // Check to see if there's a cached version of the metadata
-                    if ($metadataCache->contains($cacheId)) {
-                        $metadata = $metadataCache->fetch($cacheId);
-                    } else {
-                        $metadata = new Metadata($entity->getName());
-                        $metadata->setClassName($proxyMetadata->getClassName());
-                        $metadata->setSObjectType($proxyMetadata->getSObjectType());
-                        $metadata->setFieldMetadata(new ArrayCollection($proxyMetadata->getFieldMetadata()->toArray()));
-                        $metadataCache->save($cacheId, $metadata);
+                foreach ($entities as $entity) {
+                    if (!($entity instanceof AuthCredentialsInterface)) {
+                        throw new \RuntimeException("The class $class must implement ".AuthCredentialsInterface::class);
                     }
 
-                    $metadataRegistry->addMetadata($metadata);
+                    $authProvider    = $this->createLoginProvider($entity);
+                    $restClient      = $this->createRestClient($authProvider);
+                    $bulkClient      = $this->createBulkClient($authProvider);
+                    $streamingClient = $this->createStreamingClient($config, $authProvider, $entity->getName());
+
+                    // Build a MetadataRegistry for the new connection based on the proxy registry
+                    $metadataRegistry = new MetadataRegistry($metadataCache);
+
+                    foreach ($proxyRegistry->getMetadata() as $proxyMetadata) {
+                        $cacheId = "{$entity->getName()}__{$proxyMetadata->getClassName()}";
+                        // Check to see if there's a cached version of the metadata
+                        if ($metadataCache->contains($cacheId)) {
+                            $metadata = $metadataCache->fetch($cacheId);
+                        } else {
+                            $metadata = new Metadata($entity->getName());
+                            $metadata->setClassName($proxyMetadata->getClassName());
+                            $metadata->setSObjectType($proxyMetadata->getSObjectType());
+                            $metadata->setFieldMetadata(
+                                new ArrayCollection($proxyMetadata->getFieldMetadata()->toArray())
+                            );
+                            $metadataCache->save($cacheId, $metadata);
+                        }
+
+                        $metadataRegistry->addMetadata($metadata);
+                    }
+
+                    $connection = new Connection(
+                        $entity->getName(),
+                        $streamingClient,
+                        $restClient,
+                        $bulkClient,
+                        $metadataRegistry
+                    );
+
+                    $connection->setAlias($proxy->getName());
+                    $connection->hydrateMetadataDescribe();
+
+                    $this->connectionManager->registerConnection($connection);
                 }
-
-                $connection = new Connection(
-                    $entity->getName(),
-                    $streamingClient,
-                    $restClient,
-                    $bulkClient,
-                    $metadataRegistry
-                );
-
-                $connection->setAlias($proxy->getName());
-                $connection->hydrateMetadataDescribe();
-
-                $this->connectionManager->registerConnection($connection);
-
-                $this->cache->save($entity->getName(), $connection);
+            } catch (TableNotFoundException $e) {
+                $this->logger->error($e->getMessage());
+                $this->logger->debug($e->getTraceAsString());
             }
         }
     }
