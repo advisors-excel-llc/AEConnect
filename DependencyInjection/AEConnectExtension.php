@@ -8,7 +8,8 @@
 
 namespace AE\ConnectBundle\DependencyInjection;
 
-use AE\ConnectBundle\Connection\Connection;
+use AE\ConnectBundle\Connection\ConnectionInterface;
+use AE\ConnectBundle\Connection\Dbal\ConnectionProxy;
 use AE\ConnectBundle\Driver\AnnotationDriver;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
@@ -78,6 +79,12 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 ];
             }
 
+            if (!array_key_exists('ae_connect_dbal_connections', $providers)) {
+                $providerConfig['ae_connect_dbal_connections'] = [
+                    'type' => 'file_system',
+                ];
+            }
+
             $container->prependExtensionConfig(
                 'doctrine_cache',
                 [
@@ -100,22 +107,41 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
         if (count($connections) > 0) {
             foreach ($connections as $name => $connection) {
-                $this->createAuthProviderService($connection['login'], $name, $container);
-                $this->createBayeuxClientService($name, $container);
-                $this->createStreamingClientService($name, $connection, $container);
-                $this->createRestClientService($name, $container);
-                $this->createBulkClientExtension($name, $container);
-                $this->createReplayExtensionService($connection, $name, $container);
-                $this->createMetadataRegistryService(
-                    $connection,
-                    $name,
-                    $container,
-                    $config['default_connection'] === $name
-                );
-                $this->createConnectionService($name, $name === $config['default_connection'], $container);
+                if (isset($connection['login']['entity'])) {
+                    $this->createMetadataRegistryService(
+                        $connection,
+                        $name,
+                        $container,
+                        $config['default_connection'] === $name
+                    );
 
-                if ($name !== "default" && $name === $config['default_connection']) {
-                    $container->setAlias("ae_connect.connection.default", new Alias("ae_connect.connection.$name"));
+                    $container->register('ae_connect.connection_proxy.'.$name, ConnectionProxy::class)
+                              ->addMethodCall('setName', [$name])
+                              ->addMethodCall('setConfig', [$connection])
+                              ->addMethodCall(
+                                  'setMetadataRegistry',
+                                  [new Reference("ae_connect.connection.$name.metadata_registry")]
+                              )
+                              ->addTag('ae_connect.connection_proxy')
+                    ;
+                } else {
+                    $this->createAuthProviderService($connection['login'], $name, $container);
+                    $this->createBayeuxClientService($name, $container);
+                    $this->createStreamingClientService($name, $connection, $container);
+                    $this->createRestClientService($name, $container);
+                    $this->createBulkClientExtension($name, $container);
+                    $this->createReplayExtensionService($connection, $name, $container);
+                    $this->createMetadataRegistryService(
+                        $connection,
+                        $name,
+                        $container,
+                        $config['default_connection'] === $name
+                    );
+                    $this->createConnectionService($name, $name === $config['default_connection'], $container);
+
+                    if ($name !== "default" && $name === $config['default_connection']) {
+                        $container->setAlias("ae_connect.connection.default", new Alias("ae_connect.connection.$name"));
+                    }
                 }
             }
         }
@@ -393,7 +419,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
         ContainerBuilder $container
     ):
     void {
-        $container->register("ae_connect.connection.$connectionName", Connection::class)
+        $container->register("ae_connect.connection.$connectionName", ConnectionInterface::class)
                   ->setArguments(
                       [
                           '$name'             => $connectionName,

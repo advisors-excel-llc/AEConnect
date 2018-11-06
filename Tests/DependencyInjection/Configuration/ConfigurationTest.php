@@ -124,9 +124,7 @@ class ConfigurationTest extends TestCase
                         ],
                         'non_default' => [
                             'login'  => [
-                                'username' => 'username',
-                                'password' => 'password',
-                                'url'      => 'https://test.salesforce.com',
+                                'entity' => 'App\\Entity\\Connection',
                             ],
                             'topics' => [
                                 'TestTopic'  => [
@@ -184,9 +182,8 @@ class ConfigurationTest extends TestCase
                     ],
                     'non_default' => [
                         'login'           => [
-                            'username' => 'username',
-                            'password' => 'password',
-                            'url'      => 'https://test.salesforce.com',
+                            'entity' => 'App\\Entity\\Connection',
+                            'url'      => 'https://login.salesforce.com',
                         ],
                         'topics'          => [
                             'TestTopic'  => [
@@ -321,6 +318,60 @@ class ConfigurationTest extends TestCase
                             ],
                             'config' => [
                                 'replay_start_id' => -4,
+                            ],
+                        ],
+                    ],
+                ],
+            ]
+        );
+    }
+
+    public function testInvalidLogin()
+    {
+        $this->assertConfigurationIsInvalid(
+            [
+                'ae_connect' => [
+                    'paths'              => ['%kernel.project_dir%/src/App/Entity'],
+                    'default_connection' => 'non_default',
+                    'connections'        => [
+                        'default'     => [
+                            'login'  => [
+                                'key'      => 'client_key',
+                                'secret'   => 'client_secret',
+                                'username' => 'username',
+                            ],
+                            'topics' => [
+                                'TestTopic' => [
+                                    'type'   => 'Account',
+                                    'filter' => [
+                                        'CustomField__c' => 'Seattle',
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ]
+        );
+
+        $this->assertConfigurationIsInvalid(
+            [
+                'ae_connect' => [
+                    'paths'              => ['%kernel.project_dir%/src/App/Entity'],
+                    'default_connection' => 'non_default',
+                    'connections'        => [
+                        'default'     => [
+                            'login'  => [
+                                'key'      => 'client_key',
+                                'secret'   => 'client_secret',
+                            ],
+                            'topics' => [
+                                'TestTopic' => [
+                                    'type'   => 'Account',
+                                    'filter' => [
+                                        'CustomField__c' => 'Seattle',
+                                    ],
+                                ],
                             ],
                         ],
                     ],

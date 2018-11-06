@@ -11,12 +11,12 @@ namespace AE\ConnectBundle\Connection;
 trait ConnectionsTrait
 {
     /**
-     * @var array|Connection[]
+     * @var array|ConnectionInterface[]
      */
     protected $connections = [];
 
     /**
-     * @return Connection[]|array
+     * @return ConnectionInterface[]|array
      */
     public function getConnections(): array
     {
@@ -24,7 +24,7 @@ trait ConnectionsTrait
     }
 
     /**
-     * @param Connection[]|array $connections
+     * @param ConnectionInterface[]|array $connections
      *
      * @return ConnectionsTrait
      */
@@ -35,7 +35,7 @@ trait ConnectionsTrait
         return $this;
     }
 
-    public function addConnection(Connection $connection): self
+    public function addConnection(ConnectionInterface $connection): self
     {
         $index = array_search($connection, $this->connections);
 
@@ -46,7 +46,7 @@ trait ConnectionsTrait
         return $this;
     }
 
-    public function removeConnection(Connection $connection): self
+    public function removeConnection(ConnectionInterface $connection): self
     {
         $index = array_search($connection, $this->connections);
 

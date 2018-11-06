@@ -27,6 +27,11 @@ class Connection implements ConnectionInterface
     private $name;
 
     /**
+     * @var string|null
+     */
+    private $alias;
+
+    /**
      * @var bool
      */
     private $isDefault = false;
@@ -83,6 +88,26 @@ class Connection implements ConnectionInterface
     public function getName(): string
     {
         return $this->name;
+    }
+
+    /**
+     * @return null|string
+     */
+    public function getAlias(): ?string
+    {
+        return $this->alias;
+    }
+
+    /**
+     * @param null|string $alias
+     *
+     * @return Connection
+     */
+    public function setAlias(?string $alias): Connection
+    {
+        $this->alias = $alias;
+
+        return $this;
     }
 
     /**
