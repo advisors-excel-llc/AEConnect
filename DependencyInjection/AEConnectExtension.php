@@ -148,9 +148,9 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                           [
                               $config['key'],
                               $config['secret'],
+                              $config['url'],
                               $config['username'],
                               $config['password'],
-                              $config['url'],
                           ]
                       )
                       ->setPublic(true)

@@ -11,11 +11,13 @@ namespace AE\ConnectBundle\Driver;
 use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Connection\Dbal\AuthCredentialsInterface;
 use AE\ConnectBundle\Connection\Dbal\ConnectionProxy;
+use AE\ConnectBundle\Connection\Dbal\RefreshTokenCredentialsInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService;
+use AE\ConnectBundle\Sdk\AuthProvider\MutableOAuthProvider;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
@@ -30,8 +32,6 @@ use AE\SalesforceRestSdk\Bayeux\Extension\SfdcExtension;
 use AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport;
 use AE\SalesforceRestSdk\Rest\Client as RestClient;
 use AE\SalesforceRestSdk\Bulk\Client as BulkClient;
-use Doctrine\Common\Cache\CacheProvider;
-use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\DBAL\Exception\TableNotFoundException;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -193,13 +193,35 @@ class DbalConnectionDriver
             return new SoapProvider($entity->getUsername(), $entity->getPassword(), $entity->getLoginUrl());
         }
 
-        return new OAuthProvider(
-            $entity->getClientKey(),
-            $entity->getClientSecret(),
-            $entity->getUsername(),
-            $entity->getPassword(),
-            $entity->getLoginUrl()
-        );
+        if ($entity->getType() === AuthCredentialsInterface::OAUTH) {
+            if ($entity instanceof RefreshTokenCredentialsInterface) {
+                $provider = new MutableOAuthProvider(
+                    $entity->getClientKey(),
+                    $entity->getClientSecret(),
+                    $entity->getLoginUrl(),
+                    $entity->getUsername(),
+                    null,
+                    MutableOAuthProvider::GRANT_CODE,
+                    $entity->getRedirectUri(),
+                    ''
+                );
+
+                $provider->setToken($entity->getToken());
+                $provider->setRefreshToken($entity->getRefreshToken());
+
+                return $provider;
+            }
+
+            return new OAuthProvider(
+                $entity->getClientKey(),
+                $entity->getClientSecret(),
+                $entity->getLoginUrl(),
+                $entity->getUsername(),
+                $entity->getPassword()
+            );
+        }
+
+        throw new \LogicException("Logically, you should not have gotten here. Check your credential entity's type.");
     }
 
     /**

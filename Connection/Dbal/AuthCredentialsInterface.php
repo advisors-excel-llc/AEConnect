@@ -13,10 +13,10 @@ interface AuthCredentialsInterface
     public const OAUTH = 'OAUTH';
 
     public function getName(): string;
-    /** getType should return "SOAP" or "OAUTH" */
+    /** getType should return "SOAP" or "OAUTH" or "OATH" */
     public function getType(): string;
     public function getUsername(): string;
-    public function getPassword(): string;
+    public function getPassword(): ?string;
     public function getClientKey(): ?string;
     public function getClientSecret(): ?string;
     public function getLoginUrl(): string;
