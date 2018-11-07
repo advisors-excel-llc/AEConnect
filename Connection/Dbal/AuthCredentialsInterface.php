@@ -20,4 +20,5 @@ interface AuthCredentialsInterface
     public function getClientKey(): ?string;
     public function getClientSecret(): ?string;
     public function getLoginUrl(): string;
+    public function isActive(): bool;
 }

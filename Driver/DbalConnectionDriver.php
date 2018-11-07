@@ -118,6 +118,11 @@ class DbalConnectionDriver
                         throw new \RuntimeException("The class $class must implement ".AuthCredentialsInterface::class);
                     }
 
+                    // We don't deal with inactive connections
+                    if (!$entity->isActive()) {
+                        continue;
+                    }
+
                     $authProvider    = $this->createLoginProvider($entity);
                     $restClient      = $this->createRestClient($authProvider);
                     $bulkClient      = $this->createBulkClient($authProvider);
