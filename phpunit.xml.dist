@@ -11,6 +11,8 @@
         <env name="SF_PASS" value="YOUR_APP_PASS_W_TOKEN" />
         <env name="SF_CLIENT_ID" value="YOUR_APP_ID" />
         <env name="SF_CLIENT_SECRET" value="YOUR_APP_SECRET" />
+        <env name="SF_ALT_USER" value="ALT_ORG_USER" />
+        <env name="SF_ALT_PASS" value="ALT_ORG_PASS_W_TOKEN" />
     </php>
     <testsuites>
         <testsuite name="Test Suite">

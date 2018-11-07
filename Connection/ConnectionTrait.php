@@ -11,24 +11,24 @@ namespace AE\ConnectBundle\Connection;
 trait ConnectionTrait
 {
     /**
-     * @var Connection
+     * @var ConnectionInterface
      */
     protected $connection;
 
     /**
-     * @return Connection
+     * @return ConnectionInterface
      */
-    public function getConnection(): Connection
+    public function getConnection(): ConnectionInterface
     {
         return $this->connection;
     }
 
     /**
-     * @param Connection $connection
+     * @param ConnectionInterface $connection
      *
      * @return ConnectionTrait
      */
-    public function setConnection(Connection $connection): ConnectionTrait
+    public function setConnection(ConnectionInterface $connection): ConnectionTrait
     {
         $this->connection = $connection;
 

@@ -85,6 +85,15 @@ class SObjectCompiler
             );
         }
 
+        // Check if the entity is meant for this connection
+        $connectionProp = $metadata->getConnectionNameField();
+        if (null !== $connectionProp
+            && null !== ($entityConnectionName = $connectionProp->getValueFromEntity($entity))
+            && $connection->getName() !== $entityConnectionName
+        ) {
+            throw new \RuntimeException("Entity is meant for $entityConnectionName and not {$connection->getName()}");
+        }
+
         $uow       = $manager->getUnitOfWork();
         $changeSet = $uow->getEntityChangeSet($entity);
 

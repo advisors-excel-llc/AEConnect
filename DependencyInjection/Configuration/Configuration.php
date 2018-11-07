@@ -70,9 +70,16 @@ class Configuration implements ConfigurationInterface
                 ->children()
                     ->scalarNode('key')->end()
                     ->scalarNode('secret')->end()
-                    ->scalarNode('username')->isRequired()->end()
-                    ->scalarNode('password')->isRequired()->end()
-                    ->scalarNode('url')->cannotBeEmpty()->defaultValue('https://login.salesforce.com')->end()
+                    ->scalarNode('username')->end()
+                    ->scalarNode('password')->end()
+                    ->scalarNode('url')->defaultValue('https://login.salesforce.com')->end()
+                    ->scalarNode('entity')->end()
+                ->end()
+                ->validate()
+                    ->ifTrue(function ($value) {
+                        return empty($value['entity']) && (empty($value['username']) || empty($value['password']));
+                    })
+                    ->thenInvalid('Either a database entity or a username and password must be provided')
                 ->end()
         ;
 

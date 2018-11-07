@@ -49,7 +49,7 @@ doctrine:
         connections:
             default:
                 driver: pdo_sqlite
-                memory: true
+                url: 'sqlite:///test_db.sqlite'
                 charset: UTF8
                 mapping_types:
                      uuid_binary: binary
@@ -100,3 +100,6 @@ ae_connect:
                     type: 'S3F__Test_Object__c'
             config:
                 replay_start_id: !php/const AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension::REPLAY_SAVED
+        db_test:
+            login:
+                entity: 'AE\ConnectBundle\Tests\Entity\OrgConnection'

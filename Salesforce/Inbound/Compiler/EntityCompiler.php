@@ -110,7 +110,25 @@ class EntityCompiler
                 continue;
             }
 
-            $entity = $manager->getRepository($class)->findOneBy($criteria) ?: new $class();
+            $entity = $manager->getRepository($class)->findOneBy($criteria);
+            $connectionProp = $metadata->getConnectionNameField();
+
+            if (null !== $entity) {
+                // Check if the entity is meant for this connection
+                if (null !== $connectionProp
+                    && null !== ($entityConnectionName = $connectionProp->getValueFromEntity($entity))
+                    && $connection->getName() !== $entityConnectionName
+                ) {
+                    continue;
+                }
+            } else {
+                $entity = new $class();
+
+                // If the entity supports a connection name, set it
+                if (null !== $connectionProp) {
+                    $connectionProp->setValueForEntity($entity, $connection->getName());
+                }
+            }
 
             foreach ($object->getFields() as $field => $value) {
                 $fieldMetadata = $metadata->getMetadataForField($field);

@@ -86,7 +86,14 @@ class SalesforceConnector
             return false;
         }
 
-        $result  = $this->sObjectCompiler->compile($entity, $connectionName);
+        try {
+            $result  = $this->sObjectCompiler->compile($entity, $connectionName);
+        } catch (\RuntimeException $e) {
+            $this->logger->warning($e->getMessage());
+
+            return false;
+        }
+
         $intent  = $result->getIntent();
         $sObject = $result->getSObject();
 
@@ -119,7 +126,14 @@ class SalesforceConnector
             return false;
         }
 
-        $entities = $this->entityCompiler->compile($object, $connectionName);
+        try {
+            $entities = $this->entityCompiler->compile($object, $connectionName);
+        } catch (\RuntimeException $e) {
+            $this->logger->warning($e->getMessage());
+            $this->logger->debug($e->getTraceAsString());
+
+            return false;
+        }
 
         foreach ($entities as $entity) {
             $class   = ClassUtils::getClass($entity);
