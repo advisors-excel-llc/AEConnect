@@ -46,7 +46,7 @@ class RecordTypeMetadata extends FieldMetadata
         return $this;
     }
 
-    final public function setField(string $field)
+    final public function setField(?string $field)
     {
         // Intentionally left blank
         return $this;

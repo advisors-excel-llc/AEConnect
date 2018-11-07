@@ -60,6 +60,8 @@ class MetadataRegistryTest extends KernelTestCase
         $this->assertNotNull($describe->getName());
         $this->assertEquals($metadatum->getSObjectType(), $describe->getName());
         $this->assertNotEmpty($describe->getFields());
+        $this->assertNotNull($metadatum->getConnectionNameField());
+        $this->assertEquals("connection", $metadatum->getConnectionNameField()->getProperty());
     }
 
     public function testMetadataWithRecordType()

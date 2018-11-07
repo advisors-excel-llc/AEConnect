@@ -55,20 +55,4 @@ abstract class DatabaseTestCase extends KernelTestCase
      * @return array
      */
     abstract protected function loadSchemas(): array;
-
-    protected function tearDown()
-    {
-        /** @var EntityManager $manager */
-        $manager = $this->doctrine->getManager();
-        $tool = new SchemaTool($manager);
-        try {
-            $tool->dropSchema($this->loadSchemas());
-        } catch (\Exception $e) {
-            // keep it goin!
-        }
-
-        $tool->dropDatabase();
-
-        parent::tearDown();
-    }
 }

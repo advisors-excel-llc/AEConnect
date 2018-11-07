@@ -58,6 +58,12 @@ class Metadata
     private $connectionName;
 
     /**
+     * @var FieldMetadata|null
+     * @Serializer\Type("AE\ConnectBundle\Metadata\FieldMetadata")
+     */
+    private $connectionNameField;
+
+    /**
      * Metadata constructor.
      *
      * @param string $connectionName
@@ -80,7 +86,7 @@ class Metadata
     /**
      * @return string
      */
-    public function getClassName(): string
+    public function getClassName(): ?string
     {
         return $this->className;
     }
@@ -405,5 +411,25 @@ class Metadata
         }
 
         return null;
+    }
+
+    /**
+     * @return FieldMetadata|null
+     */
+    public function getConnectionNameField(): ?FieldMetadata
+    {
+        return $this->connectionNameField;
+    }
+
+    /**
+     * @param FieldMetadata|null $connectionNameField
+     *
+     * @return Metadata
+     */
+    public function setConnectionNameField(?FieldMetadata $connectionNameField): Metadata
+    {
+        $this->connectionNameField = $connectionNameField;
+
+        return $this;
     }
 }

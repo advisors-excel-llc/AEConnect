@@ -16,6 +16,7 @@ use AE\SalesforceRestSdk\Bulk\Client as BulkClient;
 interface ConnectionInterface
 {
     public function getName(): string;
+    public function getAlias(): ?string;
     public function getStreamingClient(): ClientInterface;
     public function getRestClient(): RestClient;
     public function getBulkClient(): BulkClient;

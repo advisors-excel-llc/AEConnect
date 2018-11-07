@@ -23,6 +23,9 @@ The annotation is only used on the `class`.
 If the Entity maps to more than one connection, then each connection name should be specified in the `connections={}`
 attribute of the annotation. If the `connections` attribute is omitted, the default connection is used.
 
+> *NEW!* You can now use a * wildcard to target ALL connections, i.e. `connections={"*"}`. This is useful for
+> standard fields.
+
 ```php
 <?php
 

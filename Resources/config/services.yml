@@ -113,3 +113,10 @@ services:
         arguments:
             $polling: '@AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService'
         tags: ['console.command']
+    AE\ConnectBundle\Driver\DbalConnectionDriver:
+        arguments:
+            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+            $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+            $pollingService: '@AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService'
+            $logger: '@?logger'
+        public: true

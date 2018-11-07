@@ -43,7 +43,9 @@ class MetadataRegistryFactory
                     // Don't save to cache here, there's something left to do (@see Connection::hydrateMetadataDescribe)
                 }
 
-                $registry->addMetadata($metadata);
+                if (null !== $metadata->getClassName()) {
+                    $registry->addMetadata($metadata);
+                }
             }
         }
 
