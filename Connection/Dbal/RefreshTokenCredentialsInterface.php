@@ -10,7 +10,7 @@ namespace AE\ConnectBundle\Connection\Dbal;
 
 interface RefreshTokenCredentialsInterface extends AuthCredentialsInterface
 {
-    public function getToken(): string;
-    public function getRefreshToken(): string;
+    public function getToken(): ?string;
+    public function getRefreshToken(): ?string;
     public function getRedirectUri(): string;
 }
