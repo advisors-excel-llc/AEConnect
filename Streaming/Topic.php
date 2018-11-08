@@ -121,7 +121,7 @@ class Topic extends AbstractSubscriber
                 $object = $data->getSobject();
 
                 if (null !== $object) {
-                    $object->Type = $this->type;
+                    $object->__SOBJECT_TYPE__ = $this->type;
                 }
             }
 

@@ -164,10 +164,12 @@ class PollingService
              * @var CompositeSObject $update
              */
             foreach ($updates as $update) {
+                $update->__SOBJECT_TYPE__ = $update->getType();
                 $this->connector->receive($update, SalesforceConsumerInterface::UPDATED, $connectionName);
             }
 
             foreach ($removals as $removal) {
+                $removal->__SOBJECT_TYPE__ = $removal->getType();
                 $this->connector->receive($removal, SalesforceConsumerInterface::DELETED, $connectionName);
             }
         }

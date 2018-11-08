@@ -64,8 +64,7 @@ class StreamingClientTest extends DatabaseTestCase
                                               )
                                           );
                                           $channel->unsubscribe($consumer);
-                                      },
-                                      1
+                                      }
                                   ))
                               )
         ;
@@ -79,8 +78,7 @@ class StreamingClientTest extends DatabaseTestCase
                     $this->assertArrayHasKey('ChangeEventHeader', $payload);
                     $accountId = $payload['ChangeEventHeader']['recordIds'][0];
                     $this->streamingClient->stop();
-                },
-                2
+                }
             )
         );
 
@@ -115,7 +113,7 @@ class StreamingClientTest extends DatabaseTestCase
                                           $channel->unsubscribe($consumer);
                                           $this->assertTrue($response);
                                       },
-                                      6
+                                      -99
                                   ))
                               )
         ;
@@ -126,11 +124,10 @@ class StreamingClientTest extends DatabaseTestCase
                     $data   = $message->getData();
                     $object = $data->getSobject();
                     $this->assertNotNull($object);
-                    $this->assertEquals('S3F__Test_Object__c', $object->Type);
+                    $this->assertEquals('S3F__Test_Object__c', $object->__SOBJECT_TYPE__);
                     $objectId = $object->Id;
                     $this->streamingClient->stop();
-                },
-                2
+                }
             )
         );
 
