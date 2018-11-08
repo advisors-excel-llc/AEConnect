@@ -20,7 +20,7 @@ class RecordTypeTransformer extends AbstractTransformerPlugin
         $value    = $payload->getValue();
         $metadata = $payload->getMetadata();
 
-        if (null !== $value && null !== ($recordTypeName = $metadata->getRecordTypeName($value))) {
+        if (null !== $value && null !== ($recordTypeName = $metadata->getRecordTypeDeveloperName($value))) {
             $payload->setValue($recordTypeName);
         }
     }
