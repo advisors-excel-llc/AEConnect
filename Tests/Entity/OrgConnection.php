@@ -148,4 +148,9 @@ class OrgConnection implements AuthCredentialsInterface
     {
         return 'https://login.salesforce.com/';
     }
+
+    public function isActive(): bool
+    {
+        return true;
+    }
 }

@@ -76,8 +76,8 @@ class SObjectConsumer implements SalesforceConsumerInterface
 
         $sObject = new SObject(
             $payload + [
-                'Type' => $changeEventHeader['entityName'],
-                'Id'   => $changeEventHeader['recordIds'][0],
+                '__SOBJECT_TYPE__' => $changeEventHeader['entityName'],
+                'Id'                => $changeEventHeader['recordIds'][0],
             ]
         );
 
@@ -88,7 +88,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
 
     private function consumeTopic(SObject $object, Event $event)
     {
-        if (null !== $object->Type) {
+        if (null !== $object->__SOBJECT_TYPE__) {
             $intent = strtoupper($event->getType());
 
             foreach ($this->connections as $connection) {

@@ -75,7 +75,7 @@ class EntityCompiler
         }
 
         $entities = [];
-        $metas    = $connection->getMetadataRegistry()->findMetadataBySObjectType($object->Type);
+        $metas    = $connection->getMetadataRegistry()->findMetadataBySObjectType($object->__SOBJECT_TYPE__);
 
         foreach ($metas as $metadata) {
             $class         = $metadata->getClassName();
