@@ -157,7 +157,7 @@ class EntityCompiler
 
                 if (null !== $recordType
                     && null !== $object->RecordTypeId
-                    && null !== ($recordTypeName = $metadata->getRecordTypeName($object->RecordTypeId))
+                    && null !== ($recordTypeName = $metadata->getRecordTypeDeveloperName($object->RecordTypeId))
                     && $recordType->getValueFromEntity($entity) !== $recordTypeName
                 ) {
                     throw new \RuntimeException(
