@@ -71,12 +71,6 @@ class DateTimeTransformer extends AbstractTransformerPlugin
             $type = Type::getType($type);
         }
 
-        $dateTime = new \DateTime($value);
-        if ($dateTime) {
-            $payload->setValue($dateTime);
-            return;
-        }
-
         $payload->setValue(
             strlen($value) > 0 ? $type->convertToPHPValue($value, $platform) : null
         );
