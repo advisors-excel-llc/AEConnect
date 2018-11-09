@@ -71,7 +71,9 @@ class DateTimeTransformer extends AbstractTransformerPlugin
             $type = Type::getType($type);
         }
 
-        $dateTime = new \DateTime($value);
+        $dateTime = false != preg_match('/_immutable$/', $type->getName()) ?
+            new \DateTimeImmutable($value) :
+            new \DateTime($value);
         if ($dateTime) {
             $payload->setValue($dateTime);
             return;
