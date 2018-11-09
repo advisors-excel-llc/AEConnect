@@ -112,6 +112,7 @@ class Configuration implements ConfigurationInterface
                             ->end()
                         ->end()
                     ->end()
+                    ->booleanNode('use_change_data_capture')->defaultTrue()->end()
                 ->end()
         ;
 
