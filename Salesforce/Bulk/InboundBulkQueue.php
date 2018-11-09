@@ -188,7 +188,7 @@ class InboundBulkQueue
         $metadataRegistry = $connection->getMetadataRegistry();
         $values           = [];
 
-        foreach ($metadataRegistry->findMetadataBySObjectType($object->Type) as $metadata) {
+        foreach ($metadataRegistry->findMetadataBySObjectType($object->getType()) as $metadata) {
             $class         = $metadata->getClassName();
             $manager       = $this->registry->getManagerForClass($class);
             $classMetadata = $manager->getClassMetadata($class);
