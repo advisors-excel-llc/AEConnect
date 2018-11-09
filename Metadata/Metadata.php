@@ -389,7 +389,9 @@ class Metadata
     public function getRecordTypeDeveloperName(string $recordTypeId)
     {
         foreach ($this->describe->getRecordTypeInfos() as $recordTypeInfo) {
-            if ($recordTypeInfo->getRecordTypeId() === $recordTypeId) {
+            $sysId  = strtolower(substr($recordTypeInfo->getRecordTypeId(), 0, 15));
+            $compId = strtolower(substr($recordTypeId, 0, 15));
+            if ($sysId === $compId) {
                 return $recordTypeInfo->getDeveloperName();
             }
         }
