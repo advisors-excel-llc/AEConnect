@@ -253,7 +253,12 @@ class DbalConnectionDriver
         $this->loadTopics($client, $config['topics']);
         $this->loadPlatformEvents($client, $config['platform_events']);
         $this->loadGenericEvents($client, $config['generic_events']);
-        $this->loadChangeEvents($client, $config['objects'], $connectionName);
+        $this->loadChangeEvents(
+            $client,
+            $config['objects'],
+            $connectionName,
+            $config['config']['use_change_data_capture']
+        );
 
         return $client;
     }
@@ -321,11 +326,16 @@ class DbalConnectionDriver
      * @param StreamingClient $client
      * @param array $config
      * @param string $connectionName
+     * @param bool $useCdc
      */
-    private function loadChangeEvents(StreamingClient $client, array $config, string $connectionName)
-    {
+    private function loadChangeEvents(
+        StreamingClient $client,
+        array $config,
+        string $connectionName,
+        bool $useCdc = true
+    ) {
         foreach ($config as $objectName) {
-            if (preg_match('/__(c|C)$/', $objectName) == true
+            if ($useCdc && (preg_match('/__(c|C)$/', $objectName) == true
                 || in_array(
                     $objectName,
                     [
@@ -347,7 +357,7 @@ class DbalConnectionDriver
                         'ServiceContract',
                         'User',
                     ]
-                )
+                ))
             ) {
                 $client->addSubscriber(new ChangeEvent($objectName));
             } else {
