@@ -78,10 +78,11 @@ class ConfigurationTest extends TestCase
                             ],
                         ],
                         'config'          => [
-                            'replay_start_id' => -2,
-                            'cache'           => [
+                            'replay_start_id'         => -2,
+                            'cache'                   => [
                                 'metadata_provider' => 'ae_connect_metadata',
                             ],
+                            'use_change_data_capture' => true,
                         ],
                         'platform_events' => [
                             'TestEvent__e',
@@ -141,10 +142,11 @@ class ConfigurationTest extends TestCase
                                 ],
                             ],
                             'config' => [
-                                'replay_start_id' => -1,
-                                'cache'           => [
+                                'replay_start_id'         => -1,
+                                'cache'                   => [
                                     'metadata_provider' => 'test_metadata',
                                 ],
+                                'use_change_data_capture' => true,
                             ],
                         ],
                     ],
@@ -171,10 +173,11 @@ class ConfigurationTest extends TestCase
                             ],
                         ],
                         'config'          => [
-                            'replay_start_id' => -2,
-                            'cache'           => [
+                            'replay_start_id'         => -2,
+                            'cache'                   => [
                                 'metadata_provider' => 'ae_connect_metadata',
                             ],
+                            'use_change_data_capture' => true,
                         ],
                         'platform_events' => [],
                         'objects'         => [],
@@ -183,7 +186,7 @@ class ConfigurationTest extends TestCase
                     'non_default' => [
                         'login'           => [
                             'entity' => 'App\\Entity\\Connection',
-                            'url'      => 'https://login.salesforce.com',
+                            'url'    => 'https://login.salesforce.com',
                         ],
                         'topics'          => [
                             'TestTopic'  => [
@@ -200,10 +203,11 @@ class ConfigurationTest extends TestCase
                             ],
                         ],
                         'config'          => [
-                            'replay_start_id' => -1,
-                            'cache'           => [
+                            'replay_start_id'         => -1,
+                            'cache'                   => [
                                 'metadata_provider' => 'test_metadata',
                             ],
+                            'use_change_data_capture' => true,
                         ],
                         'platform_events' => [],
                         'objects'         => [],
@@ -334,7 +338,7 @@ class ConfigurationTest extends TestCase
                     'paths'              => ['%kernel.project_dir%/src/App/Entity'],
                     'default_connection' => 'non_default',
                     'connections'        => [
-                        'default'     => [
+                        'default' => [
                             'login'  => [
                                 'key'      => 'client_key',
                                 'secret'   => 'client_secret',
@@ -360,10 +364,10 @@ class ConfigurationTest extends TestCase
                     'paths'              => ['%kernel.project_dir%/src/App/Entity'],
                     'default_connection' => 'non_default',
                     'connections'        => [
-                        'default'     => [
+                        'default' => [
                             'login'  => [
-                                'key'      => 'client_key',
-                                'secret'   => 'client_secret',
+                                'key'    => 'client_key',
+                                'secret' => 'client_secret',
                             ],
                             'topics' => [
                                 'TestTopic' => [

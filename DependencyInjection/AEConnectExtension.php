@@ -169,8 +169,11 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
         }
     }
 
-    private function createStreamingClientService(string $connectionName, array $config, ContainerBuilder $container)
-    {
+    private function createStreamingClientService(
+        string $connectionName,
+        array $config,
+        ContainerBuilder $container
+    ) {
         $def = $container->register("ae_connect.connection.$connectionName.streaming_client", Client::class)
                          ->setArgument('$client', new Reference("ae_connect.connection.$connectionName.bayeux_client"))
         ;
@@ -188,7 +191,13 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
         }
 
         if (!empty($config['objects'])) {
-            $this->buildObjects($connectionName, $config['objects'], $container, $def);
+            $this->buildObjects(
+                $connectionName,
+                $config['objects'],
+                $container,
+                $def,
+                $config['config']['use_change_data_capture']
+            );
         }
     }
 
@@ -249,15 +258,21 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
      * @param array $config
      * @param ContainerBuilder $container
      * @param Definition $def
+     * @param bool $useCdc
      */
-    private function buildObjects(string $name, array $config, ContainerBuilder $container, Definition $def): void
-    {
+    private function buildObjects(
+        string $name,
+        array $config,
+        ContainerBuilder $container,
+        Definition $def,
+        bool $useCdc = true
+    ): void {
         $pollObjects = $container->hasParameter('ae_connect.poll_objects')
             ? $container->getParameter('ae_connect.poll_objects')
             : [];
 
         foreach ($config as $objectName) {
-            if (preg_match('/__(c|C)$/', $objectName) == true
+            if ($useCdc && (preg_match('/__(c|C)$/', $objectName) == true
                 || in_array(
                     $objectName,
                     [
@@ -279,7 +294,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                         'ServiceContract',
                         'User',
                     ]
-                )
+                ))
             ) {
                 $event   = new Definition(ChangeEvent::class, [$objectName]);
                 $eventId = "ae_connect.connection.$name.change_event.$objectName";
