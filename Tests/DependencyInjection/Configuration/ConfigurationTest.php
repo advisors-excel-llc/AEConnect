@@ -21,6 +21,20 @@ class ConfigurationTest extends TestCase
         return new Configuration();
     }
 
+    public function testEmptyConnection()
+    {
+        $this->assertProcessedConfigurationEquals(
+            [
+                'ae_connection' => []
+            ],
+            [
+                'paths'              => [],
+                'default_connection' => 'default',
+                'connections'        => []
+            ]
+        );
+    }
+
     public function testSingleConnection()
     {
         $this->assertProcessedConfigurationEquals(

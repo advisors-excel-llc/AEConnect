@@ -21,7 +21,7 @@ class Configuration implements ConfigurationInterface
         $tree->root('ae_connect')
              ->children()
                 ->arrayNode('paths')
-                    ->isRequired()
+                    ->defaultValue([])
                     ->scalarPrototype()->end()
                 ->end()
                 ->scalarNode('default_connection')
@@ -33,7 +33,7 @@ class Configuration implements ConfigurationInterface
                 ->ifTrue(function ($value) {
                     $default = $value['default_connection'];
 
-                    return !array_key_exists($default, $value['connections']);
+                    return !empty($value['connections']) && !array_key_exists($default, $value['connections']);
                 })
                 ->thenInvalid('The value given for `default_connection` is not named in the `connections` array.')
             ->end()

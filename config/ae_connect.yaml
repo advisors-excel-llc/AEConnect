@@ -1,0 +1,3 @@
+ae_connect:
+    paths: ['%kernel.project_dir%/src/Entity']
+    connections: []

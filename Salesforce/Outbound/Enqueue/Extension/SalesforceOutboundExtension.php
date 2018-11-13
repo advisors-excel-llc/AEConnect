@@ -79,7 +79,8 @@ class SalesforceOutboundExtension implements ExtensionInterface
     public function onIdle(Context $context)
     {
         $now = new \DateTime();
-        $then = (clone $this->lastMessageReceived)->add(\DateInterval::createFromDateString($this->idleWindow));
+        $lastMessageReceieved = $this->lastMessageReceived ? $this->lastMessageReceived : new \DateTime();
+        $then = (clone $lastMessageReceieved)->add(\DateInterval::createFromDateString($this->idleWindow));
         if (null !== $this->lastMessageReceived && ($now >= $then || $this->outboundQueue->count() > 1000)) {
             $this->outboundQueue->send();
         }
