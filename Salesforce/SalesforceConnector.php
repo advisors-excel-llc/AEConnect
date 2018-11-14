@@ -87,7 +87,7 @@ class SalesforceConnector
         }
 
         try {
-            $result  = $this->sObjectCompiler->compile($entity, $connectionName);
+            $result = $this->sObjectCompiler->compile($entity, $connectionName);
         } catch (\RuntimeException $e) {
             $this->logger->warning($e->getMessage());
 
@@ -114,20 +114,27 @@ class SalesforceConnector
     }
 
     /**
-     * @param SObject $object
+     * @param SObject|SObject[] $object
      * @param string $intent
      * @param string $connectionName
      *
      * @return bool
      */
-    public function receive(SObject $object, string $intent, string $connectionName = 'default'): bool
+    public function receive($object, string $intent, string $connectionName = 'default'): bool
     {
         if (!$this->enabled) {
             return false;
         }
 
+        if (!is_array($object)) {
+            $object = [$object];
+        }
+
         try {
-            $entities = $this->entityCompiler->compile($object, $connectionName);
+            $entities = [];
+            foreach ($object as $obj) {
+                $entities = array_merge($entities, $this->entityCompiler->compile($obj, $connectionName));
+            }
         } catch (\RuntimeException $e) {
             $this->logger->warning($e->getMessage());
             $this->logger->debug($e->getTraceAsString());
@@ -135,9 +142,15 @@ class SalesforceConnector
             return false;
         }
 
+        $classes = [];
+
         foreach ($entities as $entity) {
-            $class   = ClassUtils::getClass($entity);
-            $manager = $this->registry->getManagerForClass($class);
+            $class     = ClassUtils::getClass($entity);
+            $manager   = $this->registry->getManagerForClass($class);
+
+            if (false === array_search($classes, $classes)) {
+                $classes[] = $class;
+            }
 
             switch ($intent) {
                 case SalesforceConsumerInterface::CREATED:
@@ -149,9 +162,12 @@ class SalesforceConnector
                     break;
             }
 
-            $manager->flush();
-
             $this->logger->info('{intent} entity of type {type}', ['intent' => $intent, 'type' => $class]);
+        }
+
+        foreach ($classes as $class) {
+            $manager = $this->registry->getManagerForClass($class);
+            $manager->flush();
         }
 
         return true;
