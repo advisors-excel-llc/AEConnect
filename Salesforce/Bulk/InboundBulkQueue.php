@@ -14,6 +14,8 @@ use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use AE\SalesforceRestSdk\Bulk\BatchInfo;
 use AE\SalesforceRestSdk\Bulk\JobInfo;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
+use AE\SalesforceRestSdk\Model\Rest\Count;
+use AE\SalesforceRestSdk\Model\SObject;
 use AE\SalesforceRestSdk\Psr7\CsvStream;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -62,13 +64,16 @@ class InboundBulkQueue
             $map = array_intersect($map, $types);
         }
 
-        foreach ($map as $type) {
-            $this->startJob($connection, $type, $updateEntities);
+        $counts = $connection->getRestClient()->count($map);
+
+        foreach ($counts as $count) {
+            $this->startJob($connection, $count, $updateEntities);
         }
     }
 
-    private function startJob(ConnectionInterface $connection, string $objectType, bool $updateEntities)
+    private function startJob(ConnectionInterface $connection, Count $count, bool $updateEntities)
     {
+        $objectType       = $count->getName();
         $fields           = [];
         $metadataRegistry = $connection->getMetadataRegistry();
 
@@ -89,66 +94,19 @@ class InboundBulkQueue
         }
 
         try {
-            $query  = "SELECT ".implode(',', $fields)." FROM $objectType";
-            $client = $connection->getBulkClient();
-            $job    = $client->createJob($objectType, JobInfo::QUERY, JobInfo::TYPE_CSV);
-
-            $this->logger->info(
-                'Bulk Job (ID# {job}) started for SObject Type {type}',
-                [
-                    'job'  => $job->getId(),
-                    'type' => $objectType,
-                ]
-            );
-
-            $batch = $client->addBatch($job, $query);
-
-            $this->logger->info(
-                'Batch (ID# {batch}) added to Job (ID# {job})',
-                [
-                    'job'   => $job->getId(),
-                    'batch' => $batch->getId(),
-                ]
-            );
-
-            do {
-                $batchStatus = $client->getBatchStatus($job, $batch->getId());
-                sleep(10);
-            } while (BatchInfo::STATE_COMPLETED !== $batchStatus->getState());
-
-            $this->logger->info(
-                'Batch (ID# {batch}) for Job (ID# {job}) is complete',
-                [
-                    'job'   => $job->getId(),
-                    'batch' => $batch->getId(),
-                ]
-            );
-
-            $batchResults = $client->getBatchResults($job, $batch->getId());
-
-            foreach ($batchResults as $resultId) {
-                $result = $client->getResult($job, $batch->getId(), $resultId);
-
-                if (null !== $result) {
-                    $this->saveResult($result, $objectType, $connection, $updateEntities);
-                }
+            $query = "SELECT ".implode(',', $fields)." FROM $objectType";
+            if ($count->getCount() > 10000) {
+                $this->processInBulk($connection, $objectType, $updateEntities, $query);
+            } else {
+                $this->processComposite($connection, $objectType, $updateEntities, $query);
             }
-
-            $client->closeJob($job);
-
-            $this->logger->info(
-                'Job (ID# {job}) is now closed',
-                [
-                    'job' => $job->getId(),
-                ]
-            );
         } catch (\Exception $e) {
             $this->logger->warning($e->getMessage());
             $this->logger->debug($e->getTraceAsString());
         }
     }
 
-    private function saveResult(
+    private function saveBulkResult(
         CsvStream $result,
         string $objectType,
         ConnectionInterface $connection,
@@ -156,6 +114,7 @@ class InboundBulkQueue
     ) {
         $fields = [];
         $count  = 0;
+        $objects = [];
 
         while (!$result->eof()) {
             $row = $result->read();
@@ -168,18 +127,30 @@ class InboundBulkQueue
             foreach ($row as $i => $value) {
                 $object->{$fields[$i]} = $value;
             }
-            $this->preProcess($object, $connection, $updateEntities);
             $object->__SOBJECT_TYPE__ = $objectType;
-            $this->connector->enable();
-            $this->connector->receive($object, SalesforceConsumerInterface::UPDATED, $connection->getName());
-            $this->connector->disable();
+            $this->preProcess($object, $connection, $updateEntities);
+            $objects[] = $object;
+
+            // Gotta break this up a little to precent 10000000s of records from being saved at once
+            if (count($objects) === 200) {
+                $this->connector->enable();
+                $this->connector->receive($objects, SalesforceConsumerInterface::UPDATED, $connection->getName());
+                $this->connector->disable();
+                $objects = [];
+            }
             ++$count;
+        }
+
+        if (!empty($objects)) {
+            $this->connector->enable();
+            $this->connector->receive($objects, SalesforceConsumerInterface::UPDATED, $connection->getName());
+            $this->connector->disable();
         }
 
         $this->logger->info('Processed {count} {type} objects.', ['count' => $count, 'type' => $objectType]);
     }
 
-    private function preProcess(CompositeSObject $object, ConnectionInterface $connection, bool $updateEntities)
+    private function preProcess(SObject $object, ConnectionInterface $connection, bool $updateEntities)
     {
         if (true === $updateEntities) {
             return;
@@ -188,14 +159,14 @@ class InboundBulkQueue
         $metadataRegistry = $connection->getMetadataRegistry();
         $values           = [];
 
-        foreach ($metadataRegistry->findMetadataBySObjectType($object->getType()) as $metadata) {
+        foreach ($metadataRegistry->findMetadataBySObjectType($object->__SOBJECT_TYPE__) as $metadata) {
             $class         = $metadata->getClassName();
             $manager       = $this->registry->getManagerForClass($class);
             $classMetadata = $manager->getClassMetadata($class);
             $ids           = [];
 
             foreach ($metadata->getIdentifyingFields() as $prop => $field) {
-                $value      = $object->$field;
+                $value = $object->$field;
                 if (null !== $value && is_string($value) && strlen($value) > 0) {
                     if ($classMetadata->getTypeOfField($prop) instanceof UuidType) {
                         $value = Uuid::fromString($value);
@@ -222,5 +193,96 @@ class InboundBulkQueue
         if (!empty($values)) {
             $object->setFields($values);
         }
+    }
+
+    /**
+     * @param ConnectionInterface $connection
+     * @param string $objectType
+     * @param bool $updateEntities
+     * @param $query
+     *
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    private function processInBulk(
+        ConnectionInterface $connection,
+        string $objectType,
+        bool $updateEntities,
+        $query
+    ): void {
+        $client = $connection->getBulkClient();
+        $job    = $client->createJob($objectType, JobInfo::QUERY, JobInfo::TYPE_CSV);
+
+        $this->logger->info(
+            'Bulk Job (ID# {job}) started for SObject Type {type}',
+            [
+                'job'  => $job->getId(),
+                'type' => $objectType,
+            ]
+        );
+
+        $batch = $client->addBatch($job, $query);
+
+        $this->logger->info(
+            'Batch (ID# {batch}) added to Job (ID# {job})',
+            [
+                'job'   => $job->getId(),
+                'batch' => $batch->getId(),
+            ]
+        );
+
+        do {
+            $batchStatus = $client->getBatchStatus($job, $batch->getId());
+            sleep(10);
+        } while (BatchInfo::STATE_COMPLETED !== $batchStatus->getState());
+
+        $this->logger->info(
+            'Batch (ID# {batch}) for Job (ID# {job}) is complete',
+            [
+                'job'   => $job->getId(),
+                'batch' => $batch->getId(),
+            ]
+        );
+
+        $batchResults = $client->getBatchResults($job, $batch->getId());
+
+        foreach ($batchResults as $resultId) {
+            $result = $client->getResult($job, $batch->getId(), $resultId);
+
+            if (null !== $result) {
+                $this->saveBulkResult($result, $objectType, $connection, $updateEntities);
+            }
+        }
+
+        $client->closeJob($job);
+
+        $this->logger->info(
+            'Job (ID# {job}) is now closed',
+            [
+                'job' => $job->getId(),
+            ]
+        );
+    }
+
+    public function processComposite(
+        ConnectionInterface $connection,
+        string $sObjectType,
+        bool $updateEntity,
+        string $query
+    ) {
+        $client = $connection->getRestClient()->getSObjectClient();
+        $query = $client->query($query);
+        do {
+            $records = $query->getRecords();
+            if (!empty($records)) {
+                foreach ($records as $record) {
+                    $record->__SOBJECT_TYPE__ = $sObjectType;
+                    $this->preProcess($record, $connection, $updateEntity);
+                }
+                $this->connector->enable();
+                $this->connector->receive($records, SalesforceConsumerInterface::UPDATED, $connection->getName());
+                $this->connector->disable();
+            }
+        } while (!($query = $client->query($query))->isDone());
     }
 }
