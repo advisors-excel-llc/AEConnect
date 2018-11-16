@@ -23,12 +23,19 @@ class ChannelConsumerCompilerPass implements CompilerPassInterface
                 $connections = explode(",", $attributes['connections']);
             } else {
                 $config      = $container->getExtensionConfig('ae_connect');
-                $connections = $config[0]['connections'];
+                $connections = [];
+                foreach ($config as $conf) {
+                    if (null === $conf) {
+                        continue;
+                    }
+
+                    $connections = array_merge($connections, array_keys($conf['connections']));
+                }
             }
 
             $subscriber = $container->getDefinition($id);
 
-            foreach (array_keys($connections) as $name) {
+            foreach ($connections as $name) {
                 $name = trim($name);
 
                 if ($container->hasDefinition("ae_connect.connection.$name.streaming_client")) {

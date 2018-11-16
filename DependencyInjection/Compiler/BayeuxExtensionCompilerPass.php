@@ -23,7 +23,13 @@ class BayeuxExtensionCompilerPass implements CompilerPassInterface
                 $connections = explode(",", $attributes['connections']);
             } else {
                 $config      = $container->getExtensionConfig('ae_connect');
-                $connections = array_keys($config[0]['connections']);
+                $connections = [];
+                foreach ($config as $conf) {
+                    if (null === $conf) {
+                        continue;
+                    }
+                    $connections = array_merge($connections, array_keys($conf['connections']));
+                }
             }
 
             foreach ($connections as $connection) {
