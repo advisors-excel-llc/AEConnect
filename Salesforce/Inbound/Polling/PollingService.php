@@ -143,10 +143,6 @@ class PollingService
                 }
             }
 
-            if (empty($updates) && empty($removals)) {
-                return;
-            }
-
             try {
                 $response = $client->sendCompositeRequest($builder->build());
                 foreach ($response->getCompositeResponse() as $result) {
@@ -158,6 +154,10 @@ class PollingService
                 }
             } catch (\RuntimeException $e) {
                 // A runtime exception is thrown if there are no requests to build.
+            }
+
+            if (empty($updates) && empty($removals)) {
+                return;
             }
 
             /**
