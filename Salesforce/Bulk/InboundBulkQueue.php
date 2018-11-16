@@ -112,8 +112,8 @@ class InboundBulkQueue
         ConnectionInterface $connection,
         bool $updateEntities
     ) {
-        $fields = [];
-        $count  = 0;
+        $fields  = [];
+        $count   = 0;
         $objects = [];
 
         while (!$result->eof()) {
@@ -271,7 +271,7 @@ class InboundBulkQueue
         string $query
     ) {
         $client = $connection->getRestClient()->getSObjectClient();
-        $query = $client->query($query);
+        $query  = $client->query($query);
         do {
             $records = $query->getRecords();
             if (!empty($records)) {
