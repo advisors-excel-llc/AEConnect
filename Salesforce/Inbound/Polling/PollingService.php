@@ -125,14 +125,19 @@ class PollingService
 
             foreach ($response->getCompositeResponse() as $result) {
                 if ($result->getHttpStatusCode() === 200) {
-                    list($action, $type) = explode('_', $result->getReferenceId());
+                    $parts = explode('_', $result->getReferenceId());
+                    $action = array_shift($parts);
+                    $type = implode('_', $parts);
+
                     $body = $result->getBody();
                     if ($body instanceof UpdatedResponse) {
                         $fields = [];
                         foreach ($connection->getMetadataRegistry()->findMetadataBySObjectType($type) as $metadata) {
                             $fields = array_merge($fields, array_values($metadata->getPropertyMap()));
                         }
-                        $builder->getSObjectCollection($type, $type, $body->getIds(), $fields);
+                        if ($body->getIds()) {
+                            $builder->getSObjectCollection($result->getReferenceId(), $type, $body->getIds(), $fields);
+                        }
                     } elseif ($body instanceof DeletedResponse) {
                         /** @var DeletedRecord[] $records */
                         $records = $body->getDeletedRecords();
