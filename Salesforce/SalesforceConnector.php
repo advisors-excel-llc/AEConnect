@@ -148,7 +148,7 @@ class SalesforceConnector
             $class     = ClassUtils::getClass($entity);
             $manager   = $this->registry->getManagerForClass($class);
 
-            if (false === array_search($classes, $classes)) {
+            if (false === array_search($class, $classes)) {
                 $classes[] = $class;
             }
 

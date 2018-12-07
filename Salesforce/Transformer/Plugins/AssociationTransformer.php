@@ -85,12 +85,6 @@ class AssociationTransformer extends AbstractTransformerPlugin
                 return false;
             }
 
-            $sfidProperty = $metadata->getIdFieldProperty();
-
-            if (null === $sfidProperty) {
-                return false;
-            }
-
             return true;
         } catch (MappingException $e) {
             $this->logger->error(
@@ -117,7 +111,14 @@ class AssociationTransformer extends AbstractTransformerPlugin
         $association   = $classMetadata->getAssociationMapping($payload->getPropertyName());
         $className     = $association['targetEntity'];
         $metadata      = $connection->getMetadataRegistry()->findMetadataByClass($className);
-        $sfidProperty  = $metadata->getIdFieldProperty();
+        $sfidProperty = $metadata->getIdFieldProperty();
+
+        // If the target entity doesn't have an SFID to lookup, can't locate the source
+        if (null === $sfidProperty) {
+            $payload->setValue(null);
+            return;
+        }
+
         /** @var EntityManager $manager */
         $manager = $this->managerRegistry->getManagerForClass($className);
         $repo    = $manager->getRepository($className);
@@ -140,6 +141,13 @@ class AssociationTransformer extends AbstractTransformerPlugin
         $className     = $association['targetEntity'];
         $metadata      = $connection->getMetadataRegistry()->findMetadataByClass($className);
         $sfidProperty  = $metadata->getIdFieldProperty();
+
+        // If the target entity doesn't have a SFID, we can't send Salesforce the ID
+        if (null === $sfidProperty) {
+            $payload->setValue(null);
+            return;
+        }
+
         /** @var EntityManager $manager */
         $manager            = $this->managerRegistry->getManagerForClass($className);
         $associatedMetadata = $manager->getClassMetadata($className);
