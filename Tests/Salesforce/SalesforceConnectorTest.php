@@ -141,6 +141,8 @@ class SalesforceConnectorTest extends DatabaseTestCase
             ]
         );
 
+        $account->__SOBJECT_TYPE__ = 'Account';
+
         $this->connector->receive($account, SalesforceConsumerInterface::CREATED);
 
         /** @var Account $account */
@@ -161,6 +163,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
                 'S3F__hcid__c' => $extId,
             ]
         );
+        $account->__SOBJECT_TYPE__ = 'Account';
 
         $this->connector->receive($account, SalesforceConsumerInterface::UPDATED);
 
@@ -182,6 +185,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
                 'LastName'  => 'Contact',
             ]
         );
+        $contact->__SOBJECT_TYPE__ = 'Contact';
 
         $this->connector->receive($contact, SalesforceConsumerInterface::CREATED);
 
@@ -202,6 +206,8 @@ class SalesforceConnectorTest extends DatabaseTestCase
             ]
         );
 
+        $contact->__SOBJECT_TYPE__ = 'Contact';
+
         $this->connector->receive($contact, SalesforceConsumerInterface::DELETED);
         /** @var Contact $contact */
         $contact = $this->doctrine->getManagerForClass(Contact::class)
@@ -212,6 +218,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $this->assertNull($contact);
 
         $account = new SObject(['Id' => '001000111000111ZAA', 'Name' => 'Test Recieving DBAL', 'Type' => 'Account']);
+        $account->__SOBJECT_TYPE__ = 'Account';
 
         $this->connector->receive($account, SalesforceConsumerInterface::CREATED, 'db_test_org1');
 
