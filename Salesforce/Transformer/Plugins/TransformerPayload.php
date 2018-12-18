@@ -98,7 +98,7 @@ class TransformerPayload
      *
      * @return TransformerPayload
      */
-    public function setPropertyName(string $propertyName): TransformerPayload
+    public function setPropertyName(?string $propertyName): TransformerPayload
     {
         $this->propertyName = $propertyName;
 
