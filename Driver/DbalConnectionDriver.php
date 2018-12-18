@@ -16,6 +16,7 @@ use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
+use AE\ConnectBundle\Metadata\RecordTypeMetadata;
 use AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService;
 use AE\ConnectBundle\Sdk\AuthProvider\MutableOAuthProvider;
 use AE\ConnectBundle\Streaming\ChangeEvent;
@@ -142,14 +143,23 @@ class DbalConnectionDriver
                             $metadata->setSObjectType($proxyMetadata->getSObjectType());
 
                             foreach ($proxyMetadata->getFieldMetadata() as $proxyFieldMeta) {
-                                $metadata->addFieldMetadata(
-                                    new FieldMetadata(
+                                if ($proxyFieldMeta instanceof RecordTypeMetadata) {
+                                    $fieldMetadata = new RecordTypeMetadata(
+                                        $metadata,
+                                        $proxyFieldMeta->getName(),
+                                        $proxyFieldMeta->getProperty()
+                                    );
+                                } else {
+                                    $fieldMetadata = new FieldMetadata(
                                         $metadata,
                                         $proxyFieldMeta->getProperty(),
                                         $proxyFieldMeta->getField(),
                                         $proxyFieldMeta->isIdentifier()
-                                    )
-                                );
+                                    );
+                                }
+                                $fieldMetadata->setSetter($proxyFieldMeta->getSetter());
+                                $fieldMetadata->setGetter($proxyFieldMeta->getGetter());
+                                $metadata->addFieldMetadata($fieldMetadata);
                             }
 
                             if (null !== $proxyMetadata->getConnectionNameField()) {
@@ -336,28 +346,28 @@ class DbalConnectionDriver
     ) {
         foreach ($config as $objectName) {
             if ($useCdc && (preg_match('/__(c|C)$/', $objectName) == true
-                || in_array(
-                    $objectName,
-                    [
-                        'Account',
-                        'Asset',
-                        'Campaign',
-                        'Case',
-                        'Contact',
-                        'ContractLineItem',
-                        'Entitlement',
-                        'Lead',
-                        'LiveChatTranscript',
-                        'Opportunity',
-                        'Order',
-                        'OrderItem',
-                        'Product2',
-                        'Quote',
-                        'QuoteLineItem',
-                        'ServiceContract',
-                        'User',
-                    ]
-                ))
+                    || in_array(
+                        $objectName,
+                        [
+                            'Account',
+                            'Asset',
+                            'Campaign',
+                            'Case',
+                            'Contact',
+                            'ContractLineItem',
+                            'Entitlement',
+                            'Lead',
+                            'LiveChatTranscript',
+                            'Opportunity',
+                            'Order',
+                            'OrderItem',
+                            'Product2',
+                            'Quote',
+                            'QuoteLineItem',
+                            'ServiceContract',
+                            'User',
+                        ]
+                    ))
             ) {
                 $client->addSubscriber(new ChangeEvent($objectName));
             } else {
