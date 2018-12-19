@@ -57,6 +57,11 @@ class Connection implements ConnectionInterface
     private $metadataRegistry;
 
     /**
+     * @var int
+     */
+    private $bulkApiMinCount;
+
+    /**
      * Connection constructor.
      *
      * @param string $name
@@ -65,6 +70,7 @@ class Connection implements ConnectionInterface
      * @param BulkClient $bulkClient
      * @param MetadataRegistry $metadataRegistry
      * @param bool $isDefault
+     * @param int $bulkApiMinCount
      */
     public function __construct(
         string $name,
@@ -72,7 +78,8 @@ class Connection implements ConnectionInterface
         RestClient $restClient,
         BulkClient $bulkClient,
         MetadataRegistry $metadataRegistry,
-        bool $isDefault = false
+        bool $isDefault = false,
+        int $bulkApiMinCount = 100000
     ) {
         $this->name             = $name;
         $this->streamingClient  = $streamingClient;
@@ -80,6 +87,7 @@ class Connection implements ConnectionInterface
         $this->bulkClient       = $bulkClient;
         $this->metadataRegistry = $metadataRegistry;
         $this->isDefault        = $isDefault;
+        $this->bulkApiMinCount  = $bulkApiMinCount;
     }
 
     /**
@@ -160,6 +168,11 @@ class Connection implements ConnectionInterface
     public function isDefault(): bool
     {
         return $this->isDefault;
+    }
+
+    public function getBulkApiMinCount(): int
+    {
+        return $this->bulkApiMinCount;
     }
 
     /**

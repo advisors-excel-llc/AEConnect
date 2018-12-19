@@ -39,8 +39,8 @@ class RecordType
             $this->connections = (array) $values['connections'];
         }
 
-        if (!empty($values) && array_key_exists(0, $values)) {
-            $this->name = $values[0];
+        if (!empty($values) && array_key_exists('value', $values)) {
+            $this->name = $values['value'];
         }
     }
 

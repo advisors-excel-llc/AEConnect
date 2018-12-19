@@ -23,4 +23,5 @@ interface ConnectionInterface
     public function getMetadataRegistry(): MetadataRegistry;
     public function isDefault(): bool;
     public function hydrateMetadataDescribe();
+    public function getBulkApiMinCount(): int;
 }
