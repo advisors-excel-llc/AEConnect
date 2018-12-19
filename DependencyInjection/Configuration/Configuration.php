@@ -113,6 +113,16 @@ class Configuration implements ConfigurationInterface
                         ->end()
                     ->end()
                     ->booleanNode('use_change_data_capture')->defaultTrue()->end()
+                    ->scalarNode('bulk_api_min_count')
+                        ->defaultValue(100000)
+                        ->cannotBeEmpty()
+                        ->validate()
+                            ->ifTrue(function ($value) {
+                                return !is_int($value) || $value < 0;
+                            })
+                            ->thenInvalid('The bulk_api_min_count must be an integer greater than 0')
+                        ->end()
+                    ->end()
                 ->end()
         ;
 

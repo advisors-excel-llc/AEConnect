@@ -56,6 +56,7 @@ class ConnectionManagerTest extends DatabaseTestCase
         $this->assertNotNull($connection->getRestClient());
         $this->assertNotNull($connection->getStreamingClient());
         $this->assertNotNull($connection->getBulkClient());
+        $this->assertEquals(100000, $connection->getBulkApiMinCount());
 
         $connection = $manager->getConnection('db_test_org1');
 
@@ -66,6 +67,7 @@ class ConnectionManagerTest extends DatabaseTestCase
         $this->assertNotNull($connection->getRestClient());
         $this->assertNotNull($connection->getStreamingClient());
         $this->assertNotNull($connection->getBulkClient());
+        $this->assertEquals(100000, $connection->getBulkApiMinCount());
 
         $metadata = $connection->getMetadataRegistry()->findMetadataByClass(Account::class);
         $this->assertNotNull($metadata);

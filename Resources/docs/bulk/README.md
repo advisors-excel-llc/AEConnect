@@ -47,3 +47,35 @@ $ bin/console ae_connect:bulk -c
 $ bin/console ae_connect:bulk default -t Account -t Contact -i -o -c
 
 ```
+
+## Configuration Options
+
+AE Connect tries to be smart about API limits. For that purpose, bulk operations don't actually use the Bulk API unless
+there are a LOT of objects to be imported. Defaulty, if there are less than 100,000 objects, the composite API is used
+instead.
+ 
+The Bulk API can make as few as three API requests just to start a job and then has to make additional requests to
+determine if a job is ready to be downloaded. And then additional requests to download the data. So for smaller batches
+of objects, calling the Bulk API can result in very very many API requests, each of which count against your limits.
+
+Using the Composite API for smaller batches allows as many as 5.000 objects to be queried and downloaded at one time.
+For 100,000 objects, this results in 20 requests. Depending on how busy your Salesforce Org is with other jobs, this
+could result in far more, or far less, requests.
+
+The Composite API is also faster, while the Bulk API is meant to happen asynchronously and in the background.
+
+In the end, 100,000, might not be a good number for your own needs. You may never want to use the Composite API or you may
+always want to use it. Because of this, this value is now configurable per connection.
+
+```yaml
+# app/config.yml (or config/ae_connect.yaml if you're using flex)
+
+ae_connect:
+    connections:
+        default: 
+            #...
+            config:
+                bulk_api_min_count: 0 # 0 will disable the Composite API and always use Bulk APi
+                # OR
+                bulk_api_min_count: !php/const PHP_INT_MAX # use something high to always use Composite Api
+```

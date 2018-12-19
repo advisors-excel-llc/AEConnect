@@ -20,7 +20,7 @@ class InboundBulkQueueTest extends DatabaseTestCase
     {
         return [
             Account::class,
-            Role::class
+            Role::class,
         ];
     }
 
@@ -28,7 +28,7 @@ class InboundBulkQueueTest extends DatabaseTestCase
     {
         /** @var ConnectionManagerInterface $connectionManager */
         $connectionManager = $this->get(ConnectionManagerInterface::class);
-        $connection = $connectionManager->getConnection();
+        $connection        = $connectionManager->getConnection();
 
         /** @var InboundBulkQueue $inboundQueue */
         $inboundQueue = $this->get(InboundBulkQueue::class);
@@ -42,11 +42,37 @@ class InboundBulkQueueTest extends DatabaseTestCase
 
         /** @var Role $role */
         $role = $this->doctrine->getManager()->getRepository(Role::class)
-                                             ->findOneBy(['developerName' => 'Director_of_Testing'])
+                               ->findOneBy(['developerName' => 'Director_of_Testing'])
         ;
 
         $this->assertNotNull($role);
         $this->assertNotNull($role->getParent());
         $this->assertEquals('CEO', $role->getParent()->getDeveloperName());
+    }
+
+    public function testProcessRecordTypeFiltering()
+    {
+        /** @var ConnectionManagerInterface $connectionManager */
+        $connectionManager = $this->get(ConnectionManagerInterface::class);
+        $connection        = $connectionManager->getConnection('db_test_org1');
+
+        /** @var InboundBulkQueue $inboundQueue */
+        $inboundQueue = $this->get(InboundBulkQueue::class);
+
+        $inboundQueue->process($connection, ['Account'], true);
+
+        /** @var array|Account[] $accounts */
+        $accounts = $this->doctrine->getManager()->getRepository(Account::class)
+                                                 ->findBy(['connection' => 'db_test_org1']);
+        $this->assertNotEmpty($accounts);
+
+        $filtered = array_filter(
+            $accounts,
+            function (Account $account) {
+                return $account->getName() === 'Test Client Account';
+            }
+        );
+
+        $this->assertCount(1, $filtered);
     }
 }

@@ -25,12 +25,12 @@ class ConfigurationTest extends TestCase
     {
         $this->assertProcessedConfigurationEquals(
             [
-                'ae_connection' => []
+                'ae_connection' => [],
             ],
             [
                 'paths'              => [],
                 'default_connection' => 'default',
-                'connections'        => []
+                'connections'        => [],
             ]
         );
     }
@@ -97,6 +97,7 @@ class ConfigurationTest extends TestCase
                                 'metadata_provider' => 'ae_connect_metadata',
                             ],
                             'use_change_data_capture' => true,
+                            'bulk_api_min_count'      => 100000,
                         ],
                         'platform_events' => [
                             'TestEvent__e',
@@ -161,6 +162,7 @@ class ConfigurationTest extends TestCase
                                     'metadata_provider' => 'test_metadata',
                                 ],
                                 'use_change_data_capture' => true,
+                                'bulk_api_min_count'      => PHP_INT_MAX,
                             ],
                         ],
                     ],
@@ -192,6 +194,7 @@ class ConfigurationTest extends TestCase
                                 'metadata_provider' => 'ae_connect_metadata',
                             ],
                             'use_change_data_capture' => true,
+                            'bulk_api_min_count'      => 100000,
                         ],
                         'platform_events' => [],
                         'objects'         => [],
@@ -222,6 +225,7 @@ class ConfigurationTest extends TestCase
                                 'metadata_provider' => 'test_metadata',
                             ],
                             'use_change_data_capture' => true,
+                            'bulk_api_min_count'      => PHP_INT_MAX,
                         ],
                         'platform_events' => [],
                         'objects'         => [],

@@ -130,7 +130,12 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                         $container,
                         $config['default_connection'] === $name
                     );
-                    $this->createConnectionService($name, $name === $config['default_connection'], $container);
+                    $this->createConnectionService(
+                        $name,
+                        $name === $config['default_connection'],
+                        $container,
+                        $connection['config']['bulk_api_min_count']
+                    );
 
                     if ($name !== "default" && $name === $config['default_connection']) {
                         $container->setAlias("ae_connect.connection.default", new Alias("ae_connect.connection.$name"));
@@ -273,28 +278,28 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
         foreach ($config as $objectName) {
             if ($useCdc && (preg_match('/__(c|C)$/', $objectName) == true
-                || in_array(
-                    $objectName,
-                    [
-                        'Account',
-                        'Asset',
-                        'Campaign',
-                        'Case',
-                        'Contact',
-                        'ContractLineItem',
-                        'Entitlement',
-                        'Lead',
-                        'LiveChatTranscript',
-                        'Opportunity',
-                        'Order',
-                        'OrderItem',
-                        'Product2',
-                        'Quote',
-                        'QuoteLineItem',
-                        'ServiceContract',
-                        'User',
-                    ]
-                ))
+                    || in_array(
+                        $objectName,
+                        [
+                            'Account',
+                            'Asset',
+                            'Campaign',
+                            'Case',
+                            'Contact',
+                            'ContractLineItem',
+                            'Entitlement',
+                            'Lead',
+                            'LiveChatTranscript',
+                            'Opportunity',
+                            'Order',
+                            'OrderItem',
+                            'Product2',
+                            'Quote',
+                            'QuoteLineItem',
+                            'ServiceContract',
+                            'User',
+                        ]
+                    ))
             ) {
                 $event   = new Definition(ChangeEvent::class, [$objectName]);
                 $eventId = "ae_connect.connection.$name.change_event.$objectName";
@@ -394,6 +399,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
      * @param array $config
      * @param string $connectionName
      * @param ContainerBuilder $container
+     * @param bool $isDefault
      */
     private function createMetadataRegistryService(
         array $config,
@@ -420,11 +426,13 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
      * @param string $connectionName
      * @param bool $isDefault
      * @param ContainerBuilder $container
+     * @param int $bulkQueryMinCount
      */
     private function createConnectionService(
         string $connectionName,
         bool $isDefault,
-        ContainerBuilder $container
+        ContainerBuilder $container,
+        int $bulkQueryMinCount = 100000
     ): void {
         $container->register("ae_connect.connection.$connectionName", Connection::class)
                   ->setArguments(
@@ -443,6 +451,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                               "ae_connect.connection.$connectionName.metadata_registry"
                           ),
                           '$isDefault'        => $isDefault,
+                          '$bulkApiMinCount'  => $bulkQueryMinCount,
                       ]
                   )
                   ->setPublic(true)

@@ -14,6 +14,7 @@ use Ramsey\Uuid\Uuid;
 /**
  * Class Account
  * @AEConnect\SObjectType(name="Account", connections={"*"})
+ * @AEConnect\RecordType("Client", connections={"db_test"})
  * @ORM\Entity()
  * @ORM\Table("account")
  */

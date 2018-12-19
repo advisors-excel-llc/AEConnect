@@ -17,6 +17,7 @@ use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
 use AE\SalesforceRestSdk\Model\Rest\Count;
 use AE\SalesforceRestSdk\Model\SObject;
 use AE\SalesforceRestSdk\Psr7\CsvStream;
+use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -43,6 +44,14 @@ class InboundBulkQueue
      */
     private $registry;
 
+    /**
+     * InboundBulkQueue constructor.
+     *
+     * @param SObjectTreeMaker $treeMaker
+     * @param SalesforceConnector $connector
+     * @param RegistryInterface $registry
+     * @param null|LoggerInterface $logger
+     */
     public function __construct(
         SObjectTreeMaker $treeMaker,
         SalesforceConnector $connector,
@@ -71,11 +80,18 @@ class InboundBulkQueue
         }
     }
 
+    /**
+     * @param ConnectionInterface $connection
+     * @param Count $count
+     * @param bool $updateEntities
+     */
     private function startJob(ConnectionInterface $connection, Count $count, bool $updateEntities)
     {
         $objectType       = $count->getName();
         $fields           = [];
+        $recordTypes      = [];
         $metadataRegistry = $connection->getMetadataRegistry();
+        $i = 0;
 
         foreach ($metadataRegistry->findMetadataBySObjectType($objectType) as $metadata) {
             if (!$metadata->getDescribe()->isQueryable()) {
@@ -87,6 +103,23 @@ class InboundBulkQueue
                     $fields[] = $field;
                 }
             }
+
+            // If the metadata has a class-level RecordType annotation, let's use it to filter
+            // but the moment there's metadata for the same type that doesn't have a class-level
+            // RecordType annotation, we need to get records of any record type and filter them out
+            // locally
+            if (in_array('RecordTypeId', $fields)) {
+                $recordType = $metadata->getRecordType();
+                if (null !== $recordType && null !== $recordType->getName() && ($i === 0 || !empty($recordTypes))) {
+                    $recordTypes[] = $metadata->getRecordTypeId($recordType->getName());
+                } else {
+                    $recordTypes = [];
+                }
+            } else {
+                $recordTypes = [];
+            }
+
+            ++$i;
         }
 
         if (empty($fields)) {
@@ -95,7 +128,12 @@ class InboundBulkQueue
 
         try {
             $query = "SELECT ".implode(',', $fields)." FROM $objectType";
-            if ($count->getCount() > 10000) {
+
+            if (!empty($recordTypes)) {
+                $query .= " WHERE RecordTypeId IN ('".implode("', '", $recordTypes)."')";
+            }
+
+            if ($count->getCount() >= $connection->getBulkApiMinCount()) {
                 $this->processInBulk($connection, $objectType, $updateEntities, $query);
             } else {
                 $this->processComposite($connection, $objectType, $updateEntities, $query);
@@ -103,9 +141,18 @@ class InboundBulkQueue
         } catch (\Exception $e) {
             $this->logger->warning($e->getMessage());
             $this->logger->debug($e->getTraceAsString());
+        } catch (GuzzleException $e) {
+            $this->logger->warning($e->getMessage());
+            $this->logger->debug($e->getTraceAsString());
         }
     }
 
+    /**
+     * @param CsvStream $result
+     * @param string $objectType
+     * @param ConnectionInterface $connection
+     * @param bool $updateEntities
+     */
     private function saveBulkResult(
         CsvStream $result,
         string $objectType,
@@ -150,6 +197,11 @@ class InboundBulkQueue
         $this->logger->info('Processed {count} {type} objects.', ['count' => $count, 'type' => $objectType]);
     }
 
+    /**
+     * @param SObject $object
+     * @param ConnectionInterface $connection
+     * @param bool $updateEntities
+     */
     private function preProcess(SObject $object, ConnectionInterface $connection, bool $updateEntities)
     {
         if (true === $updateEntities) {
@@ -264,6 +316,15 @@ class InboundBulkQueue
         );
     }
 
+    /**
+     * @param ConnectionInterface $connection
+     * @param string $sObjectType
+     * @param bool $updateEntity
+     * @param string $query
+     *
+     * @throws GuzzleException
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     */
     public function processComposite(
         ConnectionInterface $connection,
         string $sObjectType,
