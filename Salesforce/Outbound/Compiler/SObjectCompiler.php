@@ -122,6 +122,9 @@ class SObjectCompiler
         switch ($intent) {
             case CompilerResult::INSERT:
                 $this->compileForInsert($entity, $metadata, $classMetadata, $sObject);
+                if (null !== $sObject->Id) {
+                    $intent = CompilerResult::UPDATE;
+                }
                 break;
             case CompilerResult::UPDATE:
                 $this->compileForUpdate($entity, $changeSet, $metadata, $classMetadata, $sObject);
