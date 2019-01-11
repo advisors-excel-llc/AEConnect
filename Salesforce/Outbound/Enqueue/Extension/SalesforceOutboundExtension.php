@@ -29,7 +29,7 @@ class SalesforceOutboundExtension implements ExtensionInterface
     public function __construct(OutboundQueue $queue, string $idleWindow = '10 seconds')
     {
         $this->outboundQueue = $queue;
-        $this->idleWindow = $idleWindow;
+        $this->idleWindow    = $idleWindow;
     }
 
     /**
@@ -80,7 +80,9 @@ class SalesforceOutboundExtension implements ExtensionInterface
     {
         $now = new \DateTime();
         $lastMessageReceieved = $this->lastMessageReceived ? $this->lastMessageReceived : new \DateTime();
-        $then = (clone $lastMessageReceieved)->add(\DateInterval::createFromDateString($this->idleWindow));
+        $then = (clone $lastMessageReceieved)->add(
+            \DateInterval::createFromDateString($this->idleWindow)
+        );
         if (null !== $this->lastMessageReceived && ($now >= $then || $this->outboundQueue->count() > 1000)) {
             $this->outboundQueue->send();
         }

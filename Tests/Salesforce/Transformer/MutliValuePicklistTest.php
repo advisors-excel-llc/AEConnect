@@ -50,6 +50,7 @@ class MutliValuePicklistTest extends KernelTestCase
             ->setEntity($entity)
             ->setPropertyName($fieldMetadata->getProperty())
             ->setFieldName($fieldMetadata->getField())
+            ->setFieldMetadata($fieldMetadata->describe())
             ->setMetadata($metadata)
             ->setClassMetadata($this->registry->getManager()->getClassMetadata(Account::class))
             ;
@@ -84,6 +85,7 @@ class MutliValuePicklistTest extends KernelTestCase
                                      ->setEntity($sObject)
                                      ->setPropertyName($fieldMetadata->getProperty())
                                      ->setFieldName($fieldMetadata->getField())
+                                     ->setFieldMetadata($fieldMetadata->describe())
                                      ->setMetadata($metadata)
                                      ->setClassMetadata(
                                          $this->registry->getManager()->getClassMetadata($metadata->getClassName())

@@ -9,6 +9,7 @@
 namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 
 use AE\ConnectBundle\Metadata\Metadata;
+use AE\SalesforceRestSdk\Model\Rest\Metadata\Field;
 use Doctrine\ORM\Mapping\ClassMetadata;
 
 class TransformerPayload
@@ -44,6 +45,11 @@ class TransformerPayload
      * @var ClassMetadata
      */
     private $classMetadata;
+
+    /**
+     * @var Field|null
+     */
+    private $fieldMetadata;
 
     /**
      * @var int
@@ -181,6 +187,26 @@ class TransformerPayload
     public function setClassMetadata(ClassMetadata $classMetadata): TransformerPayload
     {
         $this->classMetadata = $classMetadata;
+
+        return $this;
+    }
+
+    /**
+     * @return Field|null
+     */
+    public function getFieldMetadata(): ?Field
+    {
+        return $this->fieldMetadata;
+    }
+
+    /**
+     * @param Field|null $fieldMetadata
+     *
+     * @return TransformerPayload
+     */
+    public function setFieldMetadata(?Field $fieldMetadata): TransformerPayload
+    {
+        $this->fieldMetadata = $fieldMetadata;
 
         return $this;
     }

@@ -43,9 +43,9 @@ class AssociationTransformer extends AbstractTransformerPlugin
         ValidatorInterface $validator,
         ?LoggerInterface $logger = null
     ) {
-        $this->connectionManager  = $connectionManager;
-        $this->managerRegistry    = $managerRegistry;
-        $this->validator          = $validator;
+        $this->connectionManager = $connectionManager;
+        $this->managerRegistry   = $managerRegistry;
+        $this->validator         = $validator;
 
         $this->setLogger($logger ?: new NullLogger());
     }
@@ -111,11 +111,12 @@ class AssociationTransformer extends AbstractTransformerPlugin
         $association   = $classMetadata->getAssociationMapping($payload->getPropertyName());
         $className     = $association['targetEntity'];
         $metadata      = $connection->getMetadataRegistry()->findMetadataByClass($className);
-        $sfidProperty = $metadata->getIdFieldProperty();
+        $sfidProperty  = $metadata->getIdFieldProperty();
 
         // If the target entity doesn't have an SFID to lookup, can't locate the source
         if (null === $sfidProperty) {
             $payload->setValue(null);
+
             return;
         }
 
@@ -145,6 +146,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
         // If the target entity doesn't have a SFID, we can't send Salesforce the ID
         if (null === $sfidProperty) {
             $payload->setValue(null);
+
             return;
         }
 
@@ -155,7 +157,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
         $sfid               = $associatedMetadata->getFieldValue($entity, $sfidProperty);
 
         if (null === $sfid) {
-            $groups   = [
+            $groups = [
                 'ae_connect_outbound',
                 'ae_connect_outbound.'.$connection->getName(),
             ];

@@ -16,8 +16,8 @@ use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
-use AE\SalesforceRestSdk\AuthProvider\OAuthProvider;
-use AE\SalesforceRestSdk\AuthProvider\SoapProvider;
+use AE\ConnectBundle\AuthProvider\OAuthProvider;
+use AE\ConnectBundle\AuthProvider\SoapProvider;
 use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
 use AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension;
 use AE\ConnectBundle\Streaming\Client;
@@ -78,6 +78,12 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 ];
             }
 
+            if (!array_key_exists('ae_connect_auth', $providers)) {
+                $providerConfig['ae_connect_auth'] = [
+                    'type' => 'file_system',
+                ];
+            }
+
             $container->prependExtensionConfig(
                 'doctrine_cache',
                 [
@@ -100,6 +106,10 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
         if (count($connections) > 0) {
             foreach ($connections as $name => $connection) {
+                // Alias Auth Provider Cache
+                $cacheProviderId = "doctrine_cache.providers.{$connection['config']['cache']['auth_provider']}";
+                $container->setAlias("ae_connect.connection.$name.cache.auth_provider", $cacheProviderId);
+
                 if (isset($connection['login']['entity'])) {
                     $this->createMetadataRegistryService(
                         $connection,
@@ -151,6 +161,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
             $container->register("ae_connect.connection.$connectionName.auth_provider", OAuthProvider::class)
                       ->setArguments(
                           [
+                              new Reference("ae_connect.connection.$connectionName.cache.auth_provider"),
                               $config['key'],
                               $config['secret'],
                               $config['url'],
@@ -164,6 +175,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
             $container->register("ae_connect.connection.$connectionName.auth_provider", SoapProvider::class)
                       ->setArguments(
                           [
+                              new Reference("ae_connect.connection.$connectionName.cache.auth_provider"),
                               $config['username'],
                               $config['password'],
                               $config['url'],

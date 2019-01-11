@@ -44,6 +44,7 @@ class RecordTypeTransformerTest extends KernelTestCase
         $payload->setFieldName($fieldMetadata->getField());
         $payload->setPropertyName($fieldMetadata->getProperty());
         $payload->setValue($fieldMetadata->getValueFromEntity($entity));
+        $payload->setFieldMetadata($fieldMetadata->describe());
         $payload->setEntity($entity);
         $payload->setMetadata($metadata);
 
@@ -80,6 +81,7 @@ class RecordTypeTransformerTest extends KernelTestCase
         $payload->setFieldName($fieldMetadata->getField());
         $payload->setPropertyName($fieldMetadata->getProperty());
         $payload->setValue($sObject->RecordTypeId);
+        $payload->setFieldMetadata($fieldMetadata->describe());
         $payload->setMetadata($metadata);
         $payload->setEntity($sObject);
 

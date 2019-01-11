@@ -22,7 +22,7 @@ class CompoundFieldTransformerPlugin implements TransformerPluginInterface
     public function transform(TransformerPayload $payload)
     {
         /** @var array $value */
-        $value = $payload->getValue();
+        $value    = $payload->getValue();
         $metadata = $payload->getMetadata();
 
         // If the Array is a compound field, the array keys should be other fields
