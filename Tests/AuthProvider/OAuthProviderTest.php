@@ -68,7 +68,12 @@ class OAuthProviderTest extends KernelTestCase
 
         $token = $this->authProvider->getToken();
         $this->assertTrue($this->cache->contains($clientId->getValue($this->authProvider)));
-        $this->assertEquals($token, $this->cache->fetch($clientId->getValue($this->authProvider)));
+        $values = $this->cache->fetch($clientId->getValue($this->authProvider));
+
+        $this->assertEquals($token, $values['token']);
+        $this->assertNotNull($values['instanceUrl']);
+        $this->assertNotNull($values['identityUrl']);
+
         $authProvider->authorize();
         $this->assertEquals($token, $authProvider->getToken());
     }

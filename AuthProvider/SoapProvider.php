@@ -32,10 +32,22 @@ class SoapProvider extends BaseAuthProvider
     {
         $key = "SOAP_{$this->username}";
         $oldToken = null;
+        $ref = new \ReflectionClass(BaseAuthProvider::class);
 
         if (!$reauth && null === $this->token && $this->cache->contains($key)) {
-            $this->token = $oldToken = $this->cache->fetch($key);
-            $ref = new \ReflectionClass(BaseAuthProvider::class);
+            $values = $this->cache->fetch($key);
+
+            $this->token = $oldToken = $values['token'];
+            $this->tokenType = $values['tokenType'];
+
+            $instUrl = $ref->getProperty('instanceUrl');
+            $instUrl->setAccessible(true);
+            $instUrl->setValue($this, $values['instanceUrl']);
+
+            $idUrl = $ref->getProperty('identityUrl');
+            $idUrl->setAccessible(true);
+            $idUrl->setValue($this, $values['identityUrl']);
+
             $prop = $ref->getProperty('isAuthorized');
             $prop->setAccessible(true);
             $prop->setValue($this, true);
@@ -44,7 +56,18 @@ class SoapProvider extends BaseAuthProvider
         $header = parent::authorize($reauth);
 
         if ($this->token !== $oldToken) {
-            $this->cache->save($key, $this->token);
+            $prop = $ref->getProperty('identityUrl');
+            $prop->setAccessible(true);
+
+            $this->cache->save(
+                $key,
+                [
+                    'tokenType'    => $this->tokenType,
+                    'token'        => $this->token,
+                    'instanceUrl'  => $this->getInstanceUrl(),
+                    'identityUrl'  => $prop->getValue($this),
+                ]
+            );
         }
 
         return $header;
