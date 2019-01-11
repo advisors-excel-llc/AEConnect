@@ -35,10 +35,9 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
     protected function supportsInbound(TransformerPayload $payload): bool
     {
         $value     = $payload->getValue();
-        $metadata  = $payload->getMetadata();
         $classMeta = $payload->getClassMetadata();
-        $type      = $classMeta->getTypeOfField($metadata->getPropertyByField($payload->getFieldName()));
-        $field     = $metadata->describeField($payload->getFieldName());
+        $type      = $classMeta->getTypeOfField($payload->getPropertyName());
+        $field     = $payload->getFieldMetadata();
 
         if (is_string($type)) {
             $type = Type::getType($type);
@@ -52,8 +51,7 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
     protected function supportsOutbound(TransformerPayload $payload): bool
     {
         $value    = $payload->getValue();
-        $metadata = $payload->getMetadata();
-        $field    = $metadata->describeFieldByProperty($payload->getPropertyName());
+        $field    = $payload->getFieldMetadata();
 
         return is_array($value)
             && count($field->getPicklistValues()) > 0 && $field->getLength() === 4099;
@@ -61,8 +59,6 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
 
     /**
      * @param TransformerPayload $payload
-     *
-     * @throws \Doctrine\DBAL\DBALException
      */
     public function transformInbound(TransformerPayload $payload)
     {
@@ -73,11 +69,13 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
         );
     }
 
+    /**
+     * @param TransformerPayload $payload
+     */
     public function transformOutbound(TransformerPayload $payload)
     {
         $value    = $payload->getValue();
-        $metadata = $payload->getMetadata();
-        $field    = $metadata->describeFieldByProperty($payload->getPropertyName());
+        $field    = $payload->getFieldMetadata();
 
         if ($field->isRestrictedPicklist()) {
             $values = $field->getPicklistValues();

@@ -55,10 +55,10 @@ class SObjectCompiler
         ValidatorInterface $validator,
         ?LoggerInterface $logger = null
     ) {
-        $this->connectionManager  = $connectionManager;
-        $this->registry           = $registry;
-        $this->transformer        = $transformer;
-        $this->validator          = $validator;
+        $this->connectionManager = $connectionManager;
+        $this->registry          = $registry;
+        $this->transformer       = $transformer;
+        $this->validator         = $validator;
 
         $this->setLogger($logger ?: new NullLogger());
     }
@@ -187,10 +187,16 @@ class SObjectCompiler
         Metadata $metadata,
         ClassMetadata $classMetadata
     ) {
-        $payload = TransformerPayload::outbound();
+        $payload       = TransformerPayload::outbound();
+        $fieldName     = $metadata->getFieldByProperty($property);
+        $fieldMetadata = null !== $fieldName
+            ? $metadata->describeField($fieldName)
+            : $metadata->describeFieldByProperty($property);
+
         $payload->setValue($value)
                 ->setPropertyName($property)
-                ->setFieldName($metadata->getFieldByProperty($property))
+                ->setFieldName($fieldName)
+                ->setFieldMetadata($fieldMetadata)
                 ->setEntity($entity)
                 ->setMetadata($metadata)
                 ->setClassMetadata($classMetadata)
