@@ -27,8 +27,7 @@ class DateTimeTransformer extends AbstractTransformerPlugin
     protected function supportsInbound(TransformerPayload $payload): bool
     {
         $value    = $payload->getValue();
-        $metadata = $payload->getMetadata();
-        $field    = $metadata->describeField($payload->getFieldName());
+        $field    = $payload->getFieldMetadata();
 
         return (is_string($value) || $value instanceof \DateTimeInterface)
             && in_array(strtolower($field->getSoapType()), ['xsd:date', 'xsd:datetime', 'xsd:time']);
@@ -37,8 +36,7 @@ class DateTimeTransformer extends AbstractTransformerPlugin
     protected function supportsOutbound(TransformerPayload $payload): bool
     {
         $value    = $payload->getValue();
-        $metadata = $payload->getMetadata();
-        $field    = $metadata->describeFieldByProperty($payload->getPropertyName());
+        $field    = $payload->getFieldMetadata();
 
         return $value instanceof \DateTimeInterface
             && in_array(strtolower($field->getSoapType()), ['xsd:date', 'xsd:datetime', 'xsd:time']);

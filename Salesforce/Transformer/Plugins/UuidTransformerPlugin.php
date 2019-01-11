@@ -24,9 +24,7 @@ class UuidTransformerPlugin extends AbstractTransformerPlugin
     protected function supportsOutbound(TransformerPayload $payload): bool
     {
         return $payload->getValue() instanceof UuidInterface
-            && $payload->getMetadata()->getMetadataForField($payload->getFieldName())
-                                      ->describe()
-                                      ->getSoapType() === 'xsd:string'
+            && $payload->getFieldMetadata()->getSoapType() === 'xsd:string'
             ;
     }
 
