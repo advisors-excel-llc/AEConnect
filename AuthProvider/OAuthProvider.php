@@ -37,11 +37,23 @@ class OAuthProvider extends BaseAuthProvider
     public function authorize($reauth = false): string
     {
         $oldToken = null;
+        $ref      = new \ReflectionClass(BaseAuthProvider::class);
 
         if (!$reauth && null === $this->token && $this->cache->contains($this->clientId)) {
-            $this->token = $oldToken = $this->cache->fetch($this->clientId);
-            $ref = new \ReflectionClass(BaseAuthProvider::class);
-            $prop = $ref->getProperty('isAuthorized');
+            $values = $this->cache->fetch($this->clientId);
+            $this->token = $oldToken = $values['token'];
+            $this->tokenType = $values['tokenType'];
+            $this->refreshToken = $values['refreshToken'];
+
+            $instUrl = $ref->getProperty('instanceUrl');
+            $instUrl->setAccessible(true);
+            $instUrl->setValue($this, $values['instanceUrl']);
+
+            $idUrl = $ref->getProperty('identityUrl');
+            $idUrl->setAccessible(true);
+            $idUrl->setValue($this, $values['identityUrl']);
+
+            $prop        = $ref->getProperty('isAuthorized');
             $prop->setAccessible(true);
             $prop->setValue($this, true);
         }
@@ -49,7 +61,19 @@ class OAuthProvider extends BaseAuthProvider
         $header = parent::authorize($reauth);
 
         if ($this->token !== $oldToken) {
-            $this->cache->save($this->clientId, $this->token);
+            $prop = $ref->getProperty('identityUrl');
+            $prop->setAccessible(true);
+
+            $this->cache->save(
+                $this->clientId,
+                [
+                    'tokenType'    => $this->tokenType,
+                    'token'        => $this->token,
+                    'instanceUrl'  => $this->getInstanceUrl(),
+                    'refreshToken' => $this->getRefreshToken(),
+                    'identityUrl'  => $prop->getValue($this),
+                ]
+            );
         }
 
         return $header;
