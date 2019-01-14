@@ -16,25 +16,8 @@ use AE\ConnectBundle\Tests\KernelTestCase;
 use AE\SalesforceRestSdk\Model\SObject;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
-class MutliValuePicklistTest extends KernelTestCase
+class MutliValuePicklistTest extends AbstractTransformerTest
 {
-    /**
-     * @var ConnectionManagerInterface
-     */
-    private $connectionManager;
-
-    /**
-     * @var RegistryInterface
-     */
-    private $registry;
-
-    protected function setUp()
-    {
-        parent::setUp();
-        $this->connectionManager = $this->get(ConnectionManagerInterface::class);
-        $this->registry          = $this->get(RegistryInterface::class);
-    }
-
     public function testOutbound()
     {
         $entity = new Account();
@@ -50,7 +33,7 @@ class MutliValuePicklistTest extends KernelTestCase
             ->setEntity($entity)
             ->setPropertyName($fieldMetadata->getProperty())
             ->setFieldName($fieldMetadata->getField())
-            ->setFieldMetadata($fieldMetadata->describe())
+            ->setFieldMetadata($fieldMetadata)
             ->setMetadata($metadata)
             ->setClassMetadata($this->registry->getManager()->getClassMetadata(Account::class))
             ;
@@ -85,7 +68,7 @@ class MutliValuePicklistTest extends KernelTestCase
                                      ->setEntity($sObject)
                                      ->setPropertyName($fieldMetadata->getProperty())
                                      ->setFieldName($fieldMetadata->getField())
-                                     ->setFieldMetadata($fieldMetadata->describe())
+                                     ->setFieldMetadata($fieldMetadata)
                                      ->setMetadata($metadata)
                                      ->setClassMetadata(
                                          $this->registry->getManager()->getClassMetadata($metadata->getClassName())

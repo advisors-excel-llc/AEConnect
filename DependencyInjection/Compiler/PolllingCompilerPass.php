@@ -19,10 +19,11 @@ class PolllingCompilerPass implements CompilerPassInterface
      */
     public function process(ContainerBuilder $container)
     {
-        $pollObjects = $container->getParameter('ae_connect.poll_objects');
-
-        if (!empty($pollObjects) && $container->hasDefinition(PollingService::class)) {
-            $def = $container->getDefinition(PollingService::class);
+        if ($container->hasDefinition(PollingService::class)) {
+            $def         = $container->getDefinition(PollingService::class);
+            $pollObjects = $container->hasParameter('ae_connect.poll_objects')
+                ? $container->getParameter('ae_connect.poll_objects')
+                : [];
 
             foreach ($pollObjects as $connectionName => $objects) {
                 foreach ($objects as $object) {

@@ -15,20 +15,8 @@ use AE\ConnectBundle\Tests\Entity\TestObject;
 use AE\ConnectBundle\Tests\KernelTestCase;
 use AE\SalesforceRestSdk\Model\SObject;
 
-class RecordTypeTransformerTest extends KernelTestCase
+class RecordTypeTransformerTest extends AbstractTransformerTest
 {
-    /**
-     * @var ConnectionManagerInterface
-     */
-    private $connectionManager;
-
-    protected function setUp()
-    {
-        parent::setUp();
-
-        $this->connectionManager = $this->get(ConnectionManagerInterface::class);
-    }
-
     public function testOutbound()
     {
         $entity = new TestObject();

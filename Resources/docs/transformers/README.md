@@ -50,6 +50,7 @@ When data is inbound, the `TransformPayload` looks a little like this:
 * getFieldName(): gets the current field name from the SObject the value is being mapped from
 * getPropertyName(): gets the current property name on the Entity that the value is being mapped to
 * getMetadata(): gets the `Metadata` that's currently being used to map the SObject to the Entity class
+* getFieldMetadata(): gets the `FieldMetadata` object created for the field which can be used to get Salesforce's metadata for the field or the current value of the field
 * getEntity(): for inbound, this is actually the SObject instance from Salesforce
 * getClassMetadata(): this is the ClassMetadata for the Entity as compiled by Doctrine
 * getDirection(): though this isn't really super helpful here, it is to the `AbstractTransformerPlugin`, the value will be `TransformerPayload::INBOUND`
@@ -66,6 +67,7 @@ When data is outbound, the `TransformPayload` looks a little like this:
 * getFieldName(): gets the current field name from the SObject the value is being mapped from
 * getPropertyName(): gets the current property name on the Entity that the value is being mapped to
 * getMetadata(): gets the `Metadata` that's currently being used to map the Entity
+* getFieldMetadata(): gets the `FieldMetadata` object created for the field which can be used to get Salesforce's metadata for the field or the current value of the field
 * getEntity(): for outbound, this is Entity instance itself
 * getClassMetadata(): this is the ClassMetadata for the Entity as compiled by Doctrine
 * getDirection(): though this isn't really super helpful here, it is to the `AbstractTransformerPlugin`, the value will be `TransformerPayload::OUTBOUND`
