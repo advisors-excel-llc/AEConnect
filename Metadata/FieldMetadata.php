@@ -111,20 +111,21 @@ class FieldMetadata extends AbstractFieldMetadata
      */
     public function getValueFromEntity($entity)
     {
-        $refClass = ClassUtils::newReflectionObject($entity);
+        $refClass  = ClassUtils::newReflectionObject($entity);
+        $className = $refClass->getName();
 
         if ($entity instanceof Proxy && !$entity->__isInitialized()) {
             $entity->__load();
         }
 
-        if (null !== $this->getter && method_exists($entity, $this->getter)) {
+        if (null !== $this->getter && method_exists($className, $this->getter)) {
             $method = $refClass->getMethod($this->getter);
             $method->setAccessible(true);
 
             return $method->getClosure($entity)->call($entity);
         }
 
-        if (null !== $this->property && property_exists($entity, $this->property)) {
+        if (null !== $this->property && property_exists($className, $this->property)) {
             $property = $refClass->getProperty($this->property);
             $property->setAccessible(true);
 
