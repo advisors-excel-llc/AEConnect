@@ -226,7 +226,7 @@ class SObjectCompiler
                 continue;
             }
 
-            $value = $metadata->getMetadataForProperty($property)->getValueFromEntity($entity);
+            $value = $fieldMetadata->getValueFromEntity($entity);
             if (null !== $value) {
                 $sObject->$field = $this->compileProperty(
                     $property,

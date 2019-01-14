@@ -120,13 +120,19 @@ class OutboundBulkQueue
 
         while (count(($results = $pager->getIterator()->getArrayCopy())) > 0) {
             foreach ($results as $result) {
-                $object = $this->compiler->compile($result, $connection->getName());
-                $object->setIntent(
-                    null === $object->getSObject()->Id
-                        ? CompilerResult::INSERT
-                        : CompilerResult::UPDATE
-                );
-                $this->outboundQueue->add($object);
+                try {
+                    $object = $this->compiler->compile($result, $connection->getName());
+
+                    $object->setIntent(
+                        null === $object->getSObject()->Id
+                            ? CompilerResult::INSERT
+                            : CompilerResult::UPDATE
+                    );
+                    $this->outboundQueue->add($object);
+                } catch (\RuntimeException $e) {
+                    $this->logger->warning($e->getMessage());
+                    $this->logger->debug($e->getTraceAsString());
+                }
             }
 
             $offset += count($results);

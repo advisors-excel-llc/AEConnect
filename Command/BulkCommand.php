@@ -149,7 +149,7 @@ class BulkCommand extends Command
         );
 
         $this->bulkDataProcessor->process(
-            $input->getFirstArgument(),
+            $input->getArgument('connection'),
             $types,
             $updateFlag
         );
