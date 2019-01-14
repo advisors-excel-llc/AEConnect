@@ -73,7 +73,7 @@ class SObjectCompilerTest extends DatabaseTestCase
         $sObject = $accountResult->getSObject();
         $this->assertNotNull($sObject);
         $this->assertEquals('Test Account', $sObject->Name);
-        $this->assertEquals('Account', $sObject->Type);
+        $this->assertEquals('Account', $sObject->getType());
 
         $contactResult = $this->compiler->compile($contact);
         $this->assertEquals(CompilerResult::INSERT, $contactResult->getIntent());
@@ -90,6 +90,7 @@ class SObjectCompilerTest extends DatabaseTestCase
                 'account'   => 'AccountId',
                 'extId'     => 'S3F__hcid__c',
                 'sfid'      => 'Id',
+                'name'      => 'Name',
             ],
             $metadata->getPropertyMap()
         );
@@ -98,7 +99,7 @@ class SObjectCompilerTest extends DatabaseTestCase
         $this->assertNotNull($sObject);
         $this->assertEquals('Testy', $sObject->FirstName);
         $this->assertEquals('McTesterson', $sObject->LastName);
-        $this->assertEquals('Contact', $sObject->Type);
+        $this->assertEquals('Contact', $sObject->getType());
         $this->assertInstanceOf(ReferencePlaceholder::class, $sObject->AccountId);
     }
 }

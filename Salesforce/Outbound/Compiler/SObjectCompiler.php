@@ -189,9 +189,7 @@ class SObjectCompiler
     ) {
         $payload       = TransformerPayload::outbound();
         $fieldName     = $metadata->getFieldByProperty($property);
-        $fieldMetadata = null !== $fieldName
-            ? $metadata->describeField($fieldName)
-            : $metadata->describeFieldByProperty($property);
+        $fieldMetadata = $metadata->getMetadataForField($fieldName);
 
         $payload->setValue($value)
                 ->setPropertyName($property)
