@@ -16,26 +16,9 @@ use AE\ConnectBundle\Tests\KernelTestCase;
 use AE\SalesforceRestSdk\Model\SObject;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
-class CompoundFieldTransformerPluginTest extends KernelTestCase
+class CompoundFieldTransformerPluginTest extends AbstractTransformerTest
 {
-    /**
-     * @var ConnectionManagerInterface
-     */
-    private $connectionManager;
-
-    /**
-     * @var RegistryInterface
-     */
-    private $registry;
-
-    protected function setUp()
-    {
-        parent::setUp();
-        $this->connectionManager = $this->get(ConnectionManagerInterface::class);
-        $this->registry          = $this->get(RegistryInterface::class);
-    }
-
-    public function testSupports()
+    public function testOutbound()
     {
         $transformer = new CompoundFieldTransformerPlugin();
         $payload     = $this->createPayload();
@@ -47,7 +30,7 @@ class CompoundFieldTransformerPluginTest extends KernelTestCase
         $this->assertFalse($transformer->supports($payload));
     }
 
-    public function testTransform()
+    public function testInbound()
     {
         $transformer = new CompoundFieldTransformerPlugin();
         $payload     = $this->createPayload();

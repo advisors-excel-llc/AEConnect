@@ -77,7 +77,7 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
     public function transformOutbound(TransformerPayload $payload)
     {
         $value    = $payload->getValue();
-        $field    = $payload->getFieldMetadata();
+        $field    = $payload->getFieldMetadata()->describe();
 
         if ($field->isRestrictedPicklist()) {
             $values = $field->getPicklistValues();
