@@ -139,6 +139,7 @@ class EntityCompiler
                                              ->setClassMetadata($classMetadata)
                                              ->setEntity($object)
                                              ->setMetadata($metadata)
+                                             ->setFieldMetadata($fieldMetadata)
                                              ->setFieldName($field)
                                              ->setPropertyName($fieldMetadata->getProperty())
                                              ->setValue(is_string($value) && strlen($value) === 0 ? null : $value)

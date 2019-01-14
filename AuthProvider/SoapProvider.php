@@ -30,14 +30,14 @@ class SoapProvider extends BaseAuthProvider
 
     public function authorize($reauth = false)
     {
-        $key = "SOAP_{$this->username}";
+        $key      = "SOAP_{$this->username}";
         $oldToken = null;
-        $ref = new \ReflectionClass(BaseAuthProvider::class);
+        $ref      = new \ReflectionClass(BaseAuthProvider::class);
 
         if (!$reauth && null === $this->token && $this->cache->contains($key)) {
             $values = $this->cache->fetch($key);
 
-            $this->token = $oldToken = $values['token'];
+            $this->token     = $oldToken = $values['token'];
             $this->tokenType = $values['tokenType'];
 
             $instUrl = $ref->getProperty('instanceUrl');
@@ -62,14 +62,25 @@ class SoapProvider extends BaseAuthProvider
             $this->cache->save(
                 $key,
                 [
-                    'tokenType'    => $this->tokenType,
-                    'token'        => $this->token,
-                    'instanceUrl'  => $this->getInstanceUrl(),
-                    'identityUrl'  => $prop->getValue($this),
+                    'tokenType'   => $this->tokenType,
+                    'token'       => $this->token,
+                    'instanceUrl' => $this->getInstanceUrl(),
+                    'identityUrl' => $prop->getValue($this),
                 ]
             );
         }
 
         return $header;
+    }
+
+    public function revoke(): void
+    {
+        $key = "SOAP_{$this->username}";
+
+        if ($this->cache->contains($key)) {
+            $this->cache->delete($key);
+        }
+
+        parent::revoke();
     }
 }

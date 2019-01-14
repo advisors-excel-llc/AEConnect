@@ -78,4 +78,13 @@ class OAuthProvider extends BaseAuthProvider
 
         return $header;
     }
+
+    public function revoke(): void
+    {
+        if ($this->cache->contains($this->clientId)) {
+            $this->cache->delete($this->clientId);
+        }
+
+        parent::revoke();
+    }
 }

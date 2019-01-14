@@ -367,7 +367,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
             "ae_connect.connection.$connectionName.rest_client",
             \AE\SalesforceRestSdk\Rest\Client::class
         )
-                  ->setArgument('$authProvider', new Reference("ae_connect.connection.$connectionName.auth_provider"))
+                  ->setArgument('$provider', new Reference("ae_connect.connection.$connectionName.auth_provider"))
                   ->setAutowired(true)
         ;
     }

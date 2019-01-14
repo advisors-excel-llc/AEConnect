@@ -9,6 +9,7 @@
 namespace AE\ConnectBundle\Tests\AuthProvider;
 
 use AE\ConnectBundle\AuthProvider\OAuthProvider;
+use AE\ConnectBundle\Manager\ConnectionManager;
 use AE\ConnectBundle\Tests\KernelTestCase;
 use Doctrine\Common\Cache\CacheProvider;
 use GuzzleHttp\Client;
@@ -76,5 +77,23 @@ class OAuthProviderTest extends KernelTestCase
 
         $authProvider->authorize();
         $this->assertEquals($token, $authProvider->getToken());
+    }
+
+    public function testReauthorize()
+    {
+        /** @var ConnectionManager $connectionManager */
+        $connectionManager = $this->get(ConnectionManager::class);
+        $connection = $connectionManager->getConnection();
+
+        $this->assertNotNull($connection->getRestClient()->getAuthProvider());
+
+        $connection->getRestClient()->limits();
+
+        $connection->getRestClient()->getAuthProvider()->revoke();
+
+        $connection->getRestClient()->limits();
+
+        $this->assertNotNull($connection->getRestClient()->getAuthProvider());
+        $this->assertNotNull($connection->getRestClient()->getAuthProvider()->getToken());
     }
 }
