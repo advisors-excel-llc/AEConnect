@@ -27,18 +27,20 @@ class DateTimeTransformer extends AbstractTransformerPlugin
     protected function supportsInbound(TransformerPayload $payload): bool
     {
         $value    = $payload->getValue();
-        $field    = $payload->getFieldMetadata();
+        $field    = $payload->getFieldMetadata()->describe();
 
         return (is_string($value) || $value instanceof \DateTimeInterface)
+            && null !== $field
             && in_array(strtolower($field->getSoapType()), ['xsd:date', 'xsd:datetime', 'xsd:time']);
     }
 
     protected function supportsOutbound(TransformerPayload $payload): bool
     {
         $value    = $payload->getValue();
-        $field    = $payload->getFieldMetadata();
+        $field    = $payload->getFieldMetadata()->describe();
 
         return $value instanceof \DateTimeInterface
+            && null !== $field
             && in_array(strtolower($field->getSoapType()), ['xsd:date', 'xsd:datetime', 'xsd:time']);
     }
 

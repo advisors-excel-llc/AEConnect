@@ -37,13 +37,14 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
         $value     = $payload->getValue();
         $classMeta = $payload->getClassMetadata();
         $type      = $classMeta->getTypeOfField($payload->getPropertyName());
-        $field     = $payload->getFieldMetadata();
+        $field     = $payload->getFieldMetadata()->describe();
 
         if (is_string($type)) {
             $type = Type::getType($type);
         }
 
         return is_string($value) && false !== strpos($value, ';')
+            && null !== $field
             && ($type instanceof ArrayType || $type instanceof JsonType || $type instanceof SimpleArrayType)
             && count($field->getPicklistValues()) > 0 && $field->getLength() === 4099;
     }
@@ -51,9 +52,10 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
     protected function supportsOutbound(TransformerPayload $payload): bool
     {
         $value    = $payload->getValue();
-        $field    = $payload->getFieldMetadata();
+        $field    = $payload->getFieldMetadata()->describe();
 
         return is_array($value)
+            && null !== $field
             && count($field->getPicklistValues()) > 0 && $field->getLength() === 4099;
     }
 
