@@ -15,12 +15,13 @@ use AE\SalesforceRestSdk\Model\Rest\Composite\CollectionResponse;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeResponse;
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Collections\Collection;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
-class OutboundQueue
+class OutboundQueue implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
@@ -108,7 +109,7 @@ class OutboundQueue
             return;
         }
 
-        $queue  = RequestBuilder::build($this->messages[$connection->getName()]);
+        $queue = RequestBuilder::build($this->messages[$connection->getName()]);
 
         try {
             $request = RequestBuilder::buildRequest(
@@ -118,7 +119,7 @@ class OutboundQueue
             );
 
             if (empty($request->getCompositeRequest())) {
-                $this->logger->info('No more messages in queue.');
+                $this->logger->debug('No more messages in queue.');
 
                 return;
             }
@@ -184,13 +185,13 @@ class OutboundQueue
             } else {
                 /** @var CollectionResponse[] $messages */
                 $messages = $result->getBody();
-                $refQ    = $queue[$refId];
+                $refQ     = $queue[$refId];
 
                 if ($refQ instanceof Collection) {
                     $refQ = $refQ->toArray();
                 }
 
-                $items    = array_values($refQ);
+                $items = array_values($refQ);
                 foreach ($messages as $i => $res) {
                     if (!array_key_exists($i, $items)) {
                         continue;
@@ -206,10 +207,12 @@ class OutboundQueue
                     } elseif (!$res->isSuccess()) {
                         foreach ($res->getErrors() as $error) {
                             $this->logger->error(
-                                'AE_CONNECT error from SalesForce: ({code}) {msg}',
+                                'AE_CONNECT error from SalesForce: {type}|{intent}|{code}|{msg}',
                                 [
-                                    'code' => $error->getStatusCode(),
-                                    'msg'  => $error->getMessage(),
+                                    'type'   => $item->getMetadata()->getSObjectType(),
+                                    'intent' => $item->getIntent(),
+                                    'code'   => $error->getStatusCode(),
+                                    'msg'    => $error->getMessage(),
                                 ]
                             );
                         }

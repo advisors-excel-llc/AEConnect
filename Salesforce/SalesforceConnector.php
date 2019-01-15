@@ -18,12 +18,13 @@ use Doctrine\Common\Util\ClassUtils;
 use Enqueue\Client\Message;
 use Enqueue\Client\ProducerInterface;
 use JMS\Serializer\SerializerInterface;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
-class SalesforceConnector
+class SalesforceConnector implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
@@ -83,6 +84,8 @@ class SalesforceConnector
     public function send($entity, string $connectionName = 'default'): bool
     {
         if (!$this->enabled) {
+            $this->logger->debug('Connector is disabled for {conn}', ['conn' => $connectionName]);
+
             return false;
         }
 
@@ -98,9 +101,17 @@ class SalesforceConnector
         $sObject = $result->getSObject();
 
         if (CompilerResult::DELETE !== $intent) {
-            // If there are no fields other than Id and Type set, don't sync
-            $fields = array_diff(['Id', 'Type'], array_keys($sObject->getFields()));
+            // If there are no fields other than Id set, don't sync
+            $fields = array_diff(['Id'], array_keys($sObject->getFields()));
             if (empty($fields)) {
+                $this->logger->debug(
+                    'No fields for object {type} to insert or update for {conn}',
+                    [
+                        'type' => $sObject->getType(),
+                        'conn' => $connectionName,
+                    ]
+                );
+
                 return false;
             }
         }
@@ -145,8 +156,8 @@ class SalesforceConnector
         $classes = [];
 
         foreach ($entities as $entity) {
-            $class     = ClassUtils::getClass($entity);
-            $manager   = $this->registry->getManagerForClass($class);
+            $class   = ClassUtils::getClass($entity);
+            $manager = $this->registry->getManagerForClass($class);
 
             if (false === array_search($class, $classes)) {
                 $classes[] = $class;

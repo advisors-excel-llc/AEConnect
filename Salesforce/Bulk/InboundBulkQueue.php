@@ -91,10 +91,11 @@ class InboundBulkQueue
         $fields           = [];
         $recordTypes      = [];
         $metadataRegistry = $connection->getMetadataRegistry();
-        $i = 0;
+        $i                = 0;
 
         foreach ($metadataRegistry->findMetadataBySObjectType($objectType) as $metadata) {
             if (!$metadata->getDescribe()->isQueryable()) {
+                $this->logger->debug('{obj} is not queryable', ['obj' => $objectType]);
                 continue;
             }
 
@@ -133,9 +134,15 @@ class InboundBulkQueue
                 $query .= " WHERE RecordTypeId IN ('".implode("', '", $recordTypes)."')";
             }
 
+            $this->logger->debug('QUERY {conn}: {query}', ['conn' => $connection->getName(), 'query' => $query]);
+            $this->logger->debug('Record Count: {count}', ['count' => $count->getCount()]);
+            $this->logger->debug('Bulk Min Count: {count}', ['count' => $connection->getBulkApiMinCount()]);
+
             if ($count->getCount() >= $connection->getBulkApiMinCount()) {
+                $this->logger->debug('Processing Inbound using Bulk API');
                 $this->processInBulk($connection, $objectType, $updateEntities, $query);
             } else {
+                $this->logger->debug('Processing Inbound using Composite API');
                 $this->processComposite($connection, $objectType, $updateEntities, $query);
             }
         } catch (\Exception $e) {
@@ -178,8 +185,16 @@ class InboundBulkQueue
             $this->preProcess($object, $connection, $updateEntities);
             $objects[] = $object;
 
-            // Gotta break this up a little to precent 10000000s of records from being saved at once
+            // Gotta break this up a little to prevent 10000000s of records from being saved at once
             if (count($objects) === 200) {
+                $this->logger->debug(
+                    'Saving {count} {type} records for connection "{conn}"',
+                    [
+                        'count' => count($objects),
+                        'type'  => $objectType,
+                        'conn'  => $connection->getName(),
+                    ]
+                );
                 $this->connector->enable();
                 $this->connector->receive($objects, SalesforceConsumerInterface::UPDATED, $connection->getName());
                 $this->connector->disable();
@@ -189,12 +204,20 @@ class InboundBulkQueue
         }
 
         if (!empty($objects)) {
+            $this->logger->debug(
+                'Saving {count} {type} records for connection "{conn}"',
+                [
+                    'count' => count($objects),
+                    'type'  => $objectType,
+                    'conn'  => $connection->getName(),
+                ]
+            );
             $this->connector->enable();
             $this->connector->receive($objects, SalesforceConsumerInterface::UPDATED, $connection->getName());
             $this->connector->disable();
         }
 
-        $this->logger->info('Processed {count} {type} objects.', ['count' => $count, 'type' => $objectType]);
+        $this->logger->debug('Processed {count} {type} objects.', ['count' => $count, 'type' => $objectType]);
     }
 
     /**
