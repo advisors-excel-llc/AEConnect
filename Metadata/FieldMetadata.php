@@ -143,7 +143,7 @@ class FieldMetadata extends AbstractFieldMetadata
      */
     public function setValueForEntity($entity, $value)
     {
-        $refClass = ClassUtils::newReflectionObject($entity);
+        $refClass  = ClassUtils::newReflectionObject($entity);
         $className = $refClass->getName();
 
         if (null !== $this->setter && method_exists($className, $this->setter)) {
