@@ -9,10 +9,15 @@
 namespace AE\ConnectBundle\Salesforce\Inbound\Compiler;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
+use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
+use AE\ConnectBundle\Metadata\FieldMetadata;
+use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
 use AE\ConnectBundle\Salesforce\Transformer\Transformer;
 use AE\SalesforceRestSdk\Model\SObject;
+use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -65,6 +70,7 @@ class EntityCompiler
      * @param string $connectionName
      *
      * @return array
+     * @throws \Doctrine\ORM\Mapping\MappingException
      */
     public function compile(SObject $object, string $connectionName = 'default'): array
     {
@@ -78,47 +84,40 @@ class EntityCompiler
         $metas    = $connection->getMetadataRegistry()->findMetadataBySObjectType($object->__SOBJECT_TYPE__);
 
         foreach ($metas as $metadata) {
-            $class         = $metadata->getClassName();
-            $manager       = $this->registry->getManagerForClass($class);
+            $class   = $metadata->getClassName();
+            $manager = $this->registry->getManagerForClass($class);
+            /** @var ClassMetadata $classMetadata */
             $classMetadata = $manager->getClassMetadata($class);
-            $identifiers   = $metadata->getIdentifyingFields();
-            $criteria      = [];
 
-            if (empty($identifiers) ||
-                array_values(
-                    array_intersect(
-                        array_keys($object->getFields()),
-                        array_values($identifiers)
-                    )
-                ) !== array_values($identifiers)) {
-                $identifiers = [$metadata->getIdFieldProperty() => 'Id'];
-            }
-
-            foreach ($identifiers as $prop => $field) {
-                $value = $object->$field;
-                if (null !== $value && is_string($value) && strlen($value) > 0) {
-                    if ($classMetadata->getTypeOfField($field) instanceof UuidType) {
-                        $value = Uuid::fromString($value);
-                    }
-                    $criteria[$prop] = $value;
-                }
-            }
-
-            if (empty($criteria) && strlen($object->Id) > 0) {
-                $criteria[$metadata->getIdFieldProperty()] = $object->Id;
-            } elseif (empty($criteria)) {
+            try {
+                $entity = $this->findExistingEntity($object, $metadata, $classMetadata);
+            } catch (\Exception $e) {
+                $this->logger->debug($e->getMessage());
                 continue;
             }
 
-            $entity = $manager->getRepository($class)->findOneBy($criteria);
             $connectionProp = $metadata->getConnectionNameField();
 
             if (null !== $entity) {
                 // Check if the entity is meant for this connection
                 if (null !== $connectionProp
-                    && null !== ($entityConnectionName = $connectionProp->getValueFromEntity($entity))
-                    && $connection->getName() !== $entityConnectionName
+                    && !$this->hasConnection(
+                        $entity,
+                        $connection,
+                        $metadata
+                    )
                 ) {
+                    $this->logger->debug(
+                        "Entity {type} with Id {id} and meant for {conn}",
+                        [
+                            'type' => $class,
+                            'id'   => $classMetadata->getFieldValue(
+                                $entity,
+                                $classMetadata->getSingleIdentifierFieldName()
+                            ),
+                            'conn' => $connection->getName(),
+                        ]
+                    );
                     continue;
                 }
             } else {
@@ -126,7 +125,17 @@ class EntityCompiler
 
                 // If the entity supports a connection name, set it
                 if (null !== $connectionProp) {
-                    $connectionProp->setValueForEntity($entity, $connection->getName());
+                    $connectionProp->setValueForEntity(
+                        $entity,
+                        $this->compileField(
+                            '',
+                            $connection->getName(),
+                            $object,
+                            $classMetadata,
+                            $metadata,
+                            $metadata->getConnectionNameField()
+                        )
+                    );
                 }
             }
 
@@ -135,18 +144,8 @@ class EntityCompiler
                 if (null === $fieldMetadata) {
                     continue;
                 }
-                $payload = TransformerPayload::inbound()
-                                             ->setClassMetadata($classMetadata)
-                                             ->setEntity($object)
-                                             ->setMetadata($metadata)
-                                             ->setFieldMetadata($fieldMetadata)
-                                             ->setFieldName($field)
-                                             ->setPropertyName($fieldMetadata->getProperty())
-                                             ->setValue(is_string($value) && strlen($value) === 0 ? null : $value)
-                ;
 
-                $this->transformer->transform($payload);
-                $newValue = $payload->getValue();
+                $newValue = $this->compileField($field, $value, $object, $classMetadata, $metadata, $fieldMetadata);
 
                 if (null !== $newValue) {
                     $fieldMetadata->setValueForEntity($entity, $newValue);
@@ -211,5 +210,152 @@ class EntityCompiler
                 "The entity does not meet the following validations:".PHP_EOL.$err
             );
         }
+    }
+
+    /**
+     * @param $entity
+     * @param ConnectionInterface $connection
+     * @param Metadata $metadata
+     *
+     * @return bool
+     */
+    private function hasConnection($entity, ConnectionInterface $connection, Metadata $metadata): bool
+    {
+        $connectionProp = $metadata->getConnectionNameField();
+        $conn           = $connectionProp->getValueFromEntity($entity);
+
+        if (null === $conn) {
+            return false;
+        }
+
+        if (is_string($conn)) {
+            return $conn === $connection->getName();
+        }
+
+        if ($conn instanceof ConnectionEntityInterface) {
+            return $conn->getName() === $connection->getName();
+        }
+
+        if (is_array($conn) || $conn instanceof \ArrayAccess) {
+            foreach ($conn as $value) {
+                if ($value instanceof ConnectionEntityInterface && $value->getName() === $connection->getName()) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param SObject $object
+     * @param Metadata $metadata
+     * @param ClassMetadata $classMetadata
+     *
+     * @return mixed
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \RuntimeException
+     */
+    private function findExistingEntity(SObject $object, Metadata $metadata, ClassMetadata $classMetadata)
+    {
+        /** @var EntityRepository $repo */
+        $repo        = $this->registry->getRepository($classMetadata->getName());
+        $builder     = $repo->createQueryBuilder('o');
+        $identifiers = $metadata->getIdentifyingFields();
+        $criteria    = $builder->expr()->andX();
+
+        // External Identifiers are the best way to lookup an entity. Even if the SFID is wrong but the
+        // External Id matches, then we want to use the entity with this External ID
+        foreach ($identifiers as $prop => $field) {
+            $value = $object->$field;
+            if (null !== $value && is_string($value) && strlen($value) > 0) {
+                if ($classMetadata->getTypeOfField($field) instanceof UuidType) {
+                    $value = Uuid::fromString($value);
+                }
+                $criteria->add($builder->expr()->eq("o.$prop", ":$prop"));
+                $builder->setParameter($prop, $value);
+            }
+        }
+
+        // Only add to the builder if there is criteria to add
+        if ($criteria->count() > 0) {
+            $builder->where($criteria);
+        }
+
+        // If there's an SFID, use it to find the entity, in case the External Id isn't found in the database or one
+        // wasn't provided from Salesforce
+        if (null !== $object->Id && strlen($object->Id) > 0 && null !== ($property = $metadata->getIdFieldProperty())) {
+            $sfidVal = $this->compileField(
+                'Id',
+                $object->Id,
+                $object,
+                $classMetadata,
+                $metadata,
+                $metadata->getMetadataForField('Id')
+            );
+
+            if (is_array($sfidVal)) {
+                $sfidVal = array_shift($sfidVal);
+            }
+
+            if ($classMetadata->hasAssociation($property)) {
+                $targetClass = $classMetadata->getAssociationTargetClass($property);
+                /** @var ClassMetadata $targetMetadata */
+                $targetMetadata = $this->registry->getManagerForClass($targetClass)->getClassMetadata($targetClass);
+                $idField        = $targetMetadata->getSingleIdentifierFieldName();
+
+                // Reduce associated entities to just their ID value for lookup
+                if (get_class($sfidVal) === $targetClass) {
+                    $value = $targetMetadata->getFieldValue($sfidVal, $idField);
+                    if (null !== $value) {
+                        $builder->orWhere($builder->expr()->eq("o.$property", ":$property"));
+                        $builder->setParameter($property, $value);
+                    }
+                }
+            } else {
+                $builder->orWhere($builder->expr()->eq("o.$property", ":$property"));
+                $builder->setParameter($property, $sfidVal);
+            }
+        }
+
+        if ($builder->getParameters()->isEmpty()) {
+            throw new \RuntimeException("No restricting parameters found");
+        }
+
+        return $builder->getQuery()->getOneOrNullResult();
+    }
+
+    /**
+     * @param $field
+     * @param $value
+     * @param SObject $object
+     * @param $classMetadata
+     * @param $metadata
+     * @param $fieldMetadata
+     *
+     * @return mixed
+     */
+    private function compileField(
+        ?string $field,
+        $value,
+        SObject $object,
+        ClassMetadata $classMetadata,
+        Metadata $metadata,
+        FieldMetadata $fieldMetadata
+    ): mixed {
+        $payload = TransformerPayload::inbound()
+                                     ->setClassMetadata($classMetadata)
+                                     ->setEntity($object)
+                                     ->setMetadata($metadata)
+                                     ->setFieldMetadata($fieldMetadata)
+                                     ->setFieldName($field)
+                                     ->setPropertyName($fieldMetadata->getProperty())
+                                     ->setValue(is_string($value) && strlen($value) === 0 ? null : $value)
+        ;
+
+        $this->transformer->transform($payload);
+
+        return $payload->getValue();
     }
 }

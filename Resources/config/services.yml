@@ -113,6 +113,14 @@ services:
         arguments:
             $polling: '@AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService'
         tags: ['console.command']
+    AE\ConnectBundle\Command\DebugConnectionsCommand:
+        arguments:
+            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        tags: ['console.command']
+    AE\ConnectBundle\Command\DebugMetadataCommand:
+        arguments:
+            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        tags: ['console.command']
     AE\ConnectBundle\Driver\DbalConnectionDriver:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'

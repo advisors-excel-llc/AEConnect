@@ -243,6 +243,7 @@ class OutboundQueue
         $entity  = $repo->findOneBy($idMap);
 
         if (null !== $entity) {
+            // TODO: handle SFIDs that use associations
             $payload->getMetadata()->getMetadataForField('Id')->setValueForEntity($entity, $id);
             $manager->flush();
         }
