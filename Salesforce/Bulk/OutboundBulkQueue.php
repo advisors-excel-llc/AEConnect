@@ -122,13 +122,15 @@ class OutboundBulkQueue
             foreach ($results as $result) {
                 try {
                     $object = $this->compiler->compile($result, $connection->getName());
-
-                    $object->setIntent(
-                        null === $object->getSObject()->Id
-                            ? CompilerResult::INSERT
-                            : CompilerResult::UPDATE
-                    );
                     $this->outboundQueue->add($object);
+                    $this->logger->debug(
+                        'AE_CONNECT: Added {type} object for {intent} to {conn}',
+                        [
+                            'type'   => $object->getMetadata()->getSObjectType(),
+                            'intent' => $object->getIntent(),
+                            'conn'   => $connection->getName(),
+                        ]
+                    );
                 } catch (\RuntimeException $e) {
                     $this->logger->warning($e->getMessage());
                     $this->logger->debug($e->getTraceAsString());
@@ -140,13 +142,27 @@ class OutboundBulkQueue
             $pager = new Paginator($qb->getQuery(), false);
 
             if ($offset > 4800) {
+                $this->logger->debug(
+                    'AE_CONNECT: Sending {count} records to {conn}',
+                    [
+                        'count' => count($results),
+                        'conn'  => $connection->getName(),
+                    ]
+                );
                 $this->outboundQueue->send($connection->getName());
             }
         }
 
+        $this->logger->debug(
+            'AE_CONNECT: Sending {count} records to {conn}',
+            [
+                'count' => count($results),
+                'conn'  => $connection->getName(),
+            ]
+        );
         // Send anything that hasn't already been sent
         $this->outboundQueue->send($connection->getName());
 
-        $this->logger->info('Synced {count} objects of {type} type', ['count' => $offset, 'type' => $class]);
+        $this->logger->debug('Synced {count} objects of {type} type', ['count' => $offset, 'type' => $class]);
     }
 }

@@ -87,4 +87,20 @@ class OAuthProvider extends BaseAuthProvider
 
         parent::revoke();
     }
+
+    /**
+     * @return string
+     */
+    public function getClientId(): string
+    {
+        return $this->clientId;
+    }
+
+    /**
+     * @return string
+     */
+    public function getClientSecret(): string
+    {
+        return $this->clientSecret;
+    }
 }
