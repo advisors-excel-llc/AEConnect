@@ -37,14 +37,6 @@ class StreamingClientTest extends DatabaseTestCase
         $this->streamingClient = $connection->getStreamingClient();
     }
 
-    protected function loadSchemas(): array
-    {
-        return [
-            Account::class,
-            TestObject::class,
-        ];
-    }
-
     public function testNewAccount()
     {
         $subscriber = $this->streamingClient->getSubscriber('/data/AccountChangeEvent');

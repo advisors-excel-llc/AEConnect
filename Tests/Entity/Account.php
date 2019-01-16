@@ -5,9 +5,12 @@
  * Date: 10/2/18
  * Time: 1:34 PM
  */
+
 namespace AE\ConnectBundle\Tests\Entity;
 
 use AE\ConnectBundle\Annotations as AEConnect;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Ramsey\Uuid\Uuid;
 
@@ -53,17 +56,37 @@ class Account
 
     /**
      * @var string
-     * @AEConnect\SalesforceId(connection="*")
+     * @AEConnect\SalesforceId(connection="default")
      * @ORM\Column(length=18, nullable=true, unique=true)
      */
     private $sfid;
 
     /**
      * @var string
-     * @AEConnect\Connection(connections={"*"})
+     * @AEConnect\Connection(connections={"default"})
      * @ORM\Column(length=40, nullable=true)
      */
     private $connection = "default";
+
+    /**
+     * @var ConnectionEntity[]|Collection|array
+     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\ConnectionEntity")
+     * @AEConnect\Connection(connections={"db_test"})
+     */
+    private $connections;
+
+    /**
+     * @var SalesforceId[]|Collection|array
+     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\SalesforceId")
+     * @AEConnect\SalesforceId(connection="db_test")
+     */
+    private $sfids;
+
+    public function __construct()
+    {
+        $this->connections = new ArrayCollection();
+        $this->sfids       = new ArrayCollection();
+    }
 
     /**
      * @return mixed
@@ -181,6 +204,46 @@ class Account
     public function setConnection(?string $connection): Account
     {
         $this->connection = $connection;
+
+        return $this;
+    }
+
+    /**
+     * @return ConnectionEntity[]|array|Collection
+     */
+    public function getConnections()
+    {
+        return $this->connections;
+    }
+
+    /**
+     * @param ConnectionEntity[]|array|Collection $connections
+     *
+     * @return Account
+     */
+    public function setConnections($connections)
+    {
+        $this->connections = $connections;
+
+        return $this;
+    }
+
+    /**
+     * @return SalesforceId[]|array|Collection
+     */
+    public function getSfids()
+    {
+        return $this->sfids;
+    }
+
+    /**
+     * @param SalesforceId[]|array|Collection $sfids
+     *
+     * @return Account
+     */
+    public function setSfids($sfids)
+    {
+        $this->sfids = $sfids;
 
         return $this;
     }

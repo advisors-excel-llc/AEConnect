@@ -159,6 +159,8 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
                 if (null !== $sfid && $classMetadata->hasField($connectionField)) {
                     $sfid->setConnection($connectionName);
                     $sfid->setSalesforceId($value);
+
+                    $manager->persist($sfid);
                 } elseif (null !== $sfid && $classMetadata->hasAssociation($connectionField)) {
                     $connectionAssoc     = $classMetadata->getAssociationMapping($connectionField);
                     $connectionClass     = $connectionAssoc['targetEntity'];
@@ -191,6 +193,8 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
                         } else {
                             $sfid->setConnection($connection);
                             $sfid->setSalesforceId($value);
+
+                            $manager->persist($sfid);
                         }
                     }
                 }

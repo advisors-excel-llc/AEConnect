@@ -151,7 +151,7 @@ class SObjectCompiler
 
         $refId = spl_object_hash($entity);
 
-        return new CompilerResult($intent, $sObject, $metadata, $refId);
+        return new CompilerResult($intent, $sObject, $className, $refId, $connectionName);
     }
 
     private function validate($entity, ConnectionInterface $connection)

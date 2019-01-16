@@ -81,7 +81,7 @@ class OutboundQueue
 
     public function add(CompilerResult $result)
     {
-        $connectionName                                             = $result->getMetadata()->getConnectionName();
+        $connectionName                                             = $result->getConnectionName();
         $this->messages[$connectionName][$result->getReferenceId()] = $result;
     }
 
@@ -216,7 +216,7 @@ class OutboundQueue
                     unset($payloads[$ref]);
 
                     if ($res->isSuccess() && CompilerResult::INSERT === $intent) {
-                        $this->updateCreatedEntity($item, $res);
+                        $this->updateCreatedEntity($item, $res, $connection);
                     } elseif (!$res->isSuccess()) {
                         foreach ($res->getErrors() as $error) {
                             $this->logger->error(
@@ -236,10 +236,14 @@ class OutboundQueue
     /**
      * @param CompilerResult $payload
      * @param CollectionResponse $result
+     * @param ConnectionInterface $connection
      */
-    private function updateCreatedEntity(CompilerResult $payload, CollectionResponse $result): void
-    {
-        $metadata = $payload->getMetadata();
+    private function updateCreatedEntity(
+        CompilerResult $payload,
+        CollectionResponse $result,
+        ConnectionInterface $connection
+    ): void {
+        $metadata = $connection->getMetadataRegistry()->findMetadataByClass($payload->getClassName());
         if (null === $metadata->getIdFieldProperty()) {
             return;
         }

@@ -12,6 +12,7 @@ use AE\ConnectBundle\Annotations\Connection;
 use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\MappingException;
 use Psr\Log\LoggerAwareInterface;
@@ -43,12 +44,15 @@ class ConnectionEntityTransformer extends AbstractTransformerPlugin implements L
 
     protected function supportsInbound(TransformerPayload $payload): bool
     {
-        $metadata      = $payload->getMetadata();
-        $classMetadata = $payload->getClassMetadata();
+        $metadata            = $payload->getMetadata();
+        $classMetadata       = $payload->getClassMetadata();
+        $fieldMetadata       = $payload->getFieldMetadata();
+        $property            = $payload->getPropertyName();
+        $connectionNameField = $metadata->getConnectionNameField();
 
-        return null !== $metadata->getConnectionNameField()
-            && $metadata->getConnectionNameField() === $payload->getFieldMetadata()
-            && $classMetadata->hasAssociation($payload->getPropertyName());
+        return null !== $connectionNameField
+            && $connectionNameField->getProperty() === $fieldMetadata->getProperty()
+            && $classMetadata->hasAssociation($property);
     }
 
     protected function transformInbound(TransformerPayload $payload)
@@ -59,13 +63,16 @@ class ConnectionEntityTransformer extends AbstractTransformerPlugin implements L
             $connectionClass = $association['targetEntity'];
             $manager         = $this->registry->getManagerForClass($connectionClass);
             $repo            = $manager->getRepository($connectionClass);
+            /** @var ClassMetadata $classMetadata */
             $classMetadata   = $manager->getClassMetadata($connectionClass);
             $connectionField = 'connection';
             $connection      = null;
 
             // Look for fields on the target entity that have the Connection annotation
             foreach ($classMetadata->getFieldNames() as $field) {
-                foreach ($this->reader->getPropertyAnnotations($field) as $annotation) {
+                foreach ($this->reader->getPropertyAnnotations(
+                    $classMetadata->getReflectionProperty($field)
+                ) as $annotation) {
                     if ($annotation instanceof Connection) {
                         $connectionField = $field;
                         break;

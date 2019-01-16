@@ -8,10 +8,12 @@
 
 namespace AE\ConnectBundle\Tests\Entity;
 
+use AE\ConnectBundle\Annotations\Connection;
 use AE\ConnectBundle\Annotations\ExternalId;
 use AE\ConnectBundle\Annotations\Field;
 use AE\ConnectBundle\Annotations\SalesforceId;
 use AE\ConnectBundle\Annotations\SObjectType;
+use AE\ConnectBundle\Tests\Entity\SalesforceId as SalesforceIdEntity;
 use Doctrine\ORM\Mapping as ORM;
 use Ramsey\Uuid\Uuid;
 
@@ -19,7 +21,7 @@ use Ramsey\Uuid\Uuid;
  * Class Contact
  *
  * @package AE\ConnectBundle\Tests\Entity
- * @SObjectType("Contact")
+ * @SObjectType("Contact", connections={"*"})
  * @ORM\Entity()
  * @ORM\Table("contact")
  * @ORM\HasLifecycleCallbacks()
@@ -43,21 +45,21 @@ class Contact
     /**
      * @var string
      * @ORM\Column(length=80, nullable=true)
-     * @Field(name="FirstName")
+     * @Field(name="FirstName", connections={"*"})
      */
     private $firstName;
 
     /**
      * @var string
      * @ORM\Column(length=80, nullable=false)
-     * @Field(name="LastName")
+     * @Field(name="LastName", connections={"*"})
      */
     private $lastName;
 
     /**
      * @var Account
      * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\Account")
-     * @Field("AccountId")
+     * @Field("AccountId", connections={"*"})
      */
     private $account;
 
@@ -65,16 +67,31 @@ class Contact
      * @var string
      * @ORM\Column(type="guid", unique=true, nullable=false)
      * @ExternalId()
-     * @Field("S3F__hcid__c")
+     * @Field("S3F__hcid__c", connections={"default"})
+     * @Field("AE_Connect_Id__c", connections={"db_test"})
      */
     private $extId;
 
     /**
      * @var string
-     * @SalesforceId()
+     * @SalesforceId(connection="default")
      * @ORM\Column(length=18, nullable=true, unique=true)
      */
     private $sfid;
+
+    /**
+     * @var ConnectionEntity|null
+     * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\ConnectionEntity")
+     * @Connection(connections={"db_test"})
+     */
+    private $connection;
+
+    /**
+     * @var SalesforceIdEntity|null
+     * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\SalesforceId")
+     * @SalesforceId(connection="db_test")
+     */
+    private $dbTestSfid;
 
     /**
      * @return int|null
@@ -213,6 +230,46 @@ class Contact
     public function setExtId(string $extId): Contact
     {
         $this->extId = $extId;
+
+        return $this;
+    }
+
+    /**
+     * @return ConnectionEntity|null
+     */
+    public function getConnection(): ?ConnectionEntity
+    {
+        return $this->connection;
+    }
+
+    /**
+     * @param ConnectionEntity|null $connection
+     *
+     * @return Contact
+     */
+    public function setConnection(?ConnectionEntity $connection): Contact
+    {
+        $this->connection = $connection;
+
+        return $this;
+    }
+
+    /**
+     * @return \AE\ConnectBundle\Tests\Entity\SalesforceId|null
+     */
+    public function getDbTestSfid(): ?\AE\ConnectBundle\Tests\Entity\SalesforceId
+    {
+        return $this->dbTestSfid;
+    }
+
+    /**
+     * @param \AE\ConnectBundle\Tests\Entity\SalesforceId|null $dbTestSfid
+     *
+     * @return Contact
+     */
+    public function setDbTestSfid(?\AE\ConnectBundle\Tests\Entity\SalesforceId $dbTestSfid): Contact
+    {
+        $this->dbTestSfid = $dbTestSfid;
 
         return $this;
     }

@@ -13,6 +13,11 @@ use Doctrine\Common\Util\ClassUtils;
 use Doctrine\Common\Persistence\Proxy;
 use JMS\Serializer\Annotation as Serializer;
 
+/**
+ * Class FieldMetadata
+ *
+ * @package AE\ConnectBundle\Metadata
+ */
 class FieldMetadata extends AbstractFieldMetadata
 {
     /**
@@ -90,6 +95,26 @@ class FieldMetadata extends AbstractFieldMetadata
     public function setIsIdentifier(bool $isIdentifier)
     {
         $this->isIdentifier = $isIdentifier;
+
+        return $this;
+    }
+
+    /**
+     * @return Metadata
+     */
+    public function getMetadata(): ?Metadata
+    {
+        return $this->metadata;
+    }
+
+    /**
+     * @param Metadata $metadata
+     *
+     * @return FieldMetadata
+     */
+    public function setMetadata(?Metadata $metadata): FieldMetadata
+    {
+        $this->metadata = $metadata;
 
         return $this;
     }
