@@ -11,5 +11,7 @@ namespace AE\ConnectBundle\Connection\Dbal;
 interface SalesforceIdEntityInterface
 {
     public function getConnection();
+    public function setConnection($connection);
     public function getSalesforceId();
+    public function setSalesforceId(?string $sfid);
 }

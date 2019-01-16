@@ -36,13 +36,6 @@ class PollingServiceTest extends DatabaseTestCase
         $this->client = $connectionManager->getConnection()->getRestClient()->getSObjectClient();
     }
 
-    protected function loadSchemas(): array
-    {
-        return [
-            Role::class
-        ];
-    }
-
     /**
      * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
      * @throws \GuzzleHttp\Exception\GuzzleException

@@ -16,13 +16,6 @@ use AE\ConnectBundle\Tests\Entity\Role;
 
 class InboundBulkQueueTest extends DatabaseTestCase
 {
-    protected function loadSchemas(): array
-    {
-        return [
-            Account::class,
-            Role::class,
-        ];
-    }
 
     public function testProcess()
     {
@@ -54,6 +47,8 @@ class InboundBulkQueueTest extends DatabaseTestCase
 
     public function testProcessRecordTypeFiltering()
     {
+        $this->loadOrgConnections();
+
         /** @var ConnectionManagerInterface $connectionManager */
         $connectionManager = $this->get(ConnectionManagerInterface::class);
         $connection        = $connectionManager->getConnection('db_test_org1');

@@ -29,14 +29,6 @@ class SObjectCompilerTest extends DatabaseTestCase
         $this->compiler = $this->get(SObjectCompiler::class);
     }
 
-    protected function loadSchemas(): array
-    {
-        return [
-            Account::class,
-            Contact::class,
-        ];
-    }
-
     public function testInsert()
     {
         $manager = $this->doctrine->getManager();

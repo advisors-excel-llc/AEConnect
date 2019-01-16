@@ -8,10 +8,12 @@
 
 namespace AE\ConnectBundle\Tests;
 
+use AE\ConnectBundle\Driver\DbalConnectionDriver;
 use Doctrine\Bundle\DoctrineBundle\Registry;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Tools\SchemaTool;
 use Fidry\AliceDataFixtures\LoaderInterface;
+use Symfony\Component\Finder\Finder;
 
 abstract class DatabaseTestCase extends KernelTestCase
 {
@@ -27,7 +29,7 @@ abstract class DatabaseTestCase extends KernelTestCase
     protected function setUp()/* The :void return type declaration that should be here would cause a BC issue */
     {
         parent::setUp();
-        $this->loader = static::$container->get('fidry_alice_data_fixtures.loader.doctrine');
+        $this->loader   = static::$container->get('fidry_alice_data_fixtures.loader.doctrine');
         $this->doctrine = static::$container->get('doctrine');
         $this->createSchemas();
     }
@@ -40,9 +42,15 @@ abstract class DatabaseTestCase extends KernelTestCase
         $schemas = $this->loadSchemas();
 
         if (count($schemas) > 0) {
-            $tool->updateSchema(array_map(function ($item) use ($manager) {
-                return $manager->getClassMetadata($item);
-            }, $schemas), true);
+            $tool->updateSchema(
+                array_map(
+                    function ($item) use ($manager) {
+                        return $manager->getClassMetadata($item);
+                    },
+                    $schemas
+                ),
+                true
+            );
         }
     }
 
@@ -54,5 +62,28 @@ abstract class DatabaseTestCase extends KernelTestCase
     /**
      * @return array
      */
-    abstract protected function loadSchemas(): array;
+    protected function loadSchemas(): array
+    {
+        $schemas = [];
+        $baseNS  = "AE\ConnectBundle\Tests\Entity";
+        $finder  = new Finder();
+        $dir     = implode(DIRECTORY_SEPARATOR, [$this->getProjectDir(), "Tests", "Entity"]);
+
+        /** @var \SplFileInfo $file */
+        foreach ($finder->in($dir)->name('*.php')->files() as $file) {
+            $name      = $file->getBasename('.php');
+            $schemas[] = "$baseNS\\$name";
+        }
+
+        return $schemas;
+    }
+
+    protected function loadOrgConnections()
+    {
+        $this->loadFixtures([$this->getProjectDir().'/Tests/Resources/config/login_fixtures.yml']);
+
+        /** @var DbalConnectionDriver $dbalDriver */
+        $dbalDriver = $this->get(DbalConnectionDriver::class);
+        $dbalDriver->loadConnections();
+    }
 }

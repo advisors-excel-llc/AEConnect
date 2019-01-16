@@ -17,10 +17,7 @@ use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Contact;
 use AE\ConnectBundle\Tests\Entity\Order;
-use AE\ConnectBundle\Tests\Entity\OrgConnection;
 use AE\ConnectBundle\Tests\Entity\Product;
-use AE\ConnectBundle\Tests\Entity\Task;
-use AE\ConnectBundle\Tests\Entity\TestObject;
 use AE\SalesforceRestSdk\Model\SObject;
 use Enqueue\Client\DriverInterface;
 use Enqueue\Consumption\Result;
@@ -33,45 +30,29 @@ class SalesforceConnectorTest extends DatabaseTestCase
      */
     private $connector;
 
-    /** @var FsContext */
+    /**
+     * @var FsContext
+     */
     private $context;
 
-    /** @var DriverInterface */
-    private $driver;
-
     /**
-     * @var DbalConnectionDriver
+     * @var DriverInterface
      */
-    private $dbalDriver;
-
-    protected function loadSchemas(): array
-    {
-        return [
-            Account::class,
-            Contact::class,
-            Order::class,
-            Product::class,
-            Task::class,
-            TestObject::class,
-            OrgConnection::class,
-        ];
-    }
+    private $driver;
 
     protected function setUp()
     {
         parent::setUp();
-        $this->connector  = $this->get(SalesforceConnector::class);
-        $this->context    = $this->get('enqueue.transport.context');
-        $this->driver     = $this->get('enqueue.client.driver');
-        $this->dbalDriver = $this->get(DbalConnectionDriver::class);
+        $this->connector = $this->get(SalesforceConnector::class);
+        $this->context   = $this->get('enqueue.transport.context');
+        $this->driver    = $this->get('enqueue.client.driver');
     }
 
     public function testOutgoing()
     {
         // We don't want to fire on any triggers now do we?
         $this->connector->disable();
-        $this->loadFixtures([__DIR__.'/../Resources/config/login_fixtures.yml']);
-        $this->dbalDriver->loadConnections();
+        $this->loadOrgConnections();
 
         $manager  = $this->doctrine->getManager();
         $items    = [];
@@ -155,7 +136,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $this->assertNotNull($account);
         $this->assertEquals('Test Incoming', $account->getName());
 
-        $account = new SObject(
+        $account                   = new SObject(
             [
                 'Id'           => '001000111000111AAA',
                 'Type'         => 'Account',
@@ -176,7 +157,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $this->assertNotNull($account);
         $this->assertEquals('Test Incoming Update', $account->getName());
 
-        $contact = new SObject(
+        $contact                   = new SObject(
             [
                 'Id'        => '001000111000111BBB',
                 'Type'      => 'Contact',
@@ -217,7 +198,9 @@ class SalesforceConnectorTest extends DatabaseTestCase
 
         $this->assertNull($contact);
 
-        $account = new SObject(['Id' => '001000111000111ZAA', 'Name' => 'Test Recieving DBAL', 'Type' => 'Account']);
+        $account                   = new SObject(
+            ['Id' => '001000111000111ZAA', 'Name' => 'Test Recieving DBAL', 'Type' => 'Account']
+        );
         $account->__SOBJECT_TYPE__ = 'Account';
 
         $this->connector->receive($account, SalesforceConsumerInterface::CREATED, 'db_test_org1');

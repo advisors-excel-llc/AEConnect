@@ -22,20 +22,6 @@ use AE\ConnectBundle\Tests\Entity\TestObject;
 
 class OutboundBulkQueueTest extends DatabaseTestCase
 {
-    protected function loadSchemas(): array
-    {
-        return [
-            Account::class,
-            OrderProduct::class,
-            Product::class,
-            Order::class,
-            Task::class,
-            Contact::class,
-            Role::class,
-            TestObject::class,
-        ];
-    }
-
     public function testProcess()
     {
         $this->loadFixtures(['./Tests/Resources/config/bulk_outbound.yml']);

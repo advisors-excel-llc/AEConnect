@@ -11,4 +11,5 @@ namespace AE\ConnectBundle\Connection\Dbal;
 interface ConnectionEntityInterface
 {
     public function getName(): string;
+    public function setName(string $name);
 }

@@ -26,4 +26,9 @@ class KernelTestCase extends TestCase
     {
         return static::$container->get($serviceId);
     }
+
+    protected function getProjectDir()
+    {
+        return static::$container->getParameter('kernel.project_dir');
+    }
 }

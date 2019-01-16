@@ -11,10 +11,17 @@ namespace AE\ConnectBundle\Salesforce\Outbound\Queue;
 use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
+use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
+use AE\ConnectBundle\Salesforce\Transformer\TransformerInterface;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CollectionResponse;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeResponse;
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\DBALException;
+use Doctrine\DBAL\Driver\IBMDB2\DB2Exception;
+use Doctrine\DBAL\Types\Type;
+use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -42,6 +49,11 @@ class OutboundQueue
     private $registry;
 
     /**
+     * @var TransformerInterface
+     */
+    private $transformer;
+
+    /**
      * @var array
      */
     private $messages = [];
@@ -50,11 +62,13 @@ class OutboundQueue
         CacheProvider $cache,
         ConnectionManagerInterface $connectionManager,
         RegistryInterface $registry,
+        TransformerInterface $transformer,
         ?LoggerInterface $logger = null
     ) {
         $this->connectionManager = $connectionManager;
         $this->cache             = $cache;
         $this->registry          = $registry;
+        $this->transformer       = $transformer;
 
         $this->messages = $this->cache->fetch(self::CACHE_ID_MESSAGES) ?? [];
 
@@ -108,7 +122,7 @@ class OutboundQueue
             return;
         }
 
-        $queue  = RequestBuilder::build($this->messages[$connection->getName()]);
+        $queue = RequestBuilder::build($this->messages[$connection->getName()]);
 
         try {
             $request = RequestBuilder::buildRequest(
@@ -184,13 +198,13 @@ class OutboundQueue
             } else {
                 /** @var CollectionResponse[] $messages */
                 $messages = $result->getBody();
-                $refQ    = $queue[$refId];
+                $refQ     = $queue[$refId];
 
                 if ($refQ instanceof Collection) {
                     $refQ = $refQ->toArray();
                 }
 
-                $items    = array_values($refQ);
+                $items = array_values($refQ);
                 foreach ($messages as $i => $res) {
                     if (!array_key_exists($i, $items)) {
                         continue;
@@ -225,26 +239,41 @@ class OutboundQueue
      */
     private function updateCreatedEntity(CompilerResult $payload, CollectionResponse $result): void
     {
-        if (null === $payload->getMetadata()->getIdFieldProperty()) {
+        $metadata = $payload->getMetadata();
+        if (null === $metadata->getIdFieldProperty()) {
             return;
         }
 
         $object            = $payload->getSobject();
         $id                = $result->getId();
         $idMap             = [];
-        $identifyingFields = $payload->getMetadata()->getIdentifyingFields();
+        $identifyingFields = $metadata->getIdentifyingFields();
 
         foreach ($identifyingFields as $prop => $idProp) {
             $idMap[$prop] = $object->$idProp;
         }
 
-        $manager = $this->registry->getManagerForClass($payload->getMetadata()->getClassName());
-        $repo    = $manager->getRepository($payload->getMetadata()->getClassName());
+        $manager = $this->registry->getManagerForClass($metadata->getClassName());
+        $repo    = $manager->getRepository($metadata->getClassName());
         $entity  = $repo->findOneBy($idMap);
 
         if (null !== $entity) {
-            // TODO: handle SFIDs that use associations
-            $payload->getMetadata()->getMetadataForField('Id')->setValueForEntity($entity, $id);
+            /** @var ClassMetadata $classMetadata */
+            $classMetadata      = $manager->getClassMetadata($metadata->getClassName());
+            $fieldMetadata      = $metadata->getMetadataForField('Id');
+            $transformerPayload = TransformerPayload::inbound()
+                                                    ->setValue($id)
+                                                    ->setFieldMetadata($fieldMetadata)
+                                                    ->setMetadata($metadata)
+                                                    ->setClassMetadata($classMetadata)
+                                                    ->setEntity($object)
+                                                    ->setFieldName('Id')
+                                                    ->setPropertyName($fieldMetadata->getProperty())
+            ;
+
+            $this->transformer->transform($transformerPayload);
+            $fieldMetadata->setValueForEntity($entity, $transformerPayload->getValue());
+
             $manager->flush();
         }
     }

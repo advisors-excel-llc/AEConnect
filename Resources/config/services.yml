@@ -51,6 +51,7 @@ services:
         $cache: '@doctrine_cache.providers.ae_connect_outbound_queue'
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $transformer: '@AE\ConnectBundle\Salesforce\Transformer\Transformer'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Doctrine\Subscriber\EntitySubscriber:
         arguments:

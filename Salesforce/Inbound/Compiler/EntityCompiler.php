@@ -343,7 +343,7 @@ class EntityCompiler
         ClassMetadata $classMetadata,
         Metadata $metadata,
         FieldMetadata $fieldMetadata
-    ): mixed {
+    ) {
         $payload = TransformerPayload::inbound()
                                      ->setClassMetadata($classMetadata)
                                      ->setEntity($object)
