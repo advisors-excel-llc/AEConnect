@@ -4,6 +4,7 @@ services:
             tags:
                 - {name: "ae_connect.transformer_plugin"}
     AE\ConnectBundle\Salesforce\Transformer\Transformer: ~
+    AE\ConnectBundle\Salesforce\Transformer\TransformerInterface: '@AE\ConnectBundle\Salesforce\Transformer\Transformer'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\CompoundFieldTransformerPlugin: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\AssociationTransformer:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
@@ -15,3 +16,9 @@ services:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\RecordTypeTransformer: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\UuidTransformerPlugin: ~
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\ConnectionEntityTransformer:
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $reader: '@Doctrine\Common\Annotations\Reader'
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\SfidTransformer:
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $reader: '@Doctrine\Common\Annotations\Reader'

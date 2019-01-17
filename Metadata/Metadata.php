@@ -10,7 +10,6 @@ namespace AE\ConnectBundle\Metadata;
 
 use AE\SalesforceRestSdk\Model\Rest\Metadata\DescribeSObject;
 use AE\SalesforceRestSdk\Model\Rest\Metadata\Field;
-use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Collections\ArrayCollection;
 use JMS\Serializer\Annotation as Serializer;
 
@@ -36,18 +35,13 @@ class Metadata
     /**
      * @var ArrayCollection|FieldMetadata[]
      * @Serializer\Type("ArrayCollection<AE\ConnectBundle\Metadata\FieldMetadata>")
+     * @Serializer\AccessType("public_method")
      */
     private $fieldMetadata;
 
     /**
-     * @var ArrayCollection<string>
-     * @Serializer\Type("ArrayCollection")
-     */
-    private $identifiers;
-
-    /**
      * @var DescribeSObject
-     * @Serializer\Type("array")
+     * @Serializer\Type("AE\SalesforceRestSdk\Model\Rest\Metadata\DescribeSObject")
      */
     private $describe;
 
@@ -60,6 +54,7 @@ class Metadata
     /**
      * @var FieldMetadata|null
      * @Serializer\Type("AE\ConnectBundle\Metadata\FieldMetadata")
+     * @Serializer\AccessType("public_method")
      */
     private $connectionNameField;
 
@@ -71,7 +66,6 @@ class Metadata
     public function __construct(string $connectionName)
     {
         $this->fieldMetadata  = new ArrayCollection();
-        $this->identifiers    = new ArrayCollection();
         $this->connectionName = $connectionName;
     }
 
@@ -140,6 +134,10 @@ class Metadata
     {
         $this->fieldMetadata = $fieldMetadata;
 
+        foreach ($this->fieldMetadata as $metadata) {
+            $metadata->setMetadata($this);
+        }
+
         return $this;
     }
 
@@ -147,6 +145,7 @@ class Metadata
     {
         if (!$this->fieldMetadata->contains($metadata)) {
             $this->fieldMetadata->add($metadata);
+            $metadata->setMetadata($this);
         }
 
         return $this;
@@ -155,6 +154,7 @@ class Metadata
     public function removeFieldMetadata(FieldMetadata $metadata): Metadata
     {
         $this->fieldMetadata->removeElement($metadata);
+        $metadata->setMetadata(null);
 
         return $this;
     }
@@ -431,6 +431,8 @@ class Metadata
     public function setConnectionNameField(?FieldMetadata $connectionNameField): Metadata
     {
         $this->connectionNameField = $connectionNameField;
+
+        $connectionNameField->setMetadata($this);
 
         return $this;
     }

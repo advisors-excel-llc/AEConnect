@@ -61,3 +61,4 @@ fabric.properties
 /phpunit.xml
 /Tests/cache/
 /test_db.sqlite
+/var/

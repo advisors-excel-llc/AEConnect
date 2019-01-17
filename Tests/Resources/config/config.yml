@@ -77,7 +77,7 @@ jms_serializer:
 
 enqueue:
     transport:
-        default: 'file:'
+        default: 'file://%kernel.project_dir%/var'
     client:
         traceable_producer: true
     async_events: false

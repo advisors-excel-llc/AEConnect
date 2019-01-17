@@ -18,6 +18,7 @@ composer require ae/connect-bundle
 * [Configuration](Resources/docs/config/README.md)
     * [Entity Mapping](Resources/docs/config/entity_mapping.md)
     * [Connections Created from Stored Credentials](Resources/docs/config/runtime_connections.md)
+    * [Advanced Connection Strategies](Resources/docs/config/advanced_connections.md)
 * [Inbound Data from Salesforce](Resources/docs/inbound/README.md)
 * [Outbound Data to Salesforce](Resources/docs/outbound/README.md)
 * [Inbound and Outbound Validation](Resources/docs/validation/README.md)
