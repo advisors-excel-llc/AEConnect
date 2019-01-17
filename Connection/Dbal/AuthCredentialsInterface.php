@@ -7,12 +7,11 @@
  */
 namespace AE\ConnectBundle\Connection\Dbal;
 
-interface AuthCredentialsInterface
+interface AuthCredentialsInterface extends ConnectionEntityInterface
 {
     public const SOAP = 'SOAP';
     public const OAUTH = 'OAUTH';
 
-    public function getName(): string;
     /** getType should return "SOAP" or "OAUTH" or "OATH" */
     public function getType(): string;
     public function getUsername(): string;

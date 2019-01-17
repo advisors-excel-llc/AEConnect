@@ -37,10 +37,10 @@ class CompilerResult
     private $sObject;
 
     /**
-     * @var Metadata
-     * @Serializer\Type("AE\ConnectBundle\Metadata\Metadata")
+     * @var string
+     * @Serializer\Type("string")
      */
-    private $metadata;
+    private $className;
 
     /**
      * @var string
@@ -48,12 +48,24 @@ class CompilerResult
      */
     private $referenceId;
 
-    public function __construct(string $intent, CompositeSObject $object, Metadata $metadata, string $referenceId)
-    {
+    /**
+     * @var string
+     * @Serializer\Type("string")
+     */
+    private $connectionName;
+
+    public function __construct(
+        string $intent,
+        CompositeSObject $object,
+        string $className,
+        string $referenceId,
+        ?string $connectionName = 'default'
+    ) {
         $this->setIntent($intent);
-        $this->sObject     = $object;
-        $this->metadata    = $metadata;
-        $this->referenceId = $referenceId;
+        $this->sObject        = $object;
+        $this->referenceId    = $referenceId;
+        $this->className      = $className;
+        $this->connectionName = $connectionName;
     }
 
     /**
@@ -99,21 +111,21 @@ class CompilerResult
     }
 
     /**
-     * @return Metadata
+     * @return string
      */
-    public function getMetadata(): Metadata
+    public function getClassName(): string
     {
-        return $this->metadata;
+        return $this->className;
     }
 
     /**
-     * @param Metadata $metadata
+     * @param string $className
      *
      * @return CompilerResult
      */
-    public function setMetadata(Metadata $metadata): CompilerResult
+    public function setClassName(string $className): CompilerResult
     {
-        $this->metadata = $metadata;
+        $this->className = $className;
 
         return $this;
     }
@@ -134,6 +146,26 @@ class CompilerResult
     public function setReferenceId(string $referenceId): CompilerResult
     {
         $this->referenceId = $referenceId;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getConnectionName(): string
+    {
+        return $this->connectionName;
+    }
+
+    /**
+     * @param string $connectionName
+     *
+     * @return CompilerResult
+     */
+    public function setConnectionName(string $connectionName): CompilerResult
+    {
+        $this->connectionName = $connectionName;
 
         return $this;
     }

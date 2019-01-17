@@ -32,14 +32,6 @@ class AssociationTransformerTest extends DatabaseTestCase
         $this->connectionManager = $this->get(ConnectionManagerInterface::class);
     }
 
-    protected function loadSchemas(): array
-    {
-        return [
-            Account::class,
-            Contact::class,
-        ];
-    }
-
     /**
      * @throws \Doctrine\ORM\ORMException
      */

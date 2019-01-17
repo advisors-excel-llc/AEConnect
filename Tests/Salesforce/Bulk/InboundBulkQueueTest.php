@@ -13,16 +13,10 @@ use AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Role;
+use Doctrine\ORM\EntityRepository;
 
 class InboundBulkQueueTest extends DatabaseTestCase
 {
-    protected function loadSchemas(): array
-    {
-        return [
-            Account::class,
-            Role::class,
-        ];
-    }
 
     public function testProcess()
     {
@@ -54,6 +48,8 @@ class InboundBulkQueueTest extends DatabaseTestCase
 
     public function testProcessRecordTypeFiltering()
     {
+        $this->loadOrgConnections();
+
         /** @var ConnectionManagerInterface $connectionManager */
         $connectionManager = $this->get(ConnectionManagerInterface::class);
         $connection        = $connectionManager->getConnection('db_test_org1');
@@ -63,9 +59,18 @@ class InboundBulkQueueTest extends DatabaseTestCase
 
         $inboundQueue->process($connection, ['Account'], true);
 
+        /** @var EntityRepository $repo */
+        $repo = $this->doctrine->getManager()->getRepository(Account::class);
+        $qb = $repo->createQueryBuilder('a');
+        $qb->join('a.sfids', 's')
+            ->join('s.connection', 'c')
+            ->where('c.name = :conn')
+            ->setParameter('conn', 'db_test_org1')
+        ;
+
         /** @var array|Account[] $accounts */
-        $accounts = $this->doctrine->getManager()->getRepository(Account::class)
-                                                 ->findBy(['connection' => 'db_test_org1']);
+        $accounts = $qb->getQuery()->getResult();
+
         $this->assertNotEmpty($accounts);
 
         $filtered = array_filter(

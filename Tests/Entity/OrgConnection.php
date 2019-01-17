@@ -9,6 +9,7 @@
 namespace AE\ConnectBundle\Tests\Entity;
 
 use AE\ConnectBundle\Connection\Dbal\AuthCredentialsInterface;
+use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use Doctrine\ORM\Mapping as ORM;
 
 /**

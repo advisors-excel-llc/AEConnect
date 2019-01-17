@@ -51,6 +51,7 @@ services:
         $cache: '@doctrine_cache.providers.ae_connect_outbound_queue'
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $transformer: '@AE\ConnectBundle\Salesforce\Transformer\Transformer'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Doctrine\Subscriber\EntitySubscriber:
         arguments:
@@ -112,6 +113,14 @@ services:
     AE\ConnectBundle\Command\PollCommand:
         arguments:
             $polling: '@AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService'
+        tags: ['console.command']
+    AE\ConnectBundle\Command\DebugConnectionsCommand:
+        arguments:
+            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        tags: ['console.command']
+    AE\ConnectBundle\Command\DebugMetadataCommand:
+        arguments:
+            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         tags: ['console.command']
     AE\ConnectBundle\Driver\DbalConnectionDriver:
         arguments:

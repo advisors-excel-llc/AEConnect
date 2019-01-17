@@ -53,20 +53,6 @@ class RequestBuilderTest extends DatabaseTestCase
         $this->connector         = $this->get(SalesforceConnector::class);
     }
 
-    protected function loadSchemas(): array
-    {
-        return [
-            Account::class,
-            Contact::class,
-            Order::class,
-            OrderProduct::class,
-            Product::class,
-            Task::class,
-            TestObject::class,
-            Role::class,
-        ];
-    }
-
     public function testBuild()
     {
         // Turn off the connector or it will fire on all entity creation/update/deletion

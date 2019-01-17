@@ -113,7 +113,7 @@ class RequestBuilder
     private static function addToCollection(DependencyNode $node, ArrayCollection $collection)
     {
         $item   = $node->getItem();
-        $type   = $item->getMetadata()->getSObjectType();
+        $type   = $item->getSObject()->getType();
         $intent = $item->getIntent();
         $refId  = $item->getReferenceId();
 
@@ -195,7 +195,7 @@ class RequestBuilder
     ) {
         $item   = $node->getItem();
         $intent = $item->getIntent();
-        $type   = $item->getMetadata()->getSObjectType();
+        $type   = $item->getSObject()->getType();
 
         switch ($intent) {
             case CompilerResult::INSERT:
@@ -236,7 +236,7 @@ class RequestBuilder
 
         /** @var CompilerResult $item */
         foreach ($collection as $item) {
-            $type  = $item->getMetadata()->getSObjectType();
+            $type  = $item->getSObject()->getType();
             $types = null === $partition ? [] : $partition->getKeys();
 
             if ((false === array_search($type, $types) && count($types) === 5) || count($partition) === 200) {

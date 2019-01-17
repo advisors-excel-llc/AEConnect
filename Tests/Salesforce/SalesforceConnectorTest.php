@@ -8,7 +8,6 @@
 
 namespace AE\ConnectBundle\Tests\Salesforce;
 
-use AE\ConnectBundle\Driver\DbalConnectionDriver;
 use AE\ConnectBundle\Salesforce\Inbound\SalesforceConsumerInterface;
 use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
 use AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue;
@@ -19,9 +18,9 @@ use AE\ConnectBundle\Tests\Entity\Contact;
 use AE\ConnectBundle\Tests\Entity\Order;
 use AE\ConnectBundle\Tests\Entity\OrgConnection;
 use AE\ConnectBundle\Tests\Entity\Product;
-use AE\ConnectBundle\Tests\Entity\Task;
-use AE\ConnectBundle\Tests\Entity\TestObject;
 use AE\SalesforceRestSdk\Model\SObject;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\ORM\EntityRepository;
 use Enqueue\Client\DriverInterface;
 use Enqueue\Consumption\Result;
 use Enqueue\Fs\FsContext;
@@ -33,45 +32,35 @@ class SalesforceConnectorTest extends DatabaseTestCase
      */
     private $connector;
 
-    /** @var FsContext */
+    /**
+     * @var FsContext
+     */
     private $context;
 
-    /** @var DriverInterface */
-    private $driver;
-
     /**
-     * @var DbalConnectionDriver
+     * @var DriverInterface
      */
-    private $dbalDriver;
-
-    protected function loadSchemas(): array
-    {
-        return [
-            Account::class,
-            Contact::class,
-            Order::class,
-            Product::class,
-            Task::class,
-            TestObject::class,
-            OrgConnection::class,
-        ];
-    }
+    private $driver;
 
     protected function setUp()
     {
         parent::setUp();
-        $this->connector  = $this->get(SalesforceConnector::class);
-        $this->context    = $this->get('enqueue.transport.context');
-        $this->driver     = $this->get('enqueue.client.driver');
-        $this->dbalDriver = $this->get(DbalConnectionDriver::class);
+        $this->connector = $this->get(SalesforceConnector::class);
+        $this->context   = $this->get('enqueue.transport.context');
+        $this->driver    = $this->get('enqueue.client.driver');
     }
 
     public function testOutgoing()
     {
         // We don't want to fire on any triggers now do we?
         $this->connector->disable();
-        $this->loadFixtures([__DIR__.'/../Resources/config/login_fixtures.yml']);
-        $this->dbalDriver->loadConnections();
+        $this->loadOrgConnections();
+
+        $this->loadFixtures(
+            [
+                $this->getProjectDir().'/Tests/Resources/config/connections.yml',
+            ]
+        );
 
         $manager  = $this->doctrine->getManager();
         $items    = [];
@@ -80,22 +69,14 @@ class SalesforceConnectorTest extends DatabaseTestCase
         /** @var OutboundProcessor $processor */
         $processor = $this->get(OutboundProcessor::class);
 
-        $this->context->purge($queue);
+        if (method_exists($this->context, 'purge')) {
+            $this->context->purge($queue);
+        }
 
         for ($i = 0; $i < 5; $i++) {
             $this->createOrder($items);
             $manager->flush();
         }
-
-        // Create one for the non-default connection
-        $account = new Account();
-        $account->setName('Test DB Account');
-        $account->setConnection('db_test_org1');
-        $manager->persist($account);
-
-        $items[] = $account;
-
-        $manager->flush();
 
         $this->connector->enable();
 
@@ -103,6 +84,58 @@ class SalesforceConnectorTest extends DatabaseTestCase
             $this->connector->send($item);
         }
 
+        while (null !== ($message = $consumer->receive(100))) {
+            switch ($processor->process($message, $this->context)) {
+                case Result::ACK:
+                    $consumer->acknowledge($message);
+                    break;
+                case Result::REJECT:
+                    $consumer->reject($message, false);
+                    break;
+                case Result::REQUEUE:
+                    $consumer->reject($message, true);
+                    break;
+            }
+        }
+
+        $this->get(OutboundQueue::class)->send();
+
+        $accounts = $manager->getRepository(Account::class)->findBy(['sfid' => null, 'connection' => 'default']);
+        $this->assertEmpty($accounts);
+
+        $orders = $manager->getRepository(Order::class)->findBy(['sfid' => null]);
+        $this->assertEmpty($orders);
+
+        $this->assertCount(5, $manager->getRepository(Account::class)->findBy(['connection' => 'default']));
+    }
+
+    public function testOutgoingDbTest()
+    {
+        // We don't want to fire on any triggers now do we?
+        $this->connector->disable();
+        $this->loadOrgConnections();
+
+        $manager  = $this->doctrine->getManager();
+        $queue    = $this->driver->createQueue('default');
+        $consumer = $this->context->createConsumer($queue);
+        /** @var OutboundProcessor $processor */
+        $processor = $this->get(OutboundProcessor::class);
+        /** @var OrgConnection $conn */
+        $conn = $manager->getRepository(OrgConnection::class)->findOneBy(['name' => 'db_test_org1']);
+
+        if (method_exists($this->context, 'purge')) {
+            $this->context->purge($queue);
+        }
+
+        // Create one for the non-default connection
+        $account = new Account();
+        $account->setName('Test DB Account');
+        $account->setConnections(new ArrayCollection([$conn]));
+        $manager->persist($account);
+
+        $manager->flush();
+
+        $this->connector->enable();
         $this->connector->send($account, 'db_test_org1');
 
         while (null !== ($message = $consumer->receive(100))) {
@@ -121,14 +154,18 @@ class SalesforceConnectorTest extends DatabaseTestCase
 
         $this->get(OutboundQueue::class)->send();
 
-        $accounts = $manager->getRepository(Account::class)->findBy(['sfid' => null]);
-        $this->assertEmpty($accounts);
+        /** @var EntityRepository $repo */
+        $repo = $manager->getRepository(Account::class);
+        $qb   = $repo->createQueryBuilder('a');
 
-        $orders = $manager->getRepository(Order::class)->findBy(['sfid' => null]);
-        $this->assertEmpty($orders);
+        $qb->join('a.connections', 'c')
+           ->where('c.id = :conn')
+           ->setParameter('conn', $conn->getId())
+        ;
 
-        $this->assertCount(1, $manager->getRepository(Account::class)->findBy(['connection' => 'db_test_org1']));
-        $this->assertCount(5, $manager->getRepository(Account::class)->findBy(['connection' => 'default']));
+        $accounts = $qb->getQuery()->getResult();
+
+        $this->assertCount(1, $accounts);
     }
 
     public function testIncoming()
@@ -155,7 +192,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $this->assertNotNull($account);
         $this->assertEquals('Test Incoming', $account->getName());
 
-        $account = new SObject(
+        $account                   = new SObject(
             [
                 'Id'           => '001000111000111AAA',
                 'Type'         => 'Account',
@@ -176,7 +213,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $this->assertNotNull($account);
         $this->assertEquals('Test Incoming Update', $account->getName());
 
-        $contact = new SObject(
+        $contact                   = new SObject(
             [
                 'Id'        => '001000111000111BBB',
                 'Type'      => 'Contact',
@@ -216,26 +253,49 @@ class SalesforceConnectorTest extends DatabaseTestCase
         ;
 
         $this->assertNull($contact);
+    }
 
-        $account = new SObject(['Id' => '001000111000111ZAA', 'Name' => 'Test Recieving DBAL', 'Type' => 'Account']);
+    public function testIncomingDBTest()
+    {
+        $this->loadOrgConnections();
+
+        $account                   = new SObject(
+            [
+                'Id'   => '001000111000111ZAA',
+                'Name' => 'Test Recieving DBAL',
+                'Type' => 'Account',
+            ]
+        );
         $account->__SOBJECT_TYPE__ = 'Account';
 
         $this->connector->receive($account, SalesforceConsumerInterface::CREATED, 'db_test_org1');
 
-        $account = $this->doctrine->getManagerForClass(Account::class)
-                                  ->getRepository(Account::class)
-                                  ->findOneBy(['sfid' => '001000111000111ZAA', 'connection' => 'db_test_org1'])
-        ;
+        /** @var EntityRepository $repo */
+        $repo = $this->doctrine->getManagerForClass(Account::class)
+                               ->getRepository(Account::class);
+
+        $qb = $repo->createQueryBuilder('a');
+        $qb->join('a.sfids', 's')
+            ->join('s.connection', 'c')
+            ->where('c.name = :conn AND s.salesforceId = :sfid')
+            ->setParameters([
+                'conn' => 'db_test_org1',
+                'sfid' => '001000111000111ZAA'
+            ])
+            ;
+
+        $account = $qb->getQuery()->getOneOrNullResult();
 
         $this->assertNotNull($account);
         $this->assertEquals('Test Recieving DBAL', $account->getName());
     }
 
-    private function createOrder(array &$queue)
+    private function createOrder(array &$queue, string $connectionName = 'default')
     {
         $manager = $this->doctrine->getManager();
         $account = new Account();
         $account->setName(uniqid('Test Customer '));
+        $account->setConnection($connectionName);
 
         $manager->persist($account);
         $queue[] = $account;

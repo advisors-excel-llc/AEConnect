@@ -9,6 +9,7 @@
 namespace AE\ConnectBundle\Salesforce\Outbound\Compiler;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
+use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
@@ -89,9 +90,16 @@ class SObjectCompiler
         $connectionProp = $metadata->getConnectionNameField();
         if (null !== $connectionProp
             && null !== ($entityConnectionName = $connectionProp->getValueFromEntity($entity))
-            && $connection->getName() !== $entityConnectionName
+            && ((is_string($entityConnectionName) && $connection->getName() !== $entityConnectionName)
+                || ($entityConnectionName instanceof ConnectionEntityInterface
+                    && $connection->getName() === $entityConnectionName->getName()
+                )
+            )
         ) {
-            throw new \RuntimeException("Entity is meant for $entityConnectionName and not {$connection->getName()}");
+            $cName = $entityConnectionName instanceof ConnectionEntityInterface
+                ? $entityConnectionName->getName()
+                : $entityConnectionName;
+            throw new \RuntimeException("Entity is meant for $cName and not {$connection->getName()}");
         }
 
         $uow       = $manager->getUnitOfWork();
@@ -107,9 +115,17 @@ class SObjectCompiler
         $this->validate($entity, $connection);
 
         $sObject = new CompositeSObject($metadata->getSObjectType());
+        $idProp  = $metadata->getIdFieldProperty();
 
-        $idProp      = $metadata->getIdFieldProperty();
-        $sObject->Id = $classMetadata->getFieldValue($entity, $idProp);
+        if (null !== $idProp) {
+            $sObject->Id = $this->compileProperty(
+                $idProp,
+                $classMetadata->getFieldValue($entity, $idProp),
+                $entity,
+                $metadata,
+                $classMetadata
+            );
+        }
 
         foreach ($metadata->getIdentifyingFields() as $prop => $field) {
             $sObject->$field = $classMetadata->getFieldValue($entity, $prop);
@@ -135,7 +151,7 @@ class SObjectCompiler
 
         $refId = spl_object_hash($entity);
 
-        return new CompilerResult($intent, $sObject, $metadata, $refId);
+        return new CompilerResult($intent, $sObject, $className, $refId, $connectionName);
     }
 
     private function validate($entity, ConnectionInterface $connection)
@@ -275,7 +291,7 @@ class SObjectCompiler
                 }
             } elseif (ucwords($field) === 'Id'
                 && null !== ($id = $classMetadata->getFieldValue($entity, $property))) {
-                $sObject->Id = $id;
+                $sObject->Id = $this->compileProperty($property, $id, $entity, $metadata, $classMetadata);
             }
         }
     }
@@ -292,18 +308,18 @@ class SObjectCompiler
         ClassMetadata $classMetadata,
         CompositeSObject $sObject
     ): void {
-        $field = $metadata->getPropertyByField('Id');
+        $property = $metadata->getPropertyByField('Id');
 
-        if (null === $field) {
+        if (null === $property) {
             throw new \RuntimeException("Attempted to delete an entity without a Salesforce Id.");
         }
 
-        $id = $classMetadata->getFieldValue($entity, $field);
+        $id = $classMetadata->getFieldValue($entity, $property);
 
         if (null === $id) {
             throw new \RuntimeException("Attempted to delete an entity without a Salesforce Id.");
         }
 
-        $sObject->Id = $id;
+        $sObject->Id = $this->compileProperty($property, $id, $entity, $metadata, $classMetadata);
     }
 }

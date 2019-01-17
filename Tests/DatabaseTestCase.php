@@ -8,51 +8,19 @@
 
 namespace AE\ConnectBundle\Tests;
 
-use Doctrine\Bundle\DoctrineBundle\Registry;
-use Doctrine\ORM\EntityManager;
-use Doctrine\ORM\Tools\SchemaTool;
-use Fidry\AliceDataFixtures\LoaderInterface;
+use AE\ConnectBundle\Driver\DbalConnectionDriver;
 
 abstract class DatabaseTestCase extends KernelTestCase
 {
-    /**
-     * @var LoaderInterface
-     */
-    protected $loader;
-    /**
-     * @var Registry
-     */
-    protected $doctrine;
+    use DatabaseTestTrait;
 
     protected function setUp()/* The :void return type declaration that should be here would cause a BC issue */
     {
         parent::setUp();
-        $this->loader = static::$container->get('fidry_alice_data_fixtures.loader.doctrine');
-        $this->doctrine = static::$container->get('doctrine');
+        $this->setLoader(static::$container->get('fidry_alice_data_fixtures.loader.doctrine'));
+        $this->setDoctrine(static::$container->get('doctrine'));
+        $this->setDbalConnectionDriver(static::$container->get(DbalConnectionDriver::class));
+        $this->setProjectDir(static::$container->getParameter('kernel.project_dir'));
         $this->createSchemas();
     }
-
-    protected function createSchemas()
-    {
-        /** @var EntityManager $manager */
-        $manager = $this->doctrine->getManager();
-        $tool    = new SchemaTool($manager);
-        $schemas = $this->loadSchemas();
-
-        if (count($schemas) > 0) {
-            $tool->updateSchema(array_map(function ($item) use ($manager) {
-                return $manager->getClassMetadata($item);
-            }, $schemas), true);
-        }
-    }
-
-    protected function loadFixtures(array $fixtures)
-    {
-        $this->loader->load($fixtures);
-    }
-
-    /**
-     * @return array
-     */
-    abstract protected function loadSchemas(): array;
 }

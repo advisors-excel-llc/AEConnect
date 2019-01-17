@@ -232,3 +232,6 @@ connection property.
 
 The `@Connection` annotation does support the `connections={}` attribute, allowing you to specify only the entity-driven
 connections and ignore any standard, config-defined connections.
+
+> There's more to `@Connection` and the `AuthCredentialsInterface` than meets the eye!
+> Check out *[Advanced Connection Strategies](./advanced_connections.md)* to learn more.
