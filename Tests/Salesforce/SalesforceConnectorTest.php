@@ -14,11 +14,12 @@ use AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
-use AE\ConnectBundle\Tests\Entity\ConnectionEntity;
 use AE\ConnectBundle\Tests\Entity\Contact;
 use AE\ConnectBundle\Tests\Entity\Order;
+use AE\ConnectBundle\Tests\Entity\OrgConnection;
 use AE\ConnectBundle\Tests\Entity\Product;
 use AE\SalesforceRestSdk\Model\SObject;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityRepository;
 use Enqueue\Client\DriverInterface;
 use Enqueue\Consumption\Result;
@@ -114,19 +115,13 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $this->connector->disable();
         $this->loadOrgConnections();
 
-        $this->loadFixtures(
-            [
-                $this->getProjectDir().'/Tests/Resources/config/connections.yml',
-            ]
-        );
-
         $manager  = $this->doctrine->getManager();
         $queue    = $this->driver->createQueue('default');
         $consumer = $this->context->createConsumer($queue);
         /** @var OutboundProcessor $processor */
         $processor = $this->get(OutboundProcessor::class);
-        /** @var ConnectionEntity $conn */
-        $conn = $manager->getRepository(ConnectionEntity::class)->findOneBy(['name' => 'db_test_org1']);
+        /** @var OrgConnection $conn */
+        $conn = $manager->getRepository(OrgConnection::class)->findOneBy(['name' => 'db_test_org1']);
 
         if (method_exists($this->context, 'purge')) {
             $this->context->purge($queue);
@@ -135,7 +130,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         // Create one for the non-default connection
         $account = new Account();
         $account->setName('Test DB Account');
-        $account->setConnections([$conn]);
+        $account->setConnections(new ArrayCollection([$conn]));
         $manager->persist($account);
 
         $manager->flush();
@@ -263,12 +258,6 @@ class SalesforceConnectorTest extends DatabaseTestCase
     public function testIncomingDBTest()
     {
         $this->loadOrgConnections();
-
-        $this->loadFixtures(
-            [
-                $this->getProjectDir().'/Tests/Resources/config/connections.yml',
-            ]
-        );
 
         $account                   = new SObject(
             [

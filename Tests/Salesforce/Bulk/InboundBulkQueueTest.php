@@ -50,12 +50,6 @@ class InboundBulkQueueTest extends DatabaseTestCase
     {
         $this->loadOrgConnections();
 
-        $this->loadFixtures(
-            [
-                $this->getProjectDir().'/Tests/Resources/config/connections.yml',
-            ]
-        );
-
         /** @var ConnectionManagerInterface $connectionManager */
         $connectionManager = $this->get(ConnectionManagerInterface::class);
         $connection        = $connectionManager->getConnection('db_test_org1');

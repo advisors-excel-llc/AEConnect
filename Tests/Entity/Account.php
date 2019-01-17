@@ -12,7 +12,6 @@ use AE\ConnectBundle\Annotations as AEConnect;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-use Ramsey\Uuid\Uuid;
 
 /**
  * Class Account
@@ -69,8 +68,8 @@ class Account
     private $connection;
 
     /**
-     * @var ConnectionEntity[]|Collection|array
-     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\ConnectionEntity", cascade={"persist"})
+     * @var OrgConnection[]|Collection|array
+     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\OrgConnection", cascade={"persist"})
      * @AEConnect\Connection(connections={"db_test"})
      */
     private $connections;
@@ -212,7 +211,7 @@ class Account
     }
 
     /**
-     * @return ConnectionEntity[]|array|Collection
+     * @return OrgConnection[]|array|Collection
      */
     public function getConnections()
     {

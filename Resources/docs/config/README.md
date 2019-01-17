@@ -2,6 +2,7 @@
 
 * [Entity Mapping](entity_mapping.md)
 * [Connections Created from Stored Credentials](runtime_connections.md)
+* [Advanced Connection Strategies](advanced_connections.md)
 
 AE Connect can be configured for one or more Salesforce connections. A connection is an authorized session with a
 Salesforce organization. Along with login information, the connection configuration will also determine which channels

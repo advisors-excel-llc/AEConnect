@@ -80,8 +80,8 @@ class Contact
     private $sfid;
 
     /**
-     * @var ConnectionEntity|null
-     * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\ConnectionEntity")
+     * @var OrgConnection|null
+     * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\OrgConnection")
      * @Connection(connections={"db_test"})
      */
     private $connection;

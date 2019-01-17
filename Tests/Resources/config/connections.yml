@@ -1,3 +1,0 @@
-AE\ConnectBundle\Tests\Entity\ConnectionEntity:
-    db_test_org1:
-        name: 'db_test_org1'

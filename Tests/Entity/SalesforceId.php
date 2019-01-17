@@ -30,8 +30,8 @@ class SalesforceId implements SalesforceIdEntityInterface
     private $id;
 
     /**
-     * @var ConnectionEntity|null
-     * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\ConnectionEntity")
+     * @var OrgConnection|null
+     * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\OrgConnection")
      * @AEConnect\Connection()
      */
     private $connection;
@@ -66,13 +66,13 @@ class SalesforceId implements SalesforceIdEntityInterface
     /**
      * @return ConnectionEntity|null
      */
-    public function getConnection(): ?ConnectionEntity
+    public function getConnection(): ?OrgConnection
     {
         return $this->connection;
     }
 
     /**
-     * @param ConnectionEntity|null $connection
+     * @param OrgConnection|null $connection
      *
      * @return SalesforceId
      */
