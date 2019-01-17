@@ -18,9 +18,15 @@ use AE\SalesforceRestSdk\Model\Rest\UpdatedResponse;
 use AE\SalesforceRestSdk\Model\SObject;
 use AE\SalesforceRestSdk\Rest\Composite\Builder\CompositeRequestBuilder;
 use Doctrine\Common\Cache\CacheProvider;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
-class PollingService
+class PollingService implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     public const CACHE_ID = 'ae_connect_poll_last_updated';
     /**
      * @var array
@@ -50,7 +56,8 @@ class PollingService
     public function __construct(
         ConnectionManagerInterface $connectionManager,
         CacheProvider $cache,
-        SalesforceConnector $connector
+        SalesforceConnector $connector,
+        ?LoggerInterface $logger = null
     ) {
         $this->connectionManager = $connectionManager;
         $this->cache             = $cache;
@@ -62,6 +69,8 @@ class PollingService
             $this->lastUpdated = new \DateTime();
             $this->cache->save(self::CACHE_ID, $this->lastUpdated->format(\DATE_ISO8601));
         }
+
+        $this->setLogger($logger ?: new NullLogger());
     }
 
     /**
@@ -102,6 +111,8 @@ class PollingService
         $objects = $this->getObjects($connectionName);
 
         if (empty($objects)) {
+            $this->logger->debug('No objects to poll for connection, "{conn}"', ['conn' => $connection->getName()]);
+
             return;
         }
 
@@ -117,6 +128,15 @@ class PollingService
                 $builder->getDeleted('deleted_'.$object, $object, $this->lastUpdated, $end);
             }
 
+            $this->logger->debug(
+                'Polling for changes to {obj} between {start} and {end}',
+                [
+                    'obj'   => $object,
+                    'start' => $this->lastUpdated,
+                    'end'   => $end,
+                ]
+            );
+
             $request  = $builder->build();
             $response = $client->sendCompositeRequest($request);
             $builder  = new CompositeRequestBuilder();
@@ -125,9 +145,9 @@ class PollingService
 
             foreach ($response->getCompositeResponse() as $result) {
                 if ($result->getHttpStatusCode() === 200) {
-                    $parts = explode('_', $result->getReferenceId());
+                    $parts  = explode('_', $result->getReferenceId());
                     $action = array_shift($parts);
-                    $type = implode('_', $parts);
+                    $type   = implode('_', $parts);
 
                     $body = $result->getBody();
                     if ($body instanceof UpdatedResponse) {
@@ -162,6 +182,8 @@ class PollingService
             }
 
             if (empty($updates) && empty($removals)) {
+                $this->logger->debug('No objects to update or delete');
+
                 return;
             }
 
@@ -181,5 +203,12 @@ class PollingService
 
         $this->lastUpdated = new \DateTime();
         $this->cache->save(self::CACHE_ID, $this->lastUpdated->format(\DATE_ISO8601));
+        $this->logger->debug(
+            'Polling completed at {time} for {conn}',
+            [
+                'time' => $this->lastUpdated->format(\DATE_ISO8601),
+                'conn' => $connection->getName(),
+            ]
+        );
     }
 }

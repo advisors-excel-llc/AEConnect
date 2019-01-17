@@ -22,12 +22,13 @@ use Doctrine\DBAL\Driver\IBMDB2\DB2Exception;
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
-class OutboundQueue
+class OutboundQueue implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
@@ -132,7 +133,7 @@ class OutboundQueue
             );
 
             if (empty($request->getCompositeRequest())) {
-                $this->logger->info('No more messages in queue.');
+                $this->logger->debug('No more messages in queue.');
 
                 return;
             }
@@ -220,10 +221,12 @@ class OutboundQueue
                     } elseif (!$res->isSuccess()) {
                         foreach ($res->getErrors() as $error) {
                             $this->logger->error(
-                                'AE_CONNECT error from SalesForce: ({code}) {msg}',
+                                'AE_CONNECT error from SalesForce: {type}|{intent}|{code}|{msg}',
                                 [
-                                    'code' => $error->getStatusCode(),
-                                    'msg'  => $error->getMessage(),
+                                    'type'   => $item->getSObject()->getType(),
+                                    'intent' => $item->getIntent(),
+                                    'code'   => $error->getStatusCode(),
+                                    'msg'    => $error->getMessage(),
                                 ]
                             );
                         }
