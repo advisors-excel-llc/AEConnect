@@ -102,7 +102,7 @@ class SalesforceConnector implements LoggerAwareInterface
 
         if (CompilerResult::DELETE !== $intent) {
             // If there are no fields other than Id set, don't sync
-            $fields = array_diff(['Id'], array_keys($sObject->getFields()));
+            $fields = array_diff(array_keys($sObject->getFields()), ['Id']);
             if (empty($fields)) {
                 $this->logger->debug(
                     'No fields for object {type} to insert or update for {conn}',
