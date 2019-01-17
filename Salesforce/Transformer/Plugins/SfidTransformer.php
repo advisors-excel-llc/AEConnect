@@ -14,6 +14,7 @@ use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use AE\ConnectBundle\Connection\Dbal\SalesforceIdEntityInterface;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Psr\Log\LoggerAwareInterface;
@@ -161,6 +162,7 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
                     $sfid->setSalesforceId($value);
 
                     $manager->persist($sfid);
+                    $manager->flush();
                 } elseif (null !== $sfid && $classMetadata->hasAssociation($connectionField)) {
                     $connectionAssoc     = $classMetadata->getAssociationMapping($connectionField);
                     $connectionClass     = $connectionAssoc['targetEntity'];
@@ -195,12 +197,17 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
                             $sfid->setSalesforceId($value);
 
                             $manager->persist($sfid);
+                            $manager->flush();
                         }
                     }
                 }
             }
 
-            $payload->setValue(null !== $sfid && $association['type'] & ClassMetadataInfo::TO_MANY ? [$sfid] : $sfid);
+            $payload->setValue(
+                null !== $sfid && $association['type'] & ClassMetadataInfo::TO_MANY
+                    ? new ArrayCollection([$sfid])
+                    : $sfid
+            );
         } catch (\Exception $e) {
             $this->logger->debug($e->getMessage());
         }

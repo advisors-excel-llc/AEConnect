@@ -16,6 +16,7 @@ use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
 use AE\ConnectBundle\Salesforce\Transformer\Transformer;
 use AE\SalesforceRestSdk\Model\SObject;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Psr\Log\LoggerAwareTrait;
@@ -88,12 +89,12 @@ class EntityCompiler
             $manager = $this->registry->getManagerForClass($class);
             /** @var ClassMetadata $classMetadata */
             $classMetadata = $manager->getClassMetadata($class);
+            $entity        = null;
 
             try {
                 $entity = $this->findExistingEntity($object, $metadata, $classMetadata);
             } catch (\Exception $e) {
                 $this->logger->debug($e->getMessage());
-                continue;
             }
 
             $connectionProp = $metadata->getConnectionNameField();
@@ -295,7 +296,9 @@ class EntityCompiler
                 $metadata->getMetadataForField('Id')
             );
 
-            if (is_array($sfidVal)) {
+            if ($sfidVal instanceof Collection) {
+                $sfidVal = $sfidVal->first();
+            } elseif (is_array($sfidVal)) {
                 $sfidVal = array_shift($sfidVal);
             }
 
@@ -306,10 +309,11 @@ class EntityCompiler
                 $idField        = $targetMetadata->getSingleIdentifierFieldName();
 
                 // Reduce associated entities to just their ID value for lookup
-                if (get_class($sfidVal) === $targetClass) {
+                if (null !== $sfidVal && get_class($sfidVal) === $targetClass) {
                     $value = $targetMetadata->getFieldValue($sfidVal, $idField);
                     if (null !== $value) {
-                        $builder->orWhere($builder->expr()->eq("o.$property", ":$property"));
+                        $builder->join("o.$property", 's');
+                        $builder->orWhere($builder->expr()->eq("s.id", ":$property"));
                         $builder->setParameter($property, $value);
                     }
                 }

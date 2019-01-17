@@ -66,18 +66,21 @@ class Account
      * @AEConnect\Connection(connections={"default"})
      * @ORM\Column(length=40, nullable=true)
      */
-    private $connection = "default";
+    private $connection;
 
     /**
      * @var ConnectionEntity[]|Collection|array
-     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\ConnectionEntity")
+     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\ConnectionEntity", cascade={"persist"})
      * @AEConnect\Connection(connections={"db_test"})
      */
     private $connections;
 
     /**
      * @var SalesforceId[]|Collection|array
-     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\SalesforceId")
+     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\SalesforceId",
+     *     cascade={"persist", "merge", "remove"},
+     *     orphanRemoval=true
+     *     )
      * @AEConnect\SalesforceId(connection="db_test")
      */
     private $sfids;

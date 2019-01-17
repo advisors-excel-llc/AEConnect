@@ -12,6 +12,7 @@ use AE\ConnectBundle\Annotations\Connection;
 use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\MappingException;
@@ -99,7 +100,7 @@ class ConnectionEntityTransformer extends AbstractTransformerPlugin implements L
             // Set the payload value. If the $connection is null, no connection entity was found and that is ok
             $payload->setValue(
                 null !== $connection && $association['type'] & ClassMetadataInfo::TO_MANY
-                    ? [$connection]
+                    ? new ArrayCollection([$connection])
                     : $connection
             );
 

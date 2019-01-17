@@ -126,7 +126,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         /** @var OutboundProcessor $processor */
         $processor = $this->get(OutboundProcessor::class);
         /** @var ConnectionEntity $conn */
-        $conn      = $manager->getRepository(ConnectionEntity::class)->findOneBy(['name' => 'db_test_org1']);
+        $conn = $manager->getRepository(ConnectionEntity::class)->findOneBy(['name' => 'db_test_org1']);
 
         if (method_exists($this->context, 'purge')) {
             $this->context->purge($queue);
@@ -161,12 +161,12 @@ class SalesforceConnectorTest extends DatabaseTestCase
 
         /** @var EntityRepository $repo */
         $repo = $manager->getRepository(Account::class);
-        $qb = $repo->createQueryBuilder('a');
+        $qb   = $repo->createQueryBuilder('a');
 
         $qb->join('a.connections', 'c')
-            ->where('c.id = :conn')
-            ->setParameter('conn', $conn->getId())
-            ;
+           ->where('c.id = :conn')
+           ->setParameter('conn', $conn->getId())
+        ;
 
         $accounts = $qb->getQuery()->getResult();
 
@@ -258,28 +258,55 @@ class SalesforceConnectorTest extends DatabaseTestCase
         ;
 
         $this->assertNull($contact);
+    }
+
+    public function testIncomingDBTest()
+    {
+        $this->loadOrgConnections();
+
+        $this->loadFixtures(
+            [
+                $this->getProjectDir().'/Tests/Resources/config/connections.yml',
+            ]
+        );
 
         $account                   = new SObject(
-            ['Id' => '001000111000111ZAA', 'Name' => 'Test Recieving DBAL', 'Type' => 'Account']
+            [
+                'Id'   => '001000111000111ZAA',
+                'Name' => 'Test Recieving DBAL',
+                'Type' => 'Account',
+            ]
         );
         $account->__SOBJECT_TYPE__ = 'Account';
 
         $this->connector->receive($account, SalesforceConsumerInterface::CREATED, 'db_test_org1');
 
-        $account = $this->doctrine->getManagerForClass(Account::class)
-                                  ->getRepository(Account::class)
-                                  ->findOneBy(['sfid' => '001000111000111ZAA', 'connection' => 'db_test_org1'])
-        ;
+        /** @var EntityRepository $repo */
+        $repo = $this->doctrine->getManagerForClass(Account::class)
+                               ->getRepository(Account::class);
+
+        $qb = $repo->createQueryBuilder('a');
+        $qb->join('a.sfids', 's')
+            ->join('s.connection', 'c')
+            ->where('c.name = :conn AND s.salesforceId = :sfid')
+            ->setParameters([
+                'conn' => 'db_test_org1',
+                'sfid' => '001000111000111ZAA'
+            ])
+            ;
+
+        $account = $qb->getQuery()->getOneOrNullResult();
 
         $this->assertNotNull($account);
         $this->assertEquals('Test Recieving DBAL', $account->getName());
     }
 
-    private function createOrder(array &$queue)
+    private function createOrder(array &$queue, string $connectionName = 'default')
     {
         $manager = $this->doctrine->getManager();
         $account = new Account();
         $account->setName(uniqid('Test Customer '));
+        $account->setConnection($connectionName);
 
         $manager->persist($account);
         $queue[] = $account;
