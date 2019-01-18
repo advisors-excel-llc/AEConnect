@@ -8,14 +8,16 @@
 
 namespace AE\ConnectBundle\Salesforce\Bulk;
 
+use AE\ConnectBundle\Annotations\Connection;
 use AE\ConnectBundle\Connection\ConnectionInterface;
-use AE\ConnectBundle\Metadata\FieldMetadata;
-use AE\ConnectBundle\Metadata\Metadata;
-use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
+use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
 use AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue;
-use AE\SalesforceRestSdk\Bulk\BatchInfo;
-use AE\SalesforceRestSdk\Bulk\JobInfo;
+use Doctrine\Common\Annotations\AnnotationRegistry;
+use Doctrine\Common\Annotations\Reader;
+use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\ClassMetadataInfo;
+use Doctrine\ORM\Mapping\MappingException;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Psr\Log\LoggerAwareTrait;
@@ -47,19 +49,28 @@ class OutboundBulkQueue
      */
     private $outboundQueue;
 
+    /**
+     * @var Reader
+     */
+    private $reader;
+
     public function __construct(
         RegistryInterface $registry,
         EntityTreeMaker $treeMaker,
         SObjectCompiler $compiler,
         OutboundQueue $outboundQueue,
+        Reader $reader,
         ?LoggerInterface $logger = null
     ) {
         $this->registry      = $registry;
         $this->treeMaker     = $treeMaker;
         $this->compiler      = $compiler;
         $this->outboundQueue = $outboundQueue;
+        $this->reader        = $reader;
 
         $this->setLogger($logger ?: new NullLogger());
+
+        AnnotationRegistry::loadAnnotationClass(Connection::class);
     }
 
     public function process(
@@ -104,16 +115,100 @@ class OutboundBulkQueue
         }
 
         $manager = $this->registry->getManagerForClass($class);
-        $offset  = 0;
-        $qb      = new QueryBuilder($manager);
+        /** @var ClassMetadata $classMetadata */
+        $classMetadata = $manager->getClassMetadata($class);
+        $offset        = 0;
+        $qb            = new QueryBuilder($manager);
         $qb->from($class, 'e')
            ->select('e')
            ->setFirstResult($offset)
            ->setMaxResults(200)
         ;
 
-        if (!$updateExisting) {
-            $qb->andWhere($qb->expr()->isNull('e.'.$metadata->getIdFieldProperty()));
+        if (!$updateExisting && null !== ($idProp = $metadata->getIdFieldProperty())) {
+            if ($classMetadata->hasField($idProp)) {
+                $qb->andWhere($qb->expr()->isNull('e.'.$idProp));
+            } elseif ($classMetadata->hasAssociation($idProp)) {
+                try {
+                    $association = $classMetadata->getAssociationMapping($idProp);
+                    if ($association['type'] & ClassMetadataInfo::TO_ONE) {
+                        $qb->andWhere($qb->expr()->isNull('e.'.$idProp));
+                    } else {
+                        $targetClass   = $association['targetEntity'];
+                        $targetManager = $this->registry->getManagerForClass($targetClass);
+                        /** @var ClassMetadata $targetMetadata */
+                        $targetMetadata = $targetManager->getClassMetadata($targetClass);
+
+                        // Find Connection Field
+                        $connectionField = 'connection';
+                        /** @var \ReflectionProperty $property */
+                        foreach ($targetMetadata->getReflectionProperties() as $property) {
+                            foreach ($this->reader->getPropertyAnnotations($property) as $annotation) {
+                                if ($annotation instanceof Connection) {
+                                    $connectionField = $property->getName();
+                                    break;
+                                }
+                            }
+                        }
+
+                        $qb->leftJoin("e.$idProp", "s");
+
+                        if ($targetMetadata->hasField($connectionField)) {
+                            $qb->andWhere($qb->expr()->neq("s.$connectionField", ":conn"))
+                               ->setParameter(":conn", $connection->getName())
+                            ;
+                        } elseif ($targetMetadata->hasAssociation($connectionField)) {
+                            $connAssoc   = $targetMetadata->getAssociationMapping($connectionField);
+                            $connClass   = $connAssoc['targetEntity'];
+                            $connManager = $this->registry->getManagerForClass($connClass);
+                            /** @var ClassMetadata $connMetadata */
+                            $connMetadata = $connManager->getClassMetadata($connClass);
+                            $connIdField  = $connMetadata->getSingleIdentifierFieldName();
+                            $conn         = null;
+
+                            if ($connAssoc['type'] & ClassMetadataInfo::TO_ONE) {
+                                $repo = $connManager->getRepository($connClass);
+
+                                if ($connMetadata->hasField('name')) {
+                                    $conn = $repo->findOneBy(
+                                        [
+                                            'name' => $connection->getName(),
+                                        ]
+                                    );
+                                } else {
+                                    foreach ($repo->findAll() as $item) {
+                                        if ($item instanceof ConnectionEntityInterface
+                                            && $item->getName() === $connection->getName()
+                                        ) {
+                                            $conn = $item;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (null === $conn) {
+                                throw new \RuntimeException(
+                                    sprintf(
+                                        "No %s with %s of %s found.",
+                                        $connClass,
+                                        $connectionField,
+                                        $connection->getName()
+                                    )
+                                );
+                            }
+
+                            $connId = $connMetadata->getFieldValue($conn, $connIdField);
+                            $qb->andWhere($qb->expr()->neq("s.$connectionField", $connId));
+                        }
+                    }
+                } catch (MappingException $e) {
+                    $this->logger->critical($e->getMessage());
+                    $this->logger->debug($e->getTraceAsString());
+
+                    return;
+                }
+            }
         }
 
         $pager = new Paginator($qb->getQuery());
@@ -126,7 +221,7 @@ class OutboundBulkQueue
                     $this->logger->debug(
                         'AE_CONNECT: Added {type} object for {intent} to {conn}',
                         [
-                            'type'   => $object->getMetadata()->getSObjectType(),
+                            'type'   => $object->getSObject()->getType(),
                             'intent' => $object->getIntent(),
                             'conn'   => $connection->getName(),
                         ]

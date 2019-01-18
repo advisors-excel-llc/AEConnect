@@ -88,6 +88,7 @@ services:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\EntityTreeMaker'
         $outboundQueue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
+        $reader: '@Doctrine\Common\Annotations\Reader'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'

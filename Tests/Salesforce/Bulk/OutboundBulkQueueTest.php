@@ -15,10 +15,13 @@ use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Contact;
 use AE\ConnectBundle\Tests\Entity\Order;
 use AE\ConnectBundle\Tests\Entity\OrderProduct;
+use AE\ConnectBundle\Tests\Entity\OrgConnection;
 use AE\ConnectBundle\Tests\Entity\Product;
 use AE\ConnectBundle\Tests\Entity\Role;
+use AE\ConnectBundle\Tests\Entity\SalesforceId;
 use AE\ConnectBundle\Tests\Entity\Task;
 use AE\ConnectBundle\Tests\Entity\TestObject;
+use Doctrine\Common\Collections\ArrayCollection;
 
 class OutboundBulkQueueTest extends DatabaseTestCase
 {
@@ -39,5 +42,39 @@ class OutboundBulkQueueTest extends DatabaseTestCase
 
         $this->assertNotEmpty($accounts);
         $this->assertNotNull($accounts[0]->getSfid());
+    }
+
+    public function testProcessDBTest()
+    {
+        $this->loadOrgConnections();
+
+        $manager     = $this->getDoctrine()->getManager();
+        $conn        = $manager->getRepository(OrgConnection::class)->findOneBy(['name' => 'db_test_org1']);
+        $accountSfid = new SalesforceId();
+        $accountSfid->setConnection($conn)
+            ->setSalesforceId('111000111000111ADA')
+        ;
+        $account = new Account();
+        $account->setName('Test Account')
+            ->setConnections(new ArrayCollection([$conn]))
+            ->setSfids([$accountSfid])
+            ;
+
+        $manager->persist($account);
+        $manager->flush();
+
+        /** @var ConnectionManagerInterface $connectionManager */
+        $connectionManager = $this->get(ConnectionManagerInterface::class);
+        $connection = $connectionManager->getConnection('db_test_org1');
+
+        /** @var OutboundBulkQueue $outboundQueue */
+        $outboundQueue = $this->get(OutboundBulkQueue::class);
+
+        $outboundQueue->process($connection, ['Account']);
+
+        $accounts = $this->doctrine->getRepository(Account::class)->findAll();
+
+        $this->assertNotEmpty($accounts);
+        $this->assertNotEmpty($accounts[0]->getSfids());
     }
 }
