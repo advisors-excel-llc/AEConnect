@@ -151,12 +151,10 @@ class OutboundBulkQueue
                             }
                         }
 
-                        $qb->leftJoin("e.$idProp", "s");
+                        $conn = null;
 
                         if ($targetMetadata->hasField($connectionField)) {
-                            $qb->andWhere($qb->expr()->neq("s.$connectionField", ":conn"))
-                               ->setParameter(":conn", $connection->getName())
-                            ;
+                            $conn = $connection->getName();
                         } elseif ($targetMetadata->hasAssociation($connectionField)) {
                             $connAssoc   = $targetMetadata->getAssociationMapping($connectionField);
                             $connClass   = $connAssoc['targetEntity'];
@@ -198,8 +196,18 @@ class OutboundBulkQueue
                                 );
                             }
 
-                            $connId = $connMetadata->getFieldValue($conn, $connIdField);
-                            $qb->andWhere($qb->expr()->neq("s.$connectionField", $connId));
+                            $conn = $connMetadata->getFieldValue($conn, $connIdField);
+                        }
+
+                        if (null !== $conn) {
+                            $qb->leftJoin("e.$idProp", "s")
+                               ->andWhere(
+                                   $qb->expr()->orX()
+                                      ->add($qb->expr()->neq("s.$connectionField", ":conn"))
+                                      ->add($qb->expr()->isNull("s.$connectionField"))
+                               )
+                               ->setParameter("conn", $conn)
+                            ;
                         }
                     }
                 } catch (MappingException $e) {

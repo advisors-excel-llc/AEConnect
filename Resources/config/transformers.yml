@@ -9,6 +9,7 @@ services:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $reader: '@Doctrine\Common\Annotations\Reader'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\CompoundFieldTransformerPlugin: ~
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\StringLengthTransformer: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\AssociationTransformer:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $managerRegistry: '@Symfony\Bridge\Doctrine\RegistryInterface'

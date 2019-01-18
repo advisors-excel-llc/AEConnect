@@ -230,7 +230,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
             )->first()
             ;
 
-            if (null !== $sfid) {
+            if ($sfid instanceof SalesforceIdEntityInterface) {
                 $sfid = $sfid->getSalesforceId();
             }
         }
