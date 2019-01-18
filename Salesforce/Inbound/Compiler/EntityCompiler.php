@@ -19,6 +19,7 @@ use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Query\Expr\Join;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -312,7 +313,7 @@ class EntityCompiler
                 if (null !== $sfidVal && get_class($sfidVal) === $targetClass) {
                     $value = $targetMetadata->getFieldValue($sfidVal, $idField);
                     if (null !== $value) {
-                        $builder->join("o.$property", 's');
+                        $builder->leftJoin("o.$property", 's');
                         $builder->orWhere($builder->expr()->eq("s.id", ":$property"));
                         $builder->setParameter($property, $value);
                     }

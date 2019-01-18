@@ -50,12 +50,11 @@ class SfidFinder
         $sfidField       = 'salesforceId';
         $sfid            = null;
 
-        foreach ($classMetadata->getFieldNames() as $property) {
-            foreach ($this->reader->getPropertyAnnotations(
-                $classMetadata->getReflectionProperty($property)
-            ) as $annotation) {
+        /** @var \ReflectionProperty $property */
+        foreach ($classMetadata->getReflectionProperties() as $property) {
+            foreach ($this->reader->getPropertyAnnotations($property) as $annotation) {
                 if ($annotation instanceof SalesforceId) {
-                    $sfidField = $property;
+                    $sfidField = $property->getName();
                     break;
                 }
             }
