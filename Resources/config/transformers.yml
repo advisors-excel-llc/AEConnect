@@ -5,11 +5,15 @@ services:
                 - {name: "ae_connect.transformer_plugin"}
     AE\ConnectBundle\Salesforce\Transformer\Transformer: ~
     AE\ConnectBundle\Salesforce\Transformer\TransformerInterface: '@AE\ConnectBundle\Salesforce\Transformer\Transformer'
+    AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder:
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $reader: '@Doctrine\Common\Annotations\Reader'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\CompoundFieldTransformerPlugin: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\AssociationTransformer:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $managerRegistry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
+        $sfidFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\DateTimeTransformer:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\MultiValuePickListTransformer:
@@ -22,3 +26,4 @@ services:
     AE\ConnectBundle\Salesforce\Transformer\Plugins\SfidTransformer:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $reader: '@Doctrine\Common\Annotations\Reader'
+        $sfidFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder'
