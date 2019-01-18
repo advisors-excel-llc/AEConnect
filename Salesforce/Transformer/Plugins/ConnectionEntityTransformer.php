@@ -70,12 +70,11 @@ class ConnectionEntityTransformer extends AbstractTransformerPlugin implements L
             $connection      = null;
 
             // Look for fields on the target entity that have the Connection annotation
-            foreach ($classMetadata->getFieldNames() as $field) {
-                foreach ($this->reader->getPropertyAnnotations(
-                    $classMetadata->getReflectionProperty($field)
-                ) as $annotation) {
+            /** @var \ReflectionProperty $field */
+            foreach ($classMetadata->getReflectionProperties() as $field) {
+                foreach ($this->reader->getPropertyAnnotations($field) as $annotation) {
                     if ($annotation instanceof Connection) {
-                        $connectionField = $field;
+                        $connectionField = $field->getName();
                         break;
                     }
                 }

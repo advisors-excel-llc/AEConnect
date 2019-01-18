@@ -9,7 +9,6 @@
 namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 
 use AE\ConnectBundle\Annotations\Connection;
-use AE\ConnectBundle\Annotations\SalesforceId;
 use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use AE\ConnectBundle\Connection\Dbal\SalesforceIdEntityInterface;
 use AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder;
@@ -49,8 +48,8 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
         SfidFinder $sfidFinder,
         ?LoggerInterface $logger = null
     ) {
-        $this->registry = $registry;
-        $this->reader   = $reader;
+        $this->registry   = $registry;
+        $this->reader     = $reader;
         $this->sfidFinder = $sfidFinder;
 
         AnnotationRegistry::loadAnnotationClass(Connection::class);
@@ -128,8 +127,8 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
             $targetClass = $association['targetEntity'];
             $manager     = $this->registry->getManagerForClass($targetClass);
             /** @var ClassMetadata $classMetadata */
-            $classMetadata   = $manager->getClassMetadata($targetClass);
-            $sfid            = $this->sfidFinder->find($value, $targetClass);
+            $classMetadata = $manager->getClassMetadata($targetClass);
+            $sfid          = $this->sfidFinder->find($value, $targetClass);
 
             // If no SFID exists in the system, it's time to create one, given we can find a Connection
             if (null === $sfid) {
@@ -137,12 +136,11 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
 
                 // Find Connection Field
                 $connectionField = 'connection';
-                foreach ($classMetadata->getFieldNames() as $property) {
-                    foreach ($this->reader->getPropertyAnnotations(
-                        $classMetadata->getReflectionProperty($property)
-                    ) as $annotation) {
+                /** @var \ReflectionProperty $property */
+                foreach ($classMetadata->getReflectionProperties() as $property) {
+                    foreach ($this->reader->getPropertyAnnotations($property) as $annotation) {
                         if ($annotation instanceof Connection) {
-                            $connectionField = $property;
+                            $connectionField = $property->getName();
                             break;
                         }
                     }
@@ -156,6 +154,9 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
                 if (null !== $sfid && $classMetadata->hasField($connectionField)) {
                     $sfid->setConnection($connectionName);
                     $sfid->setSalesforceId($value);
+
+                    $manager->persist($sfid);
+                    $manager->flush();
                 } elseif (null !== $sfid && $classMetadata->hasAssociation($connectionField)) {
                     $connectionAssoc     = $classMetadata->getAssociationMapping($connectionField);
                     $connectionClass     = $connectionAssoc['targetEntity'];
@@ -188,6 +189,9 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
                         } else {
                             $sfid->setConnection($connection);
                             $sfid->setSalesforceId($value);
+
+                            $manager->persist($sfid);
+                            $manager->flush();
                         }
                     }
                 }
