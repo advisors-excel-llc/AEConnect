@@ -151,7 +151,7 @@ class OutboundBulkQueue
                             }
                         }
 
-                        $qb->join("e.$idProp", "s");
+                        $qb->leftJoin("e.$idProp", "s");
 
                         if ($targetMetadata->hasField($connectionField)) {
                             $qb->andWhere($qb->expr()->neq("s.$connectionField", ":conn"))
