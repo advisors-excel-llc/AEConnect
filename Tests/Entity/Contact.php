@@ -235,19 +235,19 @@ class Contact
     }
 
     /**
-     * @return ConnectionEntity|null
+     * @return OrgConnection|null
      */
-    public function getConnection(): ?ConnectionEntity
+    public function getConnection(): ?OrgConnection
     {
         return $this->connection;
     }
 
     /**
-     * @param ConnectionEntity|null $connection
+     * @param OrgConnection|null $connection
      *
      * @return Contact
      */
-    public function setConnection(?ConnectionEntity $connection): Contact
+    public function setConnection(?OrgConnection $connection): Contact
     {
         $this->connection = $connection;
 

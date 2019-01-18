@@ -11,10 +11,11 @@ namespace AE\ConnectBundle\Tests\Salesforce\Transformer;
 use AE\ConnectBundle\Driver\DbalConnectionDriver;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\SfidTransformer;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
+use AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder;
 use AE\ConnectBundle\Tests\DatabaseTestTrait;
 use AE\ConnectBundle\Tests\Entity\Account;
-use AE\ConnectBundle\Tests\Entity\ConnectionEntity;
 use AE\ConnectBundle\Tests\Entity\Contact;
+use AE\ConnectBundle\Tests\Entity\OrgConnection;
 use AE\ConnectBundle\Tests\Entity\SalesforceId;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Annotations\Reader;
@@ -37,13 +38,12 @@ class SalesforceIdTransformerTest extends AbstractTransformerTest
     public function testInbound()
     {
         $this->loadOrgConnections();
-        $this->loadFixtures(
-            [
-                $this->getProjectDir().'/Tests/Resources/config/connections.yml',
-            ]
-        );
 
-        $transformer = new SfidTransformer($this->getDoctrine(), $this->get(Reader::class));
+        $transformer = new SfidTransformer(
+            $this->getDoctrine(),
+            $this->get(Reader::class),
+            $this->get(SfidFinder::class)
+        );
         $manager     = $this->getDoctrine()->getManager();
         $account     = new SObject(
             [
@@ -114,15 +114,14 @@ class SalesforceIdTransformerTest extends AbstractTransformerTest
     public function testInboundWithSaved()
     {
         $this->loadOrgConnections();
-        $this->loadFixtures(
-            [
-                $this->getProjectDir().'/Tests/Resources/config/connections.yml',
-            ]
-        );
 
-        $transformer = new SfidTransformer($this->getDoctrine(), $this->get(Reader::class));
+        $transformer = new SfidTransformer(
+            $this->getDoctrine(),
+            $this->get(Reader::class),
+            $this->get(SfidFinder::class)
+        );
         $manager     = $this->getDoctrine()->getManager();
-        $conn        = $manager->getRepository(ConnectionEntity::class)->findOneBy(['name' => 'db_test_org1']);
+        $conn        = $manager->getRepository(OrgConnection::class)->findOneBy(['name' => 'db_test_org1']);
         $account     = new SObject(
             [
                 'Name' => 'Test Account',
@@ -220,15 +219,14 @@ class SalesforceIdTransformerTest extends AbstractTransformerTest
     public function testOutbound()
     {
         $this->loadOrgConnections();
-        $this->loadFixtures(
-            [
-                $this->getProjectDir().'/Tests/Resources/config/connections.yml',
-            ]
-        );
 
-        $transformer = new SfidTransformer($this->getDoctrine(), $this->get(Reader::class));
+        $transformer = new SfidTransformer(
+            $this->getDoctrine(),
+            $this->get(Reader::class),
+            $this->get(SfidFinder::class)
+        );
         $manager     = $this->getDoctrine()->getManager();
-        $conn        = $manager->getRepository(ConnectionEntity::class)->findOneBy(['name' => 'db_test_org1']);
+        $conn        = $manager->getRepository(OrgConnection::class)->findOneBy(['name' => 'db_test_org1']);
 
         $account = new Account();
         $account->setName('Tset');

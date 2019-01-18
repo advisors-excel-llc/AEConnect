@@ -8,11 +8,16 @@
 
 namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 
+use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
+use AE\ConnectBundle\Connection\Dbal\SalesforceIdEntityInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
+use AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\MappingException;
+use Doctrine\Common\Collections\Collection;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -37,15 +42,22 @@ class AssociationTransformer extends AbstractTransformerPlugin
      */
     private $validator;
 
+    /**
+     * @var SfidFinder
+     */
+    private $sfidFinder;
+
     public function __construct(
         ConnectionManagerInterface $connectionManager,
         RegistryInterface $managerRegistry,
         ValidatorInterface $validator,
+        SfidFinder $sfidFinder,
         ?LoggerInterface $logger = null
     ) {
         $this->connectionManager = $connectionManager;
         $this->managerRegistry   = $managerRegistry;
         $this->validator         = $validator;
+        $this->sfidFinder        = $sfidFinder;
 
         $this->setLogger($logger ?: new NullLogger());
     }
@@ -81,7 +93,10 @@ class AssociationTransformer extends AbstractTransformerPlugin
 
             if (null === $metadata
                 || !$association['isOwningSide']
-                || $association['type'] & ClassMetadataInfo::TO_MANY) {
+                || $association['type'] & ClassMetadataInfo::TO_MANY
+                || null === $payload->getFieldName()
+                || 'Id' === $payload->getFieldName()
+            ) {
                 return false;
             }
 
@@ -123,8 +138,31 @@ class AssociationTransformer extends AbstractTransformerPlugin
         /** @var EntityManager $manager */
         $manager = $this->managerRegistry->getManagerForClass($className);
         $repo    = $manager->getRepository($className);
+        /** @var ClassMetadata $classMetadata */
+        $classMetadata = $manager->getClassMetadata($className);
+        $value         = $payload->getValue();
+        $entity        = null;
 
-        $entity = $repo->findOneBy([$sfidProperty => $payload->getValue()]);
+        if ($classMetadata->hasField($sfidProperty)) {
+            $entity = $repo->findOneBy([$sfidProperty => $value]);
+        } elseif ($classMetadata->hasAssociation($sfidProperty)) {
+            $targetClass = $classMetadata->getAssociationTargetClass($sfidProperty);
+            /** @var ClassMetadata $targetMetadata */
+            $targetMetadata = $this->managerRegistry->getManagerForClass($targetClass)->getClassMetadata($targetClass);
+            $idField        = $targetMetadata->getSingleIdentifierFieldName();
+            $sfid           = $this->sfidFinder->find($value, $targetClass);
+
+            // If there's an SFID, let's locate the object it's associated with
+            if (null !== $sfid) {
+                $builder = $repo->createQueryBuilder('o');
+                $builder->join("o.$sfidProperty", "s")
+                    ->where($builder->expr()->eq("s.$idField", ":id"))
+                    ->setParameter("id", $targetMetadata->getFieldValue($sfid, $idField))
+                ;
+
+                $entity = $builder->getQuery()->getOneOrNullResult();
+            }
+        }
 
         $payload->setValue($entity);
     }
@@ -175,6 +213,25 @@ class AssociationTransformer extends AbstractTransformerPlugin
             if (count($messages) === 0) {
                 $assocRefId = spl_object_hash($entity);
                 $sfid       = new ReferencePlaceholder($assocRefId);
+            }
+        } elseif ($sfid instanceof SalesforceIdEntityInterface) {
+            $sfid = $sfid->getSalesforceId();
+        } elseif ($sfid instanceof Collection) {
+            $sfid = $sfid->filter(
+                function (SalesforceIdEntityInterface $entity) use ($connection) {
+                    $conn = $entity->getConnection();
+
+                    if ($conn instanceof ConnectionEntityInterface) {
+                        return $conn->getName() === $connection->getName();
+                    }
+
+                    return $connection->getName() === $conn;
+                }
+            )->first()
+            ;
+
+            if (null !== $sfid) {
+                $sfid = $sfid->getSalesforceId();
             }
         }
 

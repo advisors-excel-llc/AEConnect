@@ -219,7 +219,7 @@ class Account
     }
 
     /**
-     * @param ConnectionEntity[]|array|Collection $connections
+     * @param OrgConnection[]|array|Collection $connections
      *
      * @return Account
      */
