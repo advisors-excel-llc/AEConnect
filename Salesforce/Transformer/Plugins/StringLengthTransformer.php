@@ -14,8 +14,12 @@ class StringLengthTransformer extends AbstractTransformerPlugin
     {
         $field = $payload->getFieldMetadata()->describe();
 
-        return null !== $field && $field->getSoapType() === 'xsd:string'
-            && (null !== $field->getLength() || 0 < $field->getLength());
+        return is_string($payload->getValue())
+            && null !== $field
+            && $field->getSoapType() === 'xsd:string'
+            && null !== $field->getLength()
+            && 0 < $field->getLength()
+            ;
     }
 
     protected function transformOutbound(TransformerPayload $payload)
