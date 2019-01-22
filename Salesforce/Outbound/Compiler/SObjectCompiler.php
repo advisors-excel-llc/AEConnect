@@ -238,7 +238,17 @@ class SObjectCompiler
             $fieldMetadata = $metadata->getMetadataForProperty($property);
 
             // Don't attempt to set values for fields that cannot be updated in Salesforce
-            if (null === $fieldMetadata || !$fieldMetadata->describe()->isCreateable()) {
+            if (null === $fieldMetadata
+                || null === ($describe = $fieldMetadata->describe())
+                || !$describe->isCreateable()
+            ) {
+                $this->logger->warning(
+                    "No metadata found for Property '{prop}' mapped to '{field}'",
+                    [
+                        'prop'  => $property,
+                        'field' => $field,
+                    ]
+                );
                 continue;
             }
 
