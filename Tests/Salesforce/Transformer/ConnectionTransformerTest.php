@@ -11,8 +11,10 @@ namespace AE\ConnectBundle\Tests\Salesforce\Transformer;
 use AE\ConnectBundle\Driver\DbalConnectionDriver;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\ConnectionEntityTransformer;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
+use AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder;
 use AE\ConnectBundle\Tests\DatabaseTestTrait;
 use AE\ConnectBundle\Tests\Entity\ConnectionEntity;
+use AE\ConnectBundle\Tests\Entity\OrgConnection;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Collections\Collection;
@@ -21,6 +23,11 @@ use Doctrine\ORM\EntityManager;
 class ConnectionTransformerTest extends AbstractTransformerTest
 {
     use DatabaseTestTrait;
+
+    /**
+     * @var ConnectionFinder
+     */
+    private $connectionFinder;
 
     public function setUp()
     {
@@ -31,24 +38,18 @@ class ConnectionTransformerTest extends AbstractTransformerTest
         $this->setDbalConnectionDriver(static::$container->get(DbalConnectionDriver::class));
         $this->setProjectDir(static::$container->getParameter('kernel.project_dir'));
         $this->createSchemas();
+
+        $this->connectionFinder = $this->get(ConnectionFinder::class);
     }
 
     public function testInbound()
     {
         $this->loadOrgConnections();
-        $this->loadFixtures(
-            [
-                $this->getProjectDir().'/Tests/Resources/config/connections.yml',
-            ]
-        );
 
         /** @var EntityManager $manager */
         $manager       = $this->getDoctrine()->getManager();
-        $connectEntity = $manager->getRepository(ConnectionEntity::class)->findOneBy(['name' => 'db_test_org1']);
-        $transformer   = new ConnectionEntityTransformer(
-            $this->getDoctrine(),
-            $this->get(Reader::class)
-        );
+        $connectEntity = $manager->getRepository(OrgConnection::class)->findOneBy(['name' => 'db_test_org1']);
+        $transformer   = new ConnectionEntityTransformer($this->connectionFinder);
 
         $this->assertNotNull($connectEntity);
 
@@ -113,7 +114,7 @@ class ConnectionTransformerTest extends AbstractTransformerTest
 
         $this->assertTrue($transformer->supports($contactPayload));
         $transformer->transform($contactPayload);
-        $this->assertInstanceOf(ConnectionEntity::class, $contactPayload->getValue());
+        $this->assertInstanceOf(OrgConnection::class, $contactPayload->getValue());
         $this->assertEquals('db_test_org1', $contactPayload->getValue()->getName());
     }
 

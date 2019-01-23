@@ -15,6 +15,7 @@ use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
 use AE\ConnectBundle\Salesforce\Transformer\Transformer;
+use AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityRepository;
@@ -100,29 +101,8 @@ class EntityCompiler
 
             $connectionProp = $metadata->getConnectionNameField();
 
-            if (null !== $entity) {
-                // Check if the entity is meant for this connection
-                if (null !== $connectionProp
-                    && !$this->hasConnection(
-                        $entity,
-                        $connection,
-                        $metadata
-                    )
-                ) {
-                    $this->logger->debug(
-                        "Entity {type} with Id {id} and meant for {conn}",
-                        [
-                            'type' => $class,
-                            'id'   => $classMetadata->getFieldValue(
-                                $entity,
-                                $classMetadata->getSingleIdentifierFieldName()
-                            ),
-                            'conn' => $connection->getName(),
-                        ]
-                    );
-                    continue;
-                }
-            } else {
+            // If the entity doesn't exist, creatre a new one
+            if (null === $entity) {
                 $entity = new $class();
 
                 // If the entity supports a connection name, set it
@@ -141,9 +121,33 @@ class EntityCompiler
                 }
             }
 
+            // Check if the entity is meant for this connection, if the connection value for the entity is null,
+            // don't check, allow the entity to be created, given that validation passes
+            if (null !== $connectionProp
+                && null !== $connectionProp->getValueFromEntity($entity)
+                && !$this->hasConnection(
+                    $entity,
+                    $connection,
+                    $metadata
+                )
+            ) {
+                $this->logger->debug(
+                    "Entity {type} with Id {id} and meant for {conn}",
+                    [
+                        'type' => $class,
+                        'id'   => $classMetadata->getFieldValue(
+                            $entity,
+                            $classMetadata->getSingleIdentifierFieldName()
+                        ),
+                        'conn' => $connection->getName(),
+                    ]
+                );
+                continue;
+            }
+
+            // Apply the field values from the SObject to the Entity
             foreach ($object->getFields() as $field => $value) {
-                $fieldMetadata = $metadata->getMetadataForField($field);
-                if (null === $fieldMetadata) {
+                if (null === ($fieldMetadata = $metadata->getMetadataForField($field))) {
                     continue;
                 }
 
@@ -156,7 +160,7 @@ class EntityCompiler
 
             try {
                 $recordType = $metadata->getRecordType();
-
+                // Check that the RecordType matches what the Entity allows
                 if (null !== $recordType
                     && null !== $object->RecordTypeId
                     && null !== ($recordTypeName = $metadata->getRecordTypeDeveloperName($object->RecordTypeId))
@@ -171,6 +175,7 @@ class EntityCompiler
                     );
                 }
 
+                // Validate against entity assertions to ensure that entity can be written to the database
                 $this->validate($entity, $connection);
 
                 $entities[] = $entity;
@@ -280,6 +285,58 @@ class EntityCompiler
             }
         }
 
+        // If the metadata uses a connection field, add that to the query properly
+        $connField    = $metadata->getConnectionNameField();
+        $connCriteria = $builder->expr()->andX();
+        if (null !== $connField) {
+            $prop = $connField->getProperty();
+            $conn = $this->compileField(
+                null,
+                $metadata->getConnectionName(),
+                $object,
+                $classMetadata,
+                $metadata,
+                $connField
+            );
+
+            if ($conn instanceof Collection) {
+                $conn = $conn->first();
+            } elseif (is_array($conn)) {
+                $conn = array_shift($conn);
+            }
+
+            // There's a connection field AND a value for the connection on the entity
+            if (null !== $conn) {
+                // The Connection field is an association, create a join to it
+                if ($classMetadata->hasAssociation($prop)) {
+                    $assoc       = $classMetadata->getAssociationMapping($prop);
+                    $connClass   = $assoc['targetEntity'];
+                    $connManager = $this->registry->getManagerForClass($connClass);
+                    /** @var ClassMetadata $connMetadata */
+                    $connMetadata = $connManager->getClassMetadata($connClass);
+                    $connIdProp   = $connMetadata->getSingleIdentifierFieldName();
+                    $connId       = $connMetadata->getFieldValue($conn, $connIdProp);
+
+                    if (null !== $conn && null !== $connId) {
+                        $builder->join("o.$prop", "c")
+                                ->setParameter("conn", $connId)
+                        ;
+                        $connCriteria->add(
+                            $builder->expr()->eq("c.$connIdProp", ":conn")
+                        );
+                    }
+                } elseif ($classMetadata->hasField($prop)) {
+                    // The connection is a field, such aa a string value
+                    $connCriteria->add($builder->expr()->eq("o.$prop", ":conn"));
+                    $builder->setParameter('conn', $conn);
+                }
+
+                if ($connCriteria->count() > 0) {
+                    $criteria->add($connCriteria);
+                }
+            }
+        }
+
         // Only add to the builder if there is criteria to add
         if ($criteria->count() > 0) {
             $builder->where($criteria);
@@ -303,6 +360,7 @@ class EntityCompiler
                 $sfidVal = array_shift($sfidVal);
             }
 
+            $sfidCriteria = $builder->expr()->andX();
             if ($classMetadata->hasAssociation($property)) {
                 $targetClass = $classMetadata->getAssociationTargetClass($property);
                 /** @var ClassMetadata $targetMetadata */
@@ -313,14 +371,23 @@ class EntityCompiler
                 if (null !== $sfidVal && get_class($sfidVal) === $targetClass) {
                     $value = $targetMetadata->getFieldValue($sfidVal, $idField);
                     if (null !== $value) {
-                        $builder->leftJoin("o.$property", 's');
-                        $builder->orWhere($builder->expr()->eq("s.id", ":$property"));
-                        $builder->setParameter($property, $value);
+                        $sfidCriteria->add($builder->expr()->eq("s.id", ":$property"))
+                                     ->add($connCriteria)
+                        ;
+
+                        $builder->leftJoin("o.$property", 's')
+                                ->orWhere($sfidCriteria)
+                                ->setParameter($property, $value)
+                        ;
                     }
                 }
             } else {
-                $builder->orWhere($builder->expr()->eq("o.$property", ":$property"));
-                $builder->setParameter($property, $sfidVal);
+                $sfidCriteria->add($builder->expr()->eq("o.$property", ":$property"))
+                             ->add($connCriteria)
+                ;
+                $builder->orWhere($sfidCriteria)
+                        ->setParameter($property, $sfidVal)
+                ;
             }
         }
 

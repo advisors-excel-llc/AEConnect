@@ -10,6 +10,7 @@ namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 
 use AE\ConnectBundle\Annotations\Connection;
 use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
+use AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -27,20 +28,16 @@ class ConnectionEntityTransformer extends AbstractTransformerPlugin implements L
     use LoggerAwareTrait;
 
     /**
-     * @var RegistryInterface
+     * @var ConnectionFinder
      */
-    private $registry;
+    private $connectionFinder;
 
-    /** @var Reader */
-    private $reader;
-
-    public function __construct(RegistryInterface $registry, Reader $reader, ?LoggerInterface $logger = null)
-    {
-        $this->registry = $registry;
-        $this->reader   = $reader;
+    public function __construct(
+        ConnectionFinder $connectionFinder,
+        ?LoggerInterface $logger = null
+    ) {
+        $this->connectionFinder = $connectionFinder;
         $this->setLogger($logger ?: new NullLogger());
-
-        AnnotationRegistry::loadAnnotationClass(Connection::class);
     }
 
     protected function supportsInbound(TransformerPayload $payload): bool
@@ -59,42 +56,9 @@ class ConnectionEntityTransformer extends AbstractTransformerPlugin implements L
     protected function transformInbound(TransformerPayload $payload)
     {
         try {
-            $value           = $payload->getValue();
-            $association     = $payload->getClassMetadata()->getAssociationMapping($payload->getPropertyName());
-            $connectionClass = $association['targetEntity'];
-            $manager         = $this->registry->getManagerForClass($connectionClass);
-            $repo            = $manager->getRepository($connectionClass);
-            /** @var ClassMetadata $classMetadata */
-            $classMetadata   = $manager->getClassMetadata($connectionClass);
-            $connectionField = 'connection';
-            $connection      = null;
-
-            // Look for fields on the target entity that have the Connection annotation
-            /** @var \ReflectionProperty $field */
-            foreach ($classMetadata->getReflectionProperties() as $field) {
-                foreach ($this->reader->getPropertyAnnotations($field) as $annotation) {
-                    if ($annotation instanceof Connection) {
-                        $connectionField = $field->getName();
-                        break;
-                    }
-                }
-            }
-
-            if ($classMetadata->hasField($connectionField)) {
-                // If the entity has a field named 'connection' or uses the Connection annotation on the connection
-                // name field,then we can easily do a lookup
-                /** @var ConnectionEntityInterface $connection */
-                $connection = $repo->findOneBy([$connectionField => $value]);
-            } else {
-                // If we can't easily determine which field uses the connection name, we have to look at all entities
-                $connections = $repo->findAll();
-                foreach ($connections as $conn) {
-                    if ($conn instanceof ConnectionEntityInterface && $conn->getName() === $value) {
-                        $connection = $conn;
-                        break;
-                    }
-                }
-            }
+            $value       = $payload->getValue();
+            $connection  = $this->connectionFinder->find($value, $payload->getMetadata());
+            $association = $payload->getClassMetadata()->getAssociationMapping($payload->getPropertyName());
 
             // Set the payload value. If the $connection is null, no connection entity was found and that is ok
             $payload->setValue(
@@ -102,7 +66,6 @@ class ConnectionEntityTransformer extends AbstractTransformerPlugin implements L
                     ? new ArrayCollection([$connection])
                     : $connection
             );
-
         } catch (MappingException $e) {
             $this->logger->warning($e->getMessage());
             $this->logger->debug($e->getTraceAsString());

@@ -121,11 +121,11 @@ class TransformerPayload
     }
 
     /**
-     * @param string $fieldName
+     * @param string|null $fieldName
      *
      * @return TransformerPayload
      */
-    public function setFieldName(string $fieldName): TransformerPayload
+    public function setFieldName(?string $fieldName): TransformerPayload
     {
         $this->fieldName = $fieldName;
 
