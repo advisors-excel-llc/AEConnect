@@ -22,6 +22,7 @@ services:
         $managerRegistry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
         $sfidFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder'
+        $logger: '@logger'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\DateTimeTransformer:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\MultiValuePickListTransformer:
