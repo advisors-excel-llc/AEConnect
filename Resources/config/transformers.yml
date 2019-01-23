@@ -6,8 +6,16 @@ services:
     AE\ConnectBundle\Salesforce\Transformer\Transformer: ~
     AE\ConnectBundle\Salesforce\Transformer\TransformerInterface: '@AE\ConnectBundle\Salesforce\Transformer\Transformer'
     AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder:
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
-        $reader: '@Doctrine\Common\Annotations\Reader'
+        arguments:
+            $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+            $reader: '@Doctrine\Common\Annotations\Reader'
+        public: true
+    AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder:
+        arguments:
+            $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+            $reader: '@Doctrine\Common\Annotations\Reader'
+            $logger: '@logger'
+        public: true
     AE\ConnectBundle\Salesforce\Transformer\Plugins\CompoundFieldTransformerPlugin: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\StringLengthTransformer: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\AssociationTransformer:
@@ -15,6 +23,7 @@ services:
         $managerRegistry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
         $sfidFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder'
+        $logger: '@logger'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\DateTimeTransformer:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\MultiValuePickListTransformer:
@@ -22,8 +31,8 @@ services:
     AE\ConnectBundle\Salesforce\Transformer\Plugins\RecordTypeTransformer: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\UuidTransformerPlugin: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\ConnectionEntityTransformer:
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
-        $reader: '@Doctrine\Common\Annotations\Reader'
+        $connectionFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder'
+        $logger: '@logger'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\SfidTransformer:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $reader: '@Doctrine\Common\Annotations\Reader'

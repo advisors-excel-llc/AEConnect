@@ -18,6 +18,7 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\MappingException;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\ORMException;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -160,7 +161,12 @@ class AssociationTransformer extends AbstractTransformerPlugin
                     ->setParameter("id", $targetMetadata->getFieldValue($sfid, $idField))
                 ;
 
-                $entity = $builder->getQuery()->getOneOrNullResult();
+                try {
+                    $entity = $builder->getQuery()->getOneOrNullResult();
+                } catch (ORMException $e) {
+                    $this->logger->error($e->getMessage());
+                    $this->logger->debug($e->getTraceAsString());
+                }
             }
         }
 
@@ -232,6 +238,8 @@ class AssociationTransformer extends AbstractTransformerPlugin
 
             if ($sfid instanceof SalesforceIdEntityInterface) {
                 $sfid = $sfid->getSalesforceId();
+            } else {
+                $sfid = null;
             }
         }
 
