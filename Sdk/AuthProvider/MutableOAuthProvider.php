@@ -8,7 +8,7 @@
 
 namespace AE\ConnectBundle\Sdk\AuthProvider;
 
-use AE\SalesforceRestSdk\AuthProvider\OAuthProvider;
+use AE\ConnectBundle\AuthProvider\OAuthProvider;
 
 class MutableOAuthProvider extends OAuthProvider
 {
