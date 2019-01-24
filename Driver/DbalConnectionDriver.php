@@ -33,6 +33,7 @@ use AE\SalesforceRestSdk\Bayeux\Extension\SfdcExtension;
 use AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport;
 use AE\SalesforceRestSdk\Rest\Client as RestClient;
 use AE\SalesforceRestSdk\Bulk\Client as BulkClient;
+use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\DBAL\Exception\TableNotFoundException;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -62,6 +63,11 @@ class DbalConnectionDriver
      * @var PollingService
      */
     private $pollingService;
+
+    /**
+     * @var CacheProvider
+     */
+    private $cache;
 
     /**
      * @var array|ConnectionProxy[]
@@ -124,7 +130,7 @@ class DbalConnectionDriver
                         continue;
                     }
 
-                    $authProvider    = $this->createLoginProvider($entity);
+                    $authProvider    = $this->createLoginProvider($entity, $proxy->getCache());
                     $restClient      = $this->createRestClient($authProvider);
                     $bulkClient      = $this->createBulkClient($authProvider);
                     $streamingClient = $this->createStreamingClient($config, $authProvider, $entity->getName());
@@ -199,10 +205,11 @@ class DbalConnectionDriver
 
     /**
      * @param AuthCredentialsInterface $entity
+     * @param CacheProvider $cache
      *
      * @return AuthProviderInterface
      */
-    private function createLoginProvider(AuthCredentialsInterface $entity): AuthProviderInterface
+    private function createLoginProvider(AuthCredentialsInterface $entity, CacheProvider $cache): AuthProviderInterface
     {
         if ($entity->getType() === AuthCredentialsInterface::SOAP) {
             return new SoapProvider($entity->getUsername(), $entity->getPassword(), $entity->getLoginUrl());
@@ -211,6 +218,7 @@ class DbalConnectionDriver
         if ($entity->getType() === AuthCredentialsInterface::OAUTH) {
             if ($entity instanceof RefreshTokenCredentialsInterface) {
                 $provider = new MutableOAuthProvider(
+                    $cache,
                     $entity->getClientKey(),
                     $entity->getClientSecret(),
                     $entity->getLoginUrl(),
