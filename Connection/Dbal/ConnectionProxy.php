@@ -9,6 +9,7 @@
 namespace AE\ConnectBundle\Connection\Dbal;
 
 use AE\ConnectBundle\Metadata\MetadataRegistry;
+use Doctrine\Common\Cache\CacheProvider;
 
 class ConnectionProxy
 {
@@ -26,6 +27,11 @@ class ConnectionProxy
      * @var MetadataRegistry
      */
     private $metadataRegistry;
+
+    /**
+     * @var CacheProvider
+     */
+    private $cache;
 
     /**
      * @return string
@@ -92,6 +98,26 @@ class ConnectionProxy
                 $cache->save($cacheId, $metadata);
             }
         }
+
+        return $this;
+    }
+
+    /**
+     * @return CacheProvider
+     */
+    public function getCache(): CacheProvider
+    {
+        return $this->cache;
+    }
+
+    /**
+     * @param CacheProvider $cache
+     *
+     * @return ConnectionProxy
+     */
+    public function setCache(CacheProvider $cache): ConnectionProxy
+    {
+        $this->cache = $cache;
 
         return $this;
     }

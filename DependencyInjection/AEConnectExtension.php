@@ -125,6 +125,10 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                                   'setMetadataRegistry',
                                   [new Reference("ae_connect.connection.$name.metadata_registry")]
                               )
+                              ->addMethodCall(
+                                  'setCache',
+                                  [new Reference($cacheProviderId)]
+                              )
                               ->addTag('ae_connect.connection_proxy')
                     ;
                 } else {
