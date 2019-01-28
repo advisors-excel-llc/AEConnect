@@ -368,7 +368,9 @@ class EntityCompiler
                 $idField        = $targetMetadata->getSingleIdentifierFieldName();
 
                 // Reduce associated entities to just their ID value for lookup
-                if (null !== $sfidVal && get_class($sfidVal) === $targetClass) {
+                if (null !== $sfidVal && ((is_string($sfidVal) && $sfidVal === $targetClass)
+                        || (is_object($sfidVal) && get_class($sfidVal) === $targetClass))
+                ) {
                     $value = $targetMetadata->getFieldValue($sfidVal, $idField);
                     if (null !== $value) {
                         $sfidCriteria->add($builder->expr()->eq("s.id", ":$property"))
@@ -380,6 +382,10 @@ class EntityCompiler
                                 ->setParameter($property, $value)
                         ;
                     }
+                } else {
+                    $this->logger->warning('The follow SFID value was rejected by the EntityCompiler: {val}', [
+                        'val' => $sfidVal
+                    ]);
                 }
             } else {
                 $sfidCriteria->add($builder->expr()->eq("o.$property", ":$property"))
