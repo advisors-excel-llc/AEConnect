@@ -76,11 +76,10 @@ jms_serializer:
         id: 'jms_serializer.identical_property_naming_strategy'
 
 enqueue:
-    transport:
-        default: 'file://%kernel.project_dir%/var'
-    client:
-        traceable_producer: true
-    async_events: false
+    default:
+        transport: 'file://%kernel.project_dir%/var'
+        client:
+            traceable_producer: true
 
 ae_connect:
     paths: ["%kernel.project_dir%/Tests/Entity"]
