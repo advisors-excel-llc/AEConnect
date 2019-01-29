@@ -9,11 +9,23 @@
 namespace AE\ConnectBundle\Salesforce\Outbound\Enqueue\Extension;
 
 use AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue;
-use Enqueue\Consumption\Context;
+use Enqueue\Consumption\Context\End;
+use Enqueue\Consumption\Context\InitLogger;
+use Enqueue\Consumption\Context\MessageReceived;
+use Enqueue\Consumption\Context\MessageResult;
+use Enqueue\Consumption\Context\PostConsume;
+use Enqueue\Consumption\Context\PostMessageReceived;
+use Enqueue\Consumption\Context\PreConsume;
+use Enqueue\Consumption\Context\PreSubscribe;
+use Enqueue\Consumption\Context\ProcessorException;
+use Enqueue\Consumption\Context\Start;
 use Enqueue\Consumption\ExtensionInterface;
+use Psr\Log\LoggerAwareTrait;
 
 class SalesforceOutboundExtension implements ExtensionInterface
 {
+    use LoggerAwareTrait;
+
     /**
      * @var OutboundQueue
      */
@@ -35,7 +47,7 @@ class SalesforceOutboundExtension implements ExtensionInterface
     /**
      * @inheritDoc
      */
-    public function onStart(Context $context)
+    public function onStart(Start $context): void
     {
         // send any queued messages
         $this->outboundQueue->send();
@@ -44,7 +56,7 @@ class SalesforceOutboundExtension implements ExtensionInterface
     /**
      * @inheritDoc
      */
-    public function onBeforeReceive(Context $context)
+    public function onResult(MessageResult $context): void
     {
         // Nothing to do here
     }
@@ -52,7 +64,25 @@ class SalesforceOutboundExtension implements ExtensionInterface
     /**
      * @inheritDoc
      */
-    public function onPreReceived(Context $context)
+    public function onEnd(End $context): void
+    {
+        // Send what you can
+        $this->outboundQueue->send();
+        $this->lastMessageReceived = null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onInitLogger(InitLogger $context): void
+    {
+        $this->setLogger($context->getLogger());
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onMessageReceived(MessageReceived $context): void
     {
         // Nothing to do here
     }
@@ -60,27 +90,11 @@ class SalesforceOutboundExtension implements ExtensionInterface
     /**
      * @inheritDoc
      */
-    public function onResult(Context $context)
-    {
-        // Nothing to do here
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function onPostReceived(Context $context)
-    {
-        $this->lastMessageReceived = new \DateTime();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function onIdle(Context $context)
+    public function onPostConsume(PostConsume $context): void
     {
         $now = new \DateTime();
-        $lastMessageReceieved = $this->lastMessageReceived ? $this->lastMessageReceived : new \DateTime();
-        $then = (clone $lastMessageReceieved)->add(
+        $lastMessageReceived = $this->lastMessageReceived ? $this->lastMessageReceived : new \DateTime();
+        $then = (clone $lastMessageReceived)->add(
             \DateInterval::createFromDateString($this->idleWindow)
         );
         if (null !== $this->lastMessageReceived && ($now >= $then || $this->outboundQueue->count() > 1000)) {
@@ -91,9 +105,33 @@ class SalesforceOutboundExtension implements ExtensionInterface
     /**
      * @inheritDoc
      */
-    public function onInterrupted(Context $context)
+    public function onPostMessageReceived(PostMessageReceived $context): void
+    {
+        $this->lastMessageReceived = new \DateTime();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onPreConsume(PreConsume $context): void
     {
         // Nothing to do here
     }
 
+    /**
+     * @inheritDoc
+     */
+    public function onPreSubscribe(PreSubscribe $context): void
+    {
+        // Nothing to do here
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onProcessorException(ProcessorException $context): void
+    {
+        $this->logger->error($context->getMessage());
+        $this->logger->debug($context->getException()->getTraceAsString());
+    }
 }
