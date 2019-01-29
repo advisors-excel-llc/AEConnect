@@ -38,7 +38,7 @@ services:
     AE\ConnectBundle\Salesforce\SalesforceConnector:
         $sObjectCompiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
         $entityCompiler: '@AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler'
-        $producer: '@Enqueue\Client\Producer'
+        $producer: '@Enqueue\Client\ProducerInterface'
         $serializer: '@JMS\Serializer\SerializerInterface'
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $logger: '@Psr\Log\LoggerInterface'
@@ -102,8 +102,6 @@ services:
         tags: ['console.command']
     AE\ConnectBundle\Command\ConsumeCommand:
         arguments:
-            $consumer: '@Enqueue\Consumption\QueueConsumer'
-            $driver: '@enqueue.client.driver'
             $processor: '@AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor'
             $queue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
         tags: ['console.command']

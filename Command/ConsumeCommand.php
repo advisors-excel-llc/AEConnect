@@ -13,7 +13,6 @@ use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
 use AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue;
 use Enqueue\Client\DriverInterface;
 use Enqueue\Consumption\ChainExtension;
-use Enqueue\Consumption\Context;
 use Enqueue\Consumption\Extension\LoggerExtension;
 use Enqueue\Consumption\Extension\SignalExtension;
 use Enqueue\Consumption\QueueConsumer;

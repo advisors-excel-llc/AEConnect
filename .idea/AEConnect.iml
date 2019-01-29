@@ -19,7 +19,7 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/orm" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/persistence" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/reflection" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/enqueue/async-event-dispatcher" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/enqueue/dsn" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/enqueue/enqueue" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/enqueue/enqueue-bundle" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/enqueue/fs" />
@@ -60,7 +60,9 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/psr/link" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/psr/log" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/psr/simple-cache" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/queue-interop/amqp-interop" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/queue-interop/queue-interop" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/ralouphie/getallheaders" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/ramsey/uuid" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/ramsey/uuid-doctrine" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/sebastian/code-unit-reverse-lookup" />

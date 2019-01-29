@@ -46,8 +46,8 @@ class SalesforceConnectorTest extends DatabaseTestCase
     {
         parent::setUp();
         $this->connector = $this->get(SalesforceConnector::class);
-        $this->context   = $this->get('enqueue.transport.context');
-        $this->driver    = $this->get('enqueue.client.driver');
+        $this->context   = $this->get('enqueue.transport.default.context');
+        $this->driver    = $this->get('enqueue.client.default.driver');
     }
 
     public function testOutgoing()
