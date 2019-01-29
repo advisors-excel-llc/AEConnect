@@ -17,6 +17,7 @@ services:
             $logger: '@logger'
         public: true
     AE\ConnectBundle\Salesforce\Transformer\Plugins\CompoundFieldTransformerPlugin: ~
+    AE\ConnectBundle\Salesforce\Transformer\Plugins\StringLengthTransformer: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\AssociationTransformer:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $managerRegistry: '@Symfony\Bridge\Doctrine\RegistryInterface'
