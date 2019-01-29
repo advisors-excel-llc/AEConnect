@@ -54,13 +54,6 @@ class SalesforceConnectorTest extends DatabaseTestCase
     {
         // We don't want to fire on any triggers now do we?
         $this->connector->disable();
-        $this->loadOrgConnections();
-
-        $this->loadFixtures(
-            [
-                $this->getProjectDir().'/Tests/Resources/config/connections.yml',
-            ]
-        );
 
         $manager  = $this->doctrine->getManager();
         $items    = [];

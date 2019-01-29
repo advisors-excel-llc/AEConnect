@@ -139,10 +139,34 @@ class OutboundQueue implements LoggerAwareInterface
             }
 
             $responses = $client->sendCompositeRequest($request);
+            $classes   = [];
 
-            self::handleResponses($connection, $responses, $queue[CompilerResult::INSERT], CompilerResult::INSERT);
-            self::handleResponses($connection, $responses, $queue[CompilerResult::UPDATE], CompilerResult::UPDATE);
-            self::handleResponses($connection, $responses, $queue[CompilerResult::DELETE], CompilerResult::DELETE);
+            self::handleResponses(
+                $connection,
+                $responses,
+                $queue[CompilerResult::INSERT],
+                CompilerResult::INSERT,
+                $classes
+            );
+            self::handleResponses(
+                $connection,
+                $responses,
+                $queue[CompilerResult::UPDATE],
+                CompilerResult::UPDATE,
+                $classes
+            );
+            self::handleResponses(
+                $connection,
+                $responses,
+                $queue[CompilerResult::DELETE],
+                CompilerResult::DELETE,
+                $classes
+            );
+
+            foreach ($classes as $class) {
+                $manager = $this->registry->getManagerForClass($class);
+                $manager->clear($class);
+            }
         } catch (\GuzzleHttp\Exception\GuzzleException $e) {
             $this->logger->critical(
                 'An exception occurred while trying to send queue.'
@@ -161,12 +185,14 @@ class OutboundQueue implements LoggerAwareInterface
      * @param CompositeResponse $response
      * @param array $queue
      * @param string $intent
+     * @param array $classes
      */
     private function handleResponses(
         ConnectionInterface $connection,
         CompositeResponse $response,
         array $queue,
-        string $intent
+        string $intent,
+        array &$classes
     ) {
         $payloads = &$this->messages[$connection->getName()];
 
@@ -218,6 +244,10 @@ class OutboundQueue implements LoggerAwareInterface
 
                     if ($res->isSuccess() && CompilerResult::INSERT === $intent) {
                         $this->updateCreatedEntity($item, $res, $connection);
+                        $class = $item->getClassName();
+                        if (false === array_search($class, $classes)) {
+                            $classes[] = $class;
+                        }
                     } elseif (!$res->isSuccess()) {
                         foreach ($res->getErrors() as $error) {
                             $this->logger->error(
@@ -280,7 +310,6 @@ class OutboundQueue implements LoggerAwareInterface
 
             $this->transformer->transform($transformerPayload);
             $fieldMetadata->setValueForEntity($entity, $transformerPayload->getValue());
-
             $manager->flush();
         }
     }
