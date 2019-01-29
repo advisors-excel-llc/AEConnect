@@ -179,7 +179,7 @@ class SalesforceConnector implements LoggerAwareInterface
         foreach ($classes as $class) {
             $manager = $this->registry->getManagerForClass($class);
             $manager->flush();
-            $manager->clear();
+            $manager->clear($class);
         }
 
         return true;
