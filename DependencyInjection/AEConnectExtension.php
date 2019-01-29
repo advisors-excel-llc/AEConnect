@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\DependencyInjection;
 
+use AE\ConnectBundle\Command\ConsumeCommand;
 use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Connection\Dbal\ConnectionProxy;
 use AE\ConnectBundle\Driver\AnnotationDriver;
@@ -102,6 +103,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
     private function processConnections(ContainerBuilder $container, array $config)
     {
+        $this->processEnqueue($config['enqueue'], $container);
         $connections = $config['connections'];
 
         if (count($connections) > 0) {
@@ -157,6 +159,14 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 }
             }
         }
+    }
+
+    private function processEnqueue(string $name, ContainerBuilder $container)
+    {
+        $definition = $container->getDefinition(ConsumeCommand::class);
+        $definition->setArgument('$consumer', new Reference(sprintf('enqueue.client.%s.queue_consumer', $name)));
+        $definition->setArgument('$driver', new Reference(sprintf('enqueue.client.%s.driver', $name)));
+        $container->setDefinition(ConsumeCommand::class, $definition);
     }
 
     private function createAuthProviderService(array $config, string $connectionName, ContainerBuilder $container)

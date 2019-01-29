@@ -13,9 +13,9 @@ use AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue;
 use Enqueue\Client\TopicSubscriberInterface;
 use Enqueue\Consumption\Result;
 use Enqueue\Fs\FsMessage;
-use Interop\Queue\PsrContext;
-use Interop\Queue\PsrMessage;
-use Interop\Queue\PsrProcessor;
+use Interop\Queue\Context;
+use Interop\Queue\Message;
+use Interop\Queue\Processor;
 use JMS\Serializer\SerializerInterface;
 
 /**
@@ -23,7 +23,7 @@ use JMS\Serializer\SerializerInterface;
  *
  * @package AE\ConnectBundle\Salesforce\Outbound\Enqueue
  */
-class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
+class OutboundProcessor implements Processor, TopicSubscriberInterface
 {
 
     public const TOPIC = 'ae_connect';
@@ -51,7 +51,7 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
      *
      * @param FsMessage $message
      */
-    public function process(PsrMessage $message, PsrContext $context): string
+    public function process(Message $message, Context $context): string
     {
         /** @var CompilerResult $payload */
         $payload = $this->serializer->deserialize(

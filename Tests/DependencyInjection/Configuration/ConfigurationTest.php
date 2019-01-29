@@ -30,6 +30,7 @@ class ConfigurationTest extends TestCase
             [
                 'paths'              => [],
                 'default_connection' => 'default',
+                'enqueue'            => 'default',
                 'connections'        => [],
             ]
         );
@@ -74,6 +75,7 @@ class ConfigurationTest extends TestCase
             [
                 'paths'              => ['%kernel.project_dir%/src/App/Entity'],
                 'default_connection' => 'default',
+                'enqueue'            => 'default',
                 'connections'        => [
                     'default' => [
                         'login'           => [
@@ -122,6 +124,7 @@ class ConfigurationTest extends TestCase
             [
                 'ae_connect' => [
                     'paths'       => ['%kernel.project_dir%/src/App/Entity'],
+                    'enqueue'     => 'some_config',
                     'connections' => [
                         'default'     => [
                             'login'  => [
@@ -173,6 +176,7 @@ class ConfigurationTest extends TestCase
             [
                 'paths'              => ['%kernel.project_dir%/src/App/Entity'],
                 'default_connection' => 'default',
+                'enqueue'            => 'some_config',
                 'connections'        => [
                     'default'     => [
                         'login'           => [
