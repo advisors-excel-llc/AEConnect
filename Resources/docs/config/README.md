@@ -310,3 +310,36 @@ $ bin/console ae_connect:listen other_connection  # listens to the `other_connec
 ```
 
 Connection names are also used in [Entity Mapping](entity_mapping.md) and [Inbound and Outbound Validations](../validation/README.md);
+
+## Enqueue
+
+AE Connect uses the Enqueue bundle to aggregate local changes to entities and send large, composite requests to Salesforce
+to reduce the number of API calls.
+
+Enqueue allows you to create different client configurations. AE Connect will need to know which client to use. If
+no client is specified in the AE Connect configuration, AE Connect will attempt to use a client named "default".
+
+[Read more about Enqueue here.](https://github.com/php-enqueue/enqueue-dev)
+
+### Example Config
+
+```yaml
+enqueue:
+    default:
+        transport: 'file:///tmp/enqueue'
+        client: ~
+
+ae_connect:
+    paths: ['%kernel.project_dir%/src/Entity/']
+    default_connection: my_connection
+    enqueue: default
+    connections:
+        my_connection:
+            login:
+                username: someuser@mysalesforceorg.com
+                password: MYPASSWORD_my_user_token
+            objects:
+                - Account
+                - Contact
+                - SomeCustomObject__c
+```
