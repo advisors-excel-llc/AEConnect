@@ -19,6 +19,7 @@ use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\MappingException;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\ORMException;
+use Doctrine\ORM\Proxy\Proxy;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -198,7 +199,13 @@ class AssociationTransformer extends AbstractTransformerPlugin
         $manager            = $this->managerRegistry->getManagerForClass($className);
         $associatedMetadata = $manager->getClassMetadata($className);
         $entity             = $payload->getValue();
-        $sfid               = $associatedMetadata->getFieldValue($entity, $sfidProperty);
+
+        // Ensure that a Proxy is initialized
+        if ($entity instanceof Proxy && !$entity->__isInitialized()) {
+            $entity->__load();
+        }
+
+        $sfid = $associatedMetadata->getFieldValue($entity, $sfidProperty);
 
         if (null === $sfid) {
             $groups = [
