@@ -235,20 +235,24 @@ class SObjectCompiler
         $fields = $metadata->getPropertyMap();
 
         foreach ($fields as $property => $field) {
-            $fieldMetadata = $metadata->getMetadataForProperty($property);
+            $fieldMetadata = $metadata->getMetadataForField($field);
 
             // Don't attempt to set values for fields that cannot be updated in Salesforce
             if (null === $fieldMetadata
                 || null === ($describe = $fieldMetadata->describe())
                 || !$describe->isCreateable()
             ) {
-                $this->logger->warning(
-                    "No metadata found for Property '{prop}' mapped to '{field}'",
-                    [
-                        'prop'  => $property,
-                        'field' => $field,
-                    ]
-                );
+                if (null === ($describe = $fieldMetadata->describe())
+                    || $describe->isCreateable()
+                ) {
+                    $this->logger->warning(
+                        "No metadata found for Property '{prop}' mapped to '{field}' for insert.",
+                        [
+                            'prop'  => $property,
+                            'field' => $field,
+                        ]
+                    );
+                }
                 continue;
             }
 
@@ -282,10 +286,23 @@ class SObjectCompiler
         $fields = $metadata->getPropertyMap();
         foreach ($fields as $property => $field) {
             if (array_key_exists($property, $changeSet)) {
-                $fieldMetadata = $metadata->getMetadataForProperty($property);
+                $fieldMetadata = $metadata->getMetadataForField($field);
 
                 // Don't attempt to set values for fields that cannot be updated in Salesforce
-                if (null === $fieldMetadata || !$fieldMetadata->describe()->isCreateable()) {
+                if (null === $fieldMetadata
+                    || null === ($describe = $fieldMetadata->describe())
+                    || !$describe->isUpdateable()
+                ) {
+                    if (null === ($describe = $fieldMetadata->describe())
+                        || $describe->isUpdateable()) {
+                        $this->logger->warning(
+                            "No metadata found for Property '{prop}' mapped to '{field}' for update.",
+                            [
+                                'prop'  => $property,
+                                'field' => $field,
+                            ]
+                        );
+                    }
                     continue;
                 }
 
