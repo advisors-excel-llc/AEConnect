@@ -59,12 +59,15 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
 
     public function supports(TransformerPayload $payload): bool
     {
+        $value = $payload->getValue();
+
         return $payload->getFieldName() === 'Id'
-        && null !== $payload->getValue()
-        && $payload->getDirection() === TransformerPayload::OUTBOUND
-            ? !is_string($payload->getValue())
-            : is_string($payload->getValue())
-            && $payload->getClassMetadata()->hasAssociation($payload->getPropertyName());
+            && null !== $value
+            && (
+                ($payload->getDirection() === TransformerPayload::OUTBOUND && !is_string($value))
+                || ($payload->getDirection() === TransformerPayload::INBOUND && is_string($value)
+                    && $payload->getClassMetadata()->hasAssociation($payload->getPropertyName()))
+            );
     }
 
     protected function transformOutbound(TransformerPayload $payload)
