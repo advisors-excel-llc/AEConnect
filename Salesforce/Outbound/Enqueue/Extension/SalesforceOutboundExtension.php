@@ -83,7 +83,7 @@ class SalesforceOutboundExtension implements ExtensionInterface
         $then = (clone $lastMessageReceieved)->add(
             \DateInterval::createFromDateString($this->idleWindow)
         );
-        if (null !== $this->lastMessageReceived && ($now >= $then || $this->outboundQueue->count() > 1000)) {
+        if (null !== $this->lastMessageReceived && ($now >= $then || $this->outboundQueue->count() > 800)) {
             $this->outboundQueue->send();
         }
     }

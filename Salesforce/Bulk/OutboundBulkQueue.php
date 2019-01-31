@@ -244,7 +244,7 @@ class OutboundBulkQueue
             $qb->setFirstResult($offset);
             $pager = new Paginator($qb->getQuery(), false);
 
-            if ($offset > 4800) {
+            if ($offset > 800) {
                 $this->logger->debug(
                     'AE_CONNECT: Sending {count} records to {conn}',
                     [
