@@ -108,6 +108,7 @@ services:
     AE\ConnectBundle\Command\ListenCommand:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+            $logger: '@?logger'
         tags: ['console.command']
     AE\ConnectBundle\Command\PollCommand:
         arguments:
