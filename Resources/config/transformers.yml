@@ -14,7 +14,7 @@ services:
         arguments:
             $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
             $reader: '@Doctrine\Common\Annotations\Reader'
-            $logger: '@logger'
+            $logger: '@?logger'
         public: true
     AE\ConnectBundle\Salesforce\Transformer\Plugins\CompoundFieldTransformerPlugin: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\StringLengthTransformer: ~
@@ -23,7 +23,7 @@ services:
         $managerRegistry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
         $sfidFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder'
-        $logger: '@logger'
+        $logger: '@?logger'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\DateTimeTransformer:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\MultiValuePickListTransformer:
@@ -32,7 +32,7 @@ services:
     AE\ConnectBundle\Salesforce\Transformer\Plugins\UuidTransformerPlugin: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\ConnectionEntityTransformer:
         $connectionFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder'
-        $logger: '@logger'
+        $logger: '@?logger'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\SfidTransformer:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $reader: '@Doctrine\Common\Annotations\Reader'

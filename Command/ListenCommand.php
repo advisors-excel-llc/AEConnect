@@ -9,23 +9,31 @@
 namespace AE\ConnectBundle\Command;
 
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
+use Doctrine\ORM\ORMInvalidArgumentException;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class ListenCommand extends Command
+class ListenCommand extends Command implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     /**
      * @var ConnectionManagerInterface
      */
     private $connectionManager;
 
-    public function __construct(ConnectionManagerInterface $connectionManager)
+    public function __construct(ConnectionManagerInterface $connectionManager, ?LoggerInterface $logger = null)
     {
         parent::__construct(null);
 
         $this->connectionManager = $connectionManager;
+        $this->setLogger($logger ?: new NullLogger());
     }
 
     protected function configure()
@@ -43,12 +51,17 @@ class ListenCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $connectionName = $input->getArgument('connectionName');
-        $connection = $this->connectionManager->getConnection($connectionName);
+        $connection     = $this->connectionManager->getConnection($connectionName);
 
         if (null === $connection) {
             throw new \InvalidArgumentException("Could not find any connection named '$connectionName'.");
         }
         $output->writeln('<info>Listening to connection: '.$connectionName.'</info>');
-        $connection->getStreamingClient()->start();
+
+        try {
+            $connection->getStreamingClient()->start();
+        } catch (ORMInvalidArgumentException $e) {
+            $this->logger->critical($e->getMessage());
+        }
     }
 }
