@@ -48,6 +48,12 @@ class OrgConnection implements AuthCredentialsInterface
     private $password;
 
     /**
+     * @var string
+     * @ORM\Column(type="boolean", options={"default"=true})
+     */
+    private $active = true;
+
+    /**
      * @return int|null
      */
     public function getId(): ?int
@@ -152,6 +158,13 @@ class OrgConnection implements AuthCredentialsInterface
 
     public function isActive(): bool
     {
-        return true;
+        return $this->active;
+    }
+
+    public function setActive(bool $active)
+    {
+        $this->active = $active;
+
+        return $this;
     }
 }
