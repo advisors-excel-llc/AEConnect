@@ -23,21 +23,6 @@ use AE\ConnectBundle\Tests\Entity\TestObject;
 
 class ConnectionManagerTest extends DatabaseTestCase
 {
-    protected function loadSchemas(): array
-    {
-        return [
-            OrgConnection::class,
-            Account::class,
-            Product::class,
-            Order::class,
-            OrderProduct::class,
-            Role::class,
-            Contact::class,
-            Task::class,
-            TestObject::class
-        ];
-    }
-
     public function testManager()
     {
         $this->loadFixtures([__DIR__.'/../Resources/config/login_fixtures.yml']);
@@ -75,8 +60,35 @@ class ConnectionManagerTest extends DatabaseTestCase
         $this->assertEquals('db_test_org1', $metadata->getConnectionName());
 
         $this->assertArraySubset(
-            ['sfid' => 'Id', 'name' => 'Name', 'extId' => 'AE_Connect_Id__c'],
+            ['name' => 'Name', 'extId' => 'AE_Connect_Id__c'],
             $metadata->getPropertyMap()
         );
+    }
+
+    public function testBadConnection()
+    {
+        $org = new OrgConnection();
+        $org->setName('db_test_fail')
+            ->setUsername('test.user@fakeorg.org')
+            ->setPassword('password1234')
+        ;
+
+        $manager = $this->getDoctrine()->getManager();
+        $manager->persist($org);
+        $manager->flush();
+
+        try {
+            /** @var DbalConnectionDriver $dbalLoader */
+            $dbalLoader = $this->get(DbalConnectionDriver::class);
+            $dbalLoader->loadConnections();
+        } catch (\Exception $e) {
+            // Don't throw the error
+        }
+
+        /** @var OrgConnection $inactive */
+        $inactive = $manager->getRepository(OrgConnection::class)->find($org->getId());
+        $this->assertFalse($inactive->isActive());
+        $manager->remove($inactive);
+        $manager->flush();
     }
 }
