@@ -20,4 +20,5 @@ interface AuthCredentialsInterface extends ConnectionEntityInterface
     public function getClientSecret(): ?string;
     public function getLoginUrl(): string;
     public function isActive(): bool;
+    public function setActive(bool $active);
 }
