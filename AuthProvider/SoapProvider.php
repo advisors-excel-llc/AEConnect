@@ -10,9 +10,14 @@ namespace AE\ConnectBundle\AuthProvider;
 
 use AE\SalesforceRestSdk\AuthProvider\SoapProvider as BaseAuthProvider;
 use Doctrine\Common\Cache\CacheProvider;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\NullLogger;
 
-class SoapProvider extends BaseAuthProvider
+class SoapProvider extends BaseAuthProvider implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     /**
      * @var CacheProvider
      */
@@ -25,7 +30,8 @@ class SoapProvider extends BaseAuthProvider
         string $url = 'https://login.salesforce.com/'
     ) {
         parent::__construct($username, $password, $url);
-        $this->cache = $cache;
+        $this->cache  = $cache;
+        $this->logger = new NullLogger();
     }
 
     public function authorize($reauth = false)
@@ -53,24 +59,31 @@ class SoapProvider extends BaseAuthProvider
             $prop->setValue($this, true);
         }
 
-        $header = parent::authorize($reauth);
+        try {
+            $header = parent::authorize($reauth);
 
-        if ($this->token !== $oldToken) {
-            $prop = $ref->getProperty('identityUrl');
-            $prop->setAccessible(true);
+            if ($this->token !== $oldToken) {
+                $prop = $ref->getProperty('identityUrl');
+                $prop->setAccessible(true);
 
-            $this->cache->save(
-                $key,
-                [
-                    'tokenType'   => $this->tokenType,
-                    'token'       => $this->token,
-                    'instanceUrl' => $this->getInstanceUrl(),
-                    'identityUrl' => $prop->getValue($this),
-                ]
-            );
+                $this->cache->save(
+                    $key,
+                    [
+                        'tokenType'   => $this->tokenType,
+                        'token'       => $this->token,
+                        'instanceUrl' => $this->getInstanceUrl(),
+                        'identityUrl' => $prop->getValue($this),
+                    ]
+                );
+            }
+
+            return $header;
+        } catch (\Exception $e) {
+            $this->logger->critical($e->getMessage());
+            $this->revoke();
+
+            return '';
         }
-
-        return $header;
     }
 
     public function revoke(): void

@@ -130,6 +130,7 @@ class Configuration implements ConfigurationInterface
                             ->thenInvalid('The bulk_api_min_count must be an integer greater than 0')
                         ->end()
                     ->end()
+                    ->scalarNode('connection_logger')->defaultValue('logger')->end()
                 ->end()
         ;
 
