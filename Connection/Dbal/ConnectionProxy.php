@@ -10,9 +10,14 @@ namespace AE\ConnectBundle\Connection\Dbal;
 
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 use Doctrine\Common\Cache\CacheProvider;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
 
-class ConnectionProxy
+class ConnectionProxy implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     /**
      * @var string
      */
@@ -89,7 +94,7 @@ class ConnectionProxy
     public function setMetadataRegistry(MetadataRegistry $metadataRegistry): ConnectionProxy
     {
         $this->metadataRegistry = $metadataRegistry;
-        $cache = $this->metadataRegistry->getCache();
+        $cache                  = $this->metadataRegistry->getCache();
 
         foreach ($this->metadataRegistry->getMetadata() as $metadata) {
             $cacheId = "{$this->name}__{$metadata->getClassName()}";
@@ -120,5 +125,13 @@ class ConnectionProxy
         $this->cache = $cache;
 
         return $this;
+    }
+
+    /**
+     * @return null|LoggerInterface
+     */
+    public function getLogger(): ?LoggerInterface
+    {
+        return $this->logger;
     }
 }

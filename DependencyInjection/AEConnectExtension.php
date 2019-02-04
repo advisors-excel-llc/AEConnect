@@ -23,6 +23,7 @@ use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
 use AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension;
 use AE\ConnectBundle\Streaming\Client;
 use AE\ConnectBundle\Streaming\Topic;
+use Psr\Log\LoggerAwareInterface;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -120,21 +121,30 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                         $config['default_connection'] === $name
                     );
 
-                    $container->register('ae_connect.connection_proxy.'.$name, ConnectionProxy::class)
-                              ->addMethodCall('setName', [$name])
-                              ->addMethodCall('setConfig', [$connection])
-                              ->addMethodCall(
-                                  'setMetadataRegistry',
-                                  [new Reference("ae_connect.connection.$name.metadata_registry")]
-                              )
-                              ->addMethodCall(
-                                  'setCache',
-                                  [new Reference($cacheProviderId)]
-                              )
-                              ->addTag('ae_connect.connection_proxy')
+                    $proxy = $container->register('ae_connect.connection_proxy.'.$name, ConnectionProxy::class)
+                                       ->addMethodCall('setName', [$name])
+                                       ->addMethodCall('setConfig', [$connection])
+                                       ->addMethodCall(
+                                           'setMetadataRegistry',
+                                           [new Reference("ae_connect.connection.$name.metadata_registry")]
+                                       )
+                                       ->addMethodCall(
+                                           'setCache',
+                                           [new Reference($cacheProviderId)]
+                                       )
+                                       ->addTag('ae_connect.connection_proxy')
                     ;
+
+                    if ($container->hasDefinition($connection['config']['connection_logger'])) {
+                        $proxy->addMethodCall('setLogger', new Reference($connection['config']['connection_logger']));
+                    }
                 } else {
-                    $this->createAuthProviderService($connection['login'], $name, $container);
+                    $this->createAuthProviderService(
+                        $connection['login'],
+                        $name,
+                        $container,
+                        $connection['config']['connection_logger']
+                    );
                     $this->createBayeuxClientService($name, $container);
                     $this->createStreamingClientService($name, $connection, $container);
                     $this->createRestClientService($name, $container);
@@ -169,34 +179,43 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
         $container->setDefinition(ConsumeCommand::class, $definition);
     }
 
-    private function createAuthProviderService(array $config, string $connectionName, ContainerBuilder $container)
-    {
+    private function createAuthProviderService(
+        array $config,
+        string $connectionName,
+        ContainerBuilder $container,
+        ?string $logger = null
+    ) {
         if (array_key_exists('key', $config) && array_key_exists('secret', $config)) {
-            $container->register("ae_connect.connection.$connectionName.auth_provider", OAuthProvider::class)
-                      ->setArguments(
-                          [
-                              new Reference("ae_connect.connection.$connectionName.cache.auth_provider"),
-                              $config['key'],
-                              $config['secret'],
-                              $config['url'],
-                              $config['username'],
-                              $config['password'],
-                          ]
-                      )
-                      ->setPublic(true)
+            $proxy = $container->register("ae_connect.connection.$connectionName.auth_provider", OAuthProvider::class)
+                               ->setArguments(
+                                   [
+                                       new Reference("ae_connect.connection.$connectionName.cache.auth_provider"),
+                                       $config['key'],
+                                       $config['secret'],
+                                       $config['url'],
+                                       $config['username'],
+                                       $config['password'],
+                                   ]
+                               )
+                               ->setPublic(true)
             ;
         } else {
-            $container->register("ae_connect.connection.$connectionName.auth_provider", SoapProvider::class)
-                      ->setArguments(
-                          [
-                              new Reference("ae_connect.connection.$connectionName.cache.auth_provider"),
-                              $config['username'],
-                              $config['password'],
-                              $config['url'],
-                          ]
-                      )
-                      ->setPublic(true)
+            $proxy = $container->register("ae_connect.connection.$connectionName.auth_provider", SoapProvider::class)
+                               ->setArguments(
+                                   [
+                                       new Reference("ae_connect.connection.$connectionName.cache.auth_provider"),
+                                       $config['username'],
+                                       $config['password'],
+                                       $config['url'],
+                                   ]
+                               )
+                               ->setPublic(true)
             ;
+        }
+
+        if (in_array(LoggerAwareInterface::class, class_implements($proxy->getClass(), true)) &&
+            $container->hasDefinition($logger)) {
+            $proxy->addMethodCall('setLogger', new Reference($logger));
         }
     }
 

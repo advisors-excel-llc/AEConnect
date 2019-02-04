@@ -11,9 +11,13 @@ namespace AE\ConnectBundle\AuthProvider;
 
 use AE\SalesforceRestSdk\AuthProvider\OAuthProvider as BaseAuthProvider;
 use Doctrine\Common\Cache\CacheProvider;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\NullLogger;
 
-class OAuthProvider extends BaseAuthProvider
+class OAuthProvider extends BaseAuthProvider implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
     /**
      * @var CacheProvider
      */
@@ -31,7 +35,8 @@ class OAuthProvider extends BaseAuthProvider
         ?string $code = null
     ) {
         parent::__construct($clientId, $clientSecret, $url, $username, $password, $grantType, $redirectUri, $code);
-        $this->cache = $cache;
+        $this->cache  = $cache;
+        $this->logger = new NullLogger();
     }
 
     public function authorize($reauth = false): string
@@ -40,9 +45,9 @@ class OAuthProvider extends BaseAuthProvider
         $ref      = new \ReflectionClass(BaseAuthProvider::class);
 
         if (!$reauth && null === $this->token && $this->cache->contains($this->clientId)) {
-            $values = $this->cache->fetch($this->clientId);
-            $this->token = $oldToken = $values['token'];
-            $this->tokenType = $values['tokenType'];
+            $values             = $this->cache->fetch($this->clientId);
+            $this->token        = $oldToken = $values['token'];
+            $this->tokenType    = $values['tokenType'];
             $this->refreshToken = $values['refreshToken'];
 
             $instUrl = $ref->getProperty('instanceUrl');
@@ -53,30 +58,37 @@ class OAuthProvider extends BaseAuthProvider
             $idUrl->setAccessible(true);
             $idUrl->setValue($this, $values['identityUrl']);
 
-            $prop        = $ref->getProperty('isAuthorized');
+            $prop = $ref->getProperty('isAuthorized');
             $prop->setAccessible(true);
             $prop->setValue($this, true);
         }
 
-        $header = parent::authorize($reauth);
+        try {
+            $header = parent::authorize($reauth);
 
-        if ($this->token !== $oldToken) {
-            $prop = $ref->getProperty('identityUrl');
-            $prop->setAccessible(true);
+            if ($this->token !== $oldToken) {
+                $prop = $ref->getProperty('identityUrl');
+                $prop->setAccessible(true);
 
-            $this->cache->save(
-                $this->clientId,
-                [
-                    'tokenType'    => $this->tokenType,
-                    'token'        => $this->token,
-                    'instanceUrl'  => $this->getInstanceUrl(),
-                    'refreshToken' => $this->getRefreshToken(),
-                    'identityUrl'  => $prop->getValue($this),
-                ]
-            );
+                $this->cache->save(
+                    $this->clientId,
+                    [
+                        'tokenType'    => $this->tokenType,
+                        'token'        => $this->token,
+                        'instanceUrl'  => $this->getInstanceUrl(),
+                        'refreshToken' => $this->getRefreshToken(),
+                        'identityUrl'  => $prop->getValue($this),
+                    ]
+                );
+            }
+
+            return $header;
+        } catch (\Exception $e) {
+            $this->logger->critical($e->getMessage());
+            $this->revoke();
         }
 
-        return $header;
+        return '';
     }
 
     public function revoke(): void

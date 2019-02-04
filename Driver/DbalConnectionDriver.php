@@ -25,6 +25,7 @@ use AE\ConnectBundle\Streaming\PlatformEvent;
 use AE\ConnectBundle\Streaming\Topic;
 use AE\SalesforceRestSdk\AuthProvider\AuthProviderInterface;
 use AE\SalesforceRestSdk\AuthProvider\OAuthProvider;
+use AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException;
 use AE\SalesforceRestSdk\AuthProvider\SoapProvider;
 use AE\ConnectBundle\Streaming\Client as StreamingClient;
 use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
@@ -35,6 +36,7 @@ use AE\SalesforceRestSdk\Rest\Client as RestClient;
 use AE\SalesforceRestSdk\Bulk\Client as BulkClient;
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\DBAL\Exception\TableNotFoundException;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -63,11 +65,6 @@ class DbalConnectionDriver
      * @var PollingService
      */
     private $pollingService;
-
-    /**
-     * @var CacheProvider
-     */
-    private $cache;
 
     /**
      * @var array|ConnectionProxy[]
@@ -130,10 +127,17 @@ class DbalConnectionDriver
                         continue;
                     }
 
-                    $authProvider    = $this->createLoginProvider($entity, $proxy->getCache());
-                    $restClient      = $this->createRestClient($authProvider);
-                    $bulkClient      = $this->createBulkClient($authProvider);
-                    $streamingClient = $this->createStreamingClient($config, $authProvider, $entity->getName());
+                    try {
+                        $authProvider    = $this->createLoginProvider($entity, $proxy->getCache(), $proxy->getLogger());
+                        $restClient      = $this->createRestClient($authProvider);
+                        $bulkClient      = $this->createBulkClient($authProvider);
+                        $streamingClient = $this->createStreamingClient($config, $authProvider, $entity->getName());
+                    } catch (\Exception $e) {
+                        $entity->setActive(false);
+                        $manager->flush();
+                        $this->logger->critical($e->getMessage());
+                        continue;
+                    }
 
                     // Build a MetadataRegistry for the new connection based on the proxy registry
                     $metadataRegistry = new MetadataRegistry($metadataCache);
@@ -192,9 +196,16 @@ class DbalConnectionDriver
                     );
 
                     $connection->setAlias($proxy->getName());
-                    $connection->hydrateMetadataDescribe();
 
-                    $this->connectionManager->registerConnection($connection);
+                    try {
+                        $connection->hydrateMetadataDescribe();
+
+                        $this->connectionManager->registerConnection($connection);
+                    } catch (\Exception $e) {
+                        $entity->setActive(false);
+                        $manager->flush();
+                        $this->logger->critical($e->getMessage());
+                    }
                 }
             } catch (TableNotFoundException $e) {
                 $this->logger->error($e->getMessage());
@@ -206,11 +217,15 @@ class DbalConnectionDriver
     /**
      * @param AuthCredentialsInterface $entity
      * @param CacheProvider $cache
+     * @param LoggerInterface|null $logger
      *
      * @return AuthProviderInterface
      */
-    private function createLoginProvider(AuthCredentialsInterface $entity, CacheProvider $cache): AuthProviderInterface
-    {
+    private function createLoginProvider(
+        AuthCredentialsInterface $entity,
+        CacheProvider $cache,
+        ?LoggerInterface $logger = null
+    ): AuthProviderInterface {
         if ($entity->getType() === AuthCredentialsInterface::SOAP) {
             return new SoapProvider($entity->getUsername(), $entity->getPassword(), $entity->getLoginUrl());
         }
@@ -232,16 +247,26 @@ class DbalConnectionDriver
                 $provider->setToken($entity->getToken());
                 $provider->setRefreshToken($entity->getRefreshToken());
 
+                if ($provider instanceof LoggerAwareInterface) {
+                    $provider->setLogger($logger ?: new NullLogger());
+                }
+
                 return $provider;
             }
 
-            return new OAuthProvider(
+            $provider = new OAuthProvider(
                 $entity->getClientKey(),
                 $entity->getClientSecret(),
                 $entity->getLoginUrl(),
                 $entity->getUsername(),
                 $entity->getPassword()
             );
+
+            if ($provider instanceof LoggerAwareInterface) {
+                $provider->setLogger($logger ?: new NullLogger());
+            }
+
+            return $provider;
         }
 
         throw new \LogicException("Logically, you should not have gotten here. Check your credential entity's type.");
