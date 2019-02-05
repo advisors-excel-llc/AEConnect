@@ -70,6 +70,7 @@ class ListenCommand extends Command implements LoggerAwareInterface
             $connection->getStreamingClient()->start();
         } catch (\Exception $e) {
             $this->logger->critical($e->getMessage());
+            $connection->getStreamingClient()->stop();
         }
 
         return true;
