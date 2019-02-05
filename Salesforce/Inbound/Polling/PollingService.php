@@ -179,6 +179,7 @@ class PollingService implements LoggerAwareInterface
                 }
             } catch (\RuntimeException $e) {
                 // A runtime exception is thrown if there are no requests to build.
+                $this->logger->critical($e->getMessage());
             }
 
             if (empty($updates) && empty($removals)) {
@@ -192,12 +193,20 @@ class PollingService implements LoggerAwareInterface
              */
             foreach ($updates as $update) {
                 $update->__SOBJECT_TYPE__ = $update->getType();
-                $this->connector->receive($update, SalesforceConsumerInterface::UPDATED, $connectionName);
+                try {
+                    $this->connector->receive($update, SalesforceConsumerInterface::UPDATED, $connectionName);
+                } catch (\Exception $e) {
+                    $this->logger->critical($e->getMessage());
+                }
             }
 
             foreach ($removals as $removal) {
                 $removal->__SOBJECT_TYPE__ = $removal->getType();
-                $this->connector->receive($removal, SalesforceConsumerInterface::DELETED, $connectionName);
+                try {
+                    $this->connector->receive($removal, SalesforceConsumerInterface::DELETED, $connectionName);
+                } catch (\Exception $e) {
+                    $this->logger->critical($e->getMessage());
+                }
             }
         }
 
