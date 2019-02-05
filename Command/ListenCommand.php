@@ -56,19 +56,23 @@ class ListenCommand extends Command implements LoggerAwareInterface
         if (null === $connection) {
             throw new \InvalidArgumentException("Could not find any connection named '$connectionName'.");
         }
+
         $output->writeln('<info>Listening to connection: '.$connectionName.'</info>');
 
-        $this->start($connection, $output);
+        while ($this->start($connection)) {
+            $output->writeln('<info>Restarting connection: '.$connectionName.'</info>');
+        }
     }
 
-    private function start(ConnectionInterface $connection, OutputInterface $output)
+    private function start(ConnectionInterface $connection)
     {
         try {
             $connection->getStreamingClient()->start();
         } catch (\Exception $e) {
             $this->logger->critical($e->getMessage());
-            $output->writeln('<info>Restarting connection: '.$connection->getName().'</info>');
-            $this->start($connection, $output);
+            $connection->getStreamingClient()->stop();
         }
+
+        return true;
     }
 }
