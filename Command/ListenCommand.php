@@ -8,8 +8,8 @@
 
 namespace AE\ConnectBundle\Command;
 
+use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
-use Doctrine\ORM\ORMInvalidArgumentException;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -56,12 +56,23 @@ class ListenCommand extends Command implements LoggerAwareInterface
         if (null === $connection) {
             throw new \InvalidArgumentException("Could not find any connection named '$connectionName'.");
         }
+
         $output->writeln('<info>Listening to connection: '.$connectionName.'</info>');
 
+        while ($this->start($connection)) {
+            $output->writeln('<info>Restarting connection: '.$connectionName.'</info>');
+        }
+    }
+
+    private function start(ConnectionInterface $connection)
+    {
         try {
             $connection->getStreamingClient()->start();
-        } catch (ORMInvalidArgumentException $e) {
+        } catch (\Exception $e) {
             $this->logger->critical($e->getMessage());
+            $connection->getStreamingClient()->stop();
         }
+
+        return true;
     }
 }
