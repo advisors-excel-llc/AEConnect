@@ -127,6 +127,7 @@ class DebugConnectionsCommand extends Command
             new TableSeparator(),
             ['Is Default', $connection->isDefault() ? 'Yes' : 'No'],
             ['Is Authorized', $authProvider->isAuthorized() ? 'Yes' : 'No'],
+            ['Is Active', $connection->isActive() ? 'Yes' : 'No'],
             ['Username', $username],
             ['Instance Url', $authProvider->getInstanceUrl()],
             ['Authorization', $providerType],
