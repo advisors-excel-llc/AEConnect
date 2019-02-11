@@ -106,7 +106,7 @@ class OutboundQueue implements LoggerAwareInterface
 
         foreach ($names as $name) {
             $connection = $this->connectionManager->getConnection($name);
-            if (null !== $connection) {
+            if (null !== $connection && $connection->isActive()) {
                 $this->sendMessages($connection);
             }
         }

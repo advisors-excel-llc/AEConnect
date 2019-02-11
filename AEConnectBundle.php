@@ -43,7 +43,9 @@ class AEConnectBundle extends Bundle
 
         if (null !== $connections) {
             foreach ($connections as $connection) {
-                $connection->hydrateMetadataDescribe();
+                if ($connection->isActive()) {
+                    $connection->hydrateMetadataDescribe();
+                }
             }
         }
     }
