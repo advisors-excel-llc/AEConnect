@@ -38,7 +38,7 @@ class AEConnectBundle extends Bundle
         $dbalDriver->loadConnections();
 
         /** @var ConnectionManagerInterface $manager */
-        $manager = $this->container->get('ae_connect.connection_manager');
+        $manager     = $this->container->get('ae_connect.connection_manager');
         $connections = $manager->getConnections();
 
         if (null !== $connections) {
