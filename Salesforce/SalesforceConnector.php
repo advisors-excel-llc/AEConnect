@@ -15,6 +15,8 @@ use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
 use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Util\ClassUtils;
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Enqueue\Client\Message;
 use Enqueue\Client\ProducerInterface;
 use JMS\Serializer\SerializerInterface;
@@ -153,14 +155,26 @@ class SalesforceConnector implements LoggerAwareInterface
             return false;
         }
 
-        $classes = [];
+        /** @var EntityManagerInterface[] $managers */
+        $managers = [];
 
         foreach ($entities as $entity) {
-            $class   = ClassUtils::getClass($entity);
-            $manager = $this->registry->getManagerForClass($class);
+            $class = ClassUtils::getClass($entity);
 
-            if (false === array_search($class, $classes)) {
-                $classes[] = $class;
+            if (!array_key_exists($class, $managers)) {
+                $managers[$class] = $this->registry->getManagerForClass($class);
+            }
+
+            $manager = $managers[$class];
+
+            // If an exceptino is thrown by the entity manager, it can force it to close
+            // This is how we can reopen it for future transactions
+            if (!$manager->isOpen()) {
+                $manager = $managers[$class] = EntityManager::create(
+                    $manager->getConnection(),
+                    $manager->getConfiguration(),
+                    $manager->getEventManager()
+                );
             }
 
             switch ($intent) {
@@ -176,9 +190,20 @@ class SalesforceConnector implements LoggerAwareInterface
             $this->logger->info('{intent} entity of type {type}', ['intent' => $intent, 'type' => $class]);
         }
 
-        foreach ($classes as $class) {
-            $manager = $this->registry->getManagerForClass($class);
-            $manager->flush();
+        foreach ($managers as $class => $manager) {
+            try {
+                // Again, another check to make sure the manager is open
+                if (!$manager->isOpen()) {
+                    continue;
+                }
+                $manager->transactional(
+                    function ($em) {
+                        $em->flush();
+                    }
+                );
+            } catch (\Throwable $t) {
+                $this->logger->critical($t->getMessage());
+            }
             $manager->clear($class);
         }
 
