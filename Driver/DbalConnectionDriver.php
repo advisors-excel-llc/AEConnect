@@ -192,9 +192,12 @@ class DbalConnectionDriver
                     );
 
                     $connection->setAlias($proxy->getName());
+                    $connection->setActive($entity->isActive());
 
                     try {
-                        $connection->hydrateMetadataDescribe();
+                        if ($connection->isActive()) {
+                            $connection->hydrateMetadataDescribe();
+                        }
                     } catch (\Exception $e) {
                         if (!$entity->isActive()) {
                             $entity->setActive(false);
