@@ -26,6 +26,11 @@ class Client implements ClientInterface
         $this->channelSubscribers = new ArrayCollection();
     }
 
+    public function getChannelSubscribers()
+    {
+        return $this->channelSubscribers;
+    }
+
     public function addSubscriber(ChannelSubscriberInterface $subscriber)
     {
         if (!$this->channelSubscribers->contains($subscriber)) {
