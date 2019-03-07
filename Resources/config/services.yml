@@ -46,6 +46,7 @@ services:
         arguments:
             $queue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
             $serializer: '@JMS\Serializer\SerializerInterface'
+            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         tags: ['enqueue.client.processor']
     AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue:
         $cache: '@doctrine_cache.providers.ae_connect_outbound_queue'
