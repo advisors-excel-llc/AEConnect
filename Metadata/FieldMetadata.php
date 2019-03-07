@@ -147,7 +147,7 @@ class FieldMetadata extends AbstractFieldMetadata
             $method = $refClass->getMethod($this->getter);
             $method->setAccessible(true);
 
-            return $method->getClosure($entity)->call($entity);
+            return call_user_func($method->getClosure($entity));
         }
 
         if (null !== $this->property && property_exists($className, $this->property)) {
@@ -175,7 +175,7 @@ class FieldMetadata extends AbstractFieldMetadata
             $method = $refClass->getMethod($this->setter);
             $method->setAccessible(true);
 
-            $method->getClosure($entity)->call($entity, $value);
+            call_user_func($method->getClosure($entity), $value);
 
             return $this;
         }
