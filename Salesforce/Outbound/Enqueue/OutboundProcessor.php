@@ -68,6 +68,10 @@ class OutboundProcessor implements Processor, TopicSubscriberInterface
             'json'
         );
 
+        if (!$payload) {
+            return Result::REJECT;
+        }
+
         $connection = $this->connectionManager->getConnection($payload->getConnectionName());
         if ($connection->isActive()) {
             $this->queue->add($payload);

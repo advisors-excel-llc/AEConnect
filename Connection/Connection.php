@@ -185,7 +185,7 @@ class Connection implements ConnectionInterface
      */
     public function isActive(): bool
     {
-        return $this->getRestClient()->getAuthProvider()->getInstanceUrl() !== null;
+        return $this->active;
     }
 
     /**
