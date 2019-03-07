@@ -64,7 +64,7 @@ class Connection implements ConnectionInterface
     /**
      * @var boolean
      */
-    private $active = false;
+    private $active = true;
 
     /**
      * Connection constructor.
@@ -185,7 +185,10 @@ class Connection implements ConnectionInterface
      */
     public function isActive(): bool
     {
-        return $this->active;
+        return $this->active
+            && null !== $this->restClient
+            && null !== $this->restClient->getAuthProvider()
+            && null !== $this->restClient->getAuthProvider()->getInstanceUrl();
     }
 
     /**
