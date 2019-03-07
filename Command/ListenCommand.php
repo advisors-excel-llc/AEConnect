@@ -54,7 +54,16 @@ class ListenCommand extends Command implements LoggerAwareInterface
         $connection     = $this->connectionManager->getConnection($connectionName);
 
         if (null === $connection) {
-            throw new \InvalidArgumentException("Could not find any connection named '$connectionName'.");
+            throw new \InvalidArgumentException(sprintf("Could not find any connection named '%s'.", $connectionName));
+        }
+
+        if (!$connection->isActive()) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    "Connection, '%s', is inactive, most likely due to bad credentials.",
+                    $connectionName
+                )
+            );
         }
 
         $output->writeln('<info>Listening to connection: '.$connectionName.'</info>');
