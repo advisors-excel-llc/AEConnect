@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Salesforce\Outbound\Enqueue;
 
+use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue;
 use Enqueue\Client\TopicSubscriberInterface;
@@ -38,12 +39,19 @@ class OutboundProcessor implements Processor, TopicSubscriberInterface
      */
     private $serializer;
 
+    /**
+     * @var ConnectionManagerInterface
+     */
+    private $connectionManager;
+
     public function __construct(
         OutboundQueue $queue,
-        SerializerInterface $serializer
+        SerializerInterface $serializer,
+        ConnectionManagerInterface $connectionManager
     ) {
-        $this->serializer = $serializer;
-        $this->queue      = $queue;
+        $this->serializer        = $serializer;
+        $this->queue             = $queue;
+        $this->connectionManager = $connectionManager;
     }
 
     /**
@@ -59,9 +67,15 @@ class OutboundProcessor implements Processor, TopicSubscriberInterface
             CompilerResult::class,
             'json'
         );
-        $this->queue->add($payload);
 
-        return Result::ACK;
+        $connection = $this->connectionManager->getConnection($payload->getConnectionName());
+        if ($connection->isActive()) {
+            $this->queue->add($payload);
+
+            return Result::ACK;
+        }
+
+        return Result::REQUEUE;
     }
 
     /**
