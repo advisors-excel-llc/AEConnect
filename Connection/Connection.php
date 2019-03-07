@@ -62,6 +62,11 @@ class Connection implements ConnectionInterface
     private $bulkApiMinCount;
 
     /**
+     * @var boolean
+     */
+    private $active = true;
+
+    /**
      * Connection constructor.
      *
      * @param string $name
@@ -173,6 +178,29 @@ class Connection implements ConnectionInterface
     public function getBulkApiMinCount(): int
     {
         return $this->bulkApiMinCount;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isActive(): bool
+    {
+        return $this->active
+            && null !== $this->restClient
+            && null !== $this->restClient->getAuthProvider()
+            && null !== $this->restClient->getAuthProvider()->getInstanceUrl();
+    }
+
+    /**
+     * @param bool $active
+     *
+     * @return Connection
+     */
+    public function setActive(bool $active): Connection
+    {
+        $this->active = $active;
+
+        return $this;
     }
 
     /**

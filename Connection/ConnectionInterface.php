@@ -22,6 +22,7 @@ interface ConnectionInterface
     public function getBulkClient(): BulkClient;
     public function getMetadataRegistry(): MetadataRegistry;
     public function isDefault(): bool;
+    public function isActive();
     public function hydrateMetadataDescribe();
     public function getBulkApiMinCount(): int;
 }

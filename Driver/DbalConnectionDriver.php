@@ -25,7 +25,6 @@ use AE\ConnectBundle\Streaming\PlatformEvent;
 use AE\ConnectBundle\Streaming\Topic;
 use AE\SalesforceRestSdk\AuthProvider\AuthProviderInterface;
 use AE\SalesforceRestSdk\AuthProvider\OAuthProvider;
-use AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException;
 use AE\SalesforceRestSdk\AuthProvider\SoapProvider;
 use AE\ConnectBundle\Streaming\Client as StreamingClient;
 use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
@@ -122,11 +121,6 @@ class DbalConnectionDriver
                         throw new \RuntimeException("The class $class must implement ".AuthCredentialsInterface::class);
                     }
 
-                    // We don't deal with inactive connections
-                    if (!$entity->isActive()) {
-                        continue;
-                    }
-
                     try {
                         $authProvider    = $this->createLoginProvider($entity, $proxy->getCache(), $proxy->getLogger());
                         $restClient      = $this->createRestClient($authProvider);
@@ -136,18 +130,18 @@ class DbalConnectionDriver
                         $entity->setActive(false);
                         $manager->flush();
                         $this->logger->critical($e->getMessage());
-                        continue;
                     }
 
                     // Build a MetadataRegistry for the new connection based on the proxy registry
                     $metadataRegistry = new MetadataRegistry($metadataCache);
 
                     foreach ($proxyRegistry->getMetadata() as $proxyMetadata) {
-                        $cacheId = "{$entity->getName()}__{$proxyMetadata->getClassName()}";
+                        $metadata = null;
+                        $cacheId  = "{$entity->getName()}__{$proxyMetadata->getClassName()}";
                         // Check to see if there's a cached version of the metadata
                         if ($metadataCache->contains($cacheId)) {
                             $metadata = $metadataCache->fetch($cacheId);
-                        } else {
+                        } elseif ($entity->isActive()) {
                             $metadata = new Metadata($entity->getName());
                             $metadata->setClassName($proxyMetadata->getClassName());
                             $metadata->setSObjectType($proxyMetadata->getSObjectType());
@@ -184,7 +178,9 @@ class DbalConnectionDriver
                             $metadataCache->save($cacheId, $metadata);
                         }
 
-                        $metadataRegistry->addMetadata($metadata);
+                        if (isset($metadata)) {
+                            $metadataRegistry->addMetadata($metadata);
+                        }
                     }
 
                     $connection = new Connection(
@@ -196,16 +192,21 @@ class DbalConnectionDriver
                     );
 
                     $connection->setAlias($proxy->getName());
+                    $connection->setActive($entity->isActive());
 
                     try {
-                        $connection->hydrateMetadataDescribe();
-
-                        $this->connectionManager->registerConnection($connection);
+                        if ($connection->isActive()) {
+                            $connection->hydrateMetadataDescribe();
+                        }
                     } catch (\Exception $e) {
-                        $entity->setActive(false);
-                        $manager->flush();
-                        $this->logger->critical($e->getMessage());
+                        if (!$entity->isActive()) {
+                            $entity->setActive(false);
+                            $manager->flush();
+                            $this->logger->critical($e->getMessage());
+                        }
                     }
+
+                    $this->connectionManager->registerConnection($connection);
                 }
             } catch (TableNotFoundException $e) {
                 $this->logger->error($e->getMessage());

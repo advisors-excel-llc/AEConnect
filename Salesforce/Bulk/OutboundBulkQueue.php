@@ -79,6 +79,10 @@ class OutboundBulkQueue
         bool $updateExisting
         = false
     ) {
+        if (!$connection->isActive()) {
+            throw new \RuntimeException("Connection '{$connection->getName()} is inactive.");
+        }
+
         $map              = $this->treeMaker->buildFlatMap($connection);
         $metadataRegistry = $connection->getMetadataRegistry();
 
