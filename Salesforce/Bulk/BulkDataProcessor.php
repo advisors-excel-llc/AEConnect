@@ -9,9 +9,14 @@
 namespace AE\ConnectBundle\Salesforce\Bulk;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
+use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
+use AE\ConnectBundle\Connection\Dbal\SalesforceIdEntityInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\MappingException;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class BulkDataProcessor
@@ -61,6 +66,13 @@ class BulkDataProcessor
         $this->connector         = $connector;
     }
 
+    /**
+     * @param null|string $connectionName
+     * @param array $types
+     * @param int $updateFlag
+     *
+     * @throws MappingException
+     */
     public function process(
         ?string $connectionName,
         array $types = [],
@@ -71,7 +83,9 @@ class BulkDataProcessor
         if (null !== $connectionName
             && (null !== ($connection = $this->connectionManager->getConnection($connectionName)))
         ) {
-            $connections = [$connection];
+            if ($connection->isActive()) {
+                $connections = [$connection];
+            }
         }
 
         $this->connector->disable();
@@ -91,7 +105,9 @@ class BulkDataProcessor
      * Clearing Salesforce Ids is important so that the IDs that are created during the incoming process
      * are able to reflect what is and what is not created in Salesforce that way the outbound process can
      * only create new records, if that option is chosen
+     *
      * @param ConnectionInterface $connection
+     * @throws MappingException
      */
     private function clearSalesforceIds(ConnectionInterface $connection)
     {
@@ -104,19 +120,56 @@ class BulkDataProcessor
                 continue;
             }
 
-            $class = $metadata->getClassName();
+            $class         = $metadata->getClassName();
             $fieldMetadata = $metadata->getMetadataForField('Id');
 
             $manager = $this->registry->getManagerForClass($class);
-            $repo = $manager->getRepository($class);
-            $offset = 0;
+            /** @var ClassMetadata $classMetadata */
+            $classMetadata = $manager->getClassMetadata($class);
+            $association = null;
+            $targetManager = null;
+
+            if ($classMetadata->hasAssociation($fieldMetadata->getProperty())) {
+                $association = $classMetadata->getAssociationMapping($fieldMetadata->getProperty());
+                $targetManager = $this->registry->getManagerForClass($association['targetEntity']);
+            }
+            $repo    = $manager->getRepository($class);
+            $offset  = 0;
 
             while (count(($entities = $repo->findBy([], null, 200, $offset))) > 0) {
                 foreach ($entities as $entity) {
-                    $fieldMetadata->setValueForEntity($entity, null);
+                    if (null === $association || $association['type'] & ClassMetadata::TO_ONE) {
+                        if (null !== $targetManager && ($val = $fieldMetadata->getValueFromEntity($entity))) {
+                            $targetManager->remove($val);
+                        }
+                        $fieldMetadata->setValueForEntity($entity, null);
+                    } else {
+                        /** @var ArrayCollection|SalesforceIdEntityInterface[] $sfids */
+                        $sfids = $fieldMetadata->getValueFromEntity($entity);
+                        foreach ($sfids as $sfid) {
+                            $conn = $sfid->getConnection();
+                            if ($conn instanceof ConnectionEntityInterface) {
+                                if ($conn->getName() === $connection->getName()) {
+                                    $sfids->removeElement($sfid);
+                                    $targetManager->remove($sfid);
+                                }
+                            } elseif ($conn === $connection->getName()) {
+                                $sfids->removeElement($sfid);
+                                $targetManager->remove($sfid);
+                            }
+                        }
+
+                        $fieldMetadata->setValueForEntity($entity, $sfids);
+                    }
                 }
                 $manager->flush();
+                $manager->clear($class);
                 $offset += count($entities);
+
+                if (null !== $targetManager) {
+                    $targetManager->flush();
+                    $targetManager->clear($association['targetEntity']);
+                }
             }
         }
     }

@@ -8,6 +8,8 @@
 
 namespace AE\ConnectBundle\Tests\Salesforce;
 
+use AE\ConnectBundle\Manager\ConnectionManagerInterface;
+use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Inbound\SalesforceConsumerInterface;
 use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
 use AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue;
@@ -161,6 +163,96 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $this->assertCount(1, $accounts);
     }
 
+    public function testOutgoingInactive()
+    {
+        // We don't want to fire on any triggers now do we?
+        $this->connector->disable();
+        $this->loadOrgConnections();
+
+        /** @var ConnectionManagerInterface $connectionManager */
+        $connectionManager = $this->get(ConnectionManagerInterface::class);
+        $manager           = $this->doctrine->getManager();
+        $queue             = $this->driver->createQueue('default');
+        $consumer          = $this->context->createConsumer($queue);
+        /** @var OutboundProcessor $processor */
+        $processor = $this->get(OutboundProcessor::class);
+        /** @var OrgConnection $conn */
+        $conn           = $manager->getRepository(OrgConnection::class)->findOneBy(['name' => 'db_bad_org']);
+        $goodConnection = $connectionManager->getConnection('db_test_org1');
+        $connection     = $connectionManager->getConnection('db_bad_org');
+        $this->assertFalse($connection->isActive());
+
+        // Test with no metadata for connection
+        $connection->getMetadataRegistry()->setMetadata(new ArrayCollection());
+
+        // Create one for the non-default connection
+        $account = new Account();
+        $account->setName('Test Bad DB Account w/o Metadata');
+        $account->setConnections(new ArrayCollection([$conn]));
+        $manager->persist($account);
+
+        $manager->flush();
+
+        $this->connector->enable();
+        $this->connector->send($account, 'db_bad_org');
+        $this->connector->disable();
+
+        $result = null;
+
+        while (null !== ($message = $consumer->receive(100))) {
+            $result = $processor->process($message, $this->context);
+        }
+
+        // If there is no metadata cached for the inactive connection, no message should be sent to the processor
+        $this->assertNull($result);
+        $message = null;
+
+        // Need to mock the metadata registry to pretend like this connection was once good and is now not good
+        foreach ($goodConnection->getMetadataRegistry()->getMetadata() as $metadatum) {
+            $newMeta = new Metadata('db_bad_org');
+            $newMeta->setClassName($metadatum->getClassName());
+            $newMeta->setDescribe($metadatum->getDescribe());
+            $newMeta->setConnectionNameField($metadatum->getConnectionNameField());
+            $newMeta->setSObjectType($metadatum->getSObjectType());
+
+            foreach ($metadatum->getFieldMetadata() as $fieldMetadatum) {
+                $newMeta->addFieldMetadata(clone($fieldMetadatum));
+            }
+
+            $cacheId = "db_bad_org__{$metadatum->getClassName()}";
+            $goodConnection->getMetadataRegistry()->getCache()->save($cacheId, $newMeta);
+        }
+
+        // Reload connections with metadata from cache
+        $this->loadOrgConnections();
+
+        $connection = $connectionManager->getConnection('db_bad_org');
+        $this->assertFalse($connection->isActive());
+
+        if (method_exists($this->context, 'purge')) {
+            $this->context->purge($queue);
+        }
+
+        // Create one for the inactive connection, now with metadata hydrated
+        $account = new Account();
+        $account->setName('Test Bad DB Account');
+        $account->setConnections(new ArrayCollection([$conn]));
+        $manager->persist($account);
+
+        $manager->flush();
+
+        $this->connector->enable();
+        $this->connector->send($account, 'db_bad_org');
+
+        $result = null;
+
+        while (null !== ($message = $consumer->receive(100))) {
+            $result = $processor->process($message, $this->context);
+        }
+
+        $this->assertEquals(Result::REQUEUE, $result);
+    }
+
     public function testIncoming()
     {
         $account = new SObject(
@@ -265,17 +357,20 @@ class SalesforceConnectorTest extends DatabaseTestCase
 
         /** @var EntityRepository $repo */
         $repo = $this->doctrine->getManagerForClass(Account::class)
-                               ->getRepository(Account::class);
+                               ->getRepository(Account::class)
+        ;
 
         $qb = $repo->createQueryBuilder('a');
         $qb->join('a.sfids', 's')
-            ->join('s.connection', 'c')
-            ->where('c.name = :conn AND s.salesforceId = :sfid')
-            ->setParameters([
-                'conn' => 'db_test_org1',
-                'sfid' => '001000111000111ZAA'
-            ])
-            ;
+           ->join('s.connection', 'c')
+           ->where('c.name = :conn AND s.salesforceId = :sfid')
+           ->setParameters(
+               [
+                   'conn' => 'db_test_org1',
+                   'sfid' => '001000111000111ZAA',
+               ]
+           )
+        ;
 
         $account = $qb->getQuery()->getOneOrNullResult();
 
