@@ -4,7 +4,7 @@ framework:
     session:
         storage_id: session.storage.mock_file
     csrf_protection: false
-    validation: false
+    validation: true
 
 services:
     _defaults:

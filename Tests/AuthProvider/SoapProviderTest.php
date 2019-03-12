@@ -71,8 +71,9 @@ class SoapProviderTest extends KernelTestCase
         $this->authProvider->authorize();
         $token = $this->authProvider->getToken();
 
-        $this->assertTrue($this->cache->contains('SOAP_'.$username->getValue($this->authProvider)));
-        $values = $this->cache->fetch('SOAP_'.$username->getValue($this->authProvider));
+        $key = 'SOAP_AUTH_'.preg_replace('/[\{\}\(\)\/\@]+/', '_', $username->getValue($this->authProvider));
+        $this->assertTrue($this->cache->contains($key));
+        $values = $this->cache->fetch($key);
         $this->assertEquals($token, $values['token']);
         $this->assertNotNull($values['instanceUrl']);
         $this->assertNotNull($values['identityUrl']);
