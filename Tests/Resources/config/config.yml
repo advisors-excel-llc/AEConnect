@@ -3,9 +3,8 @@ framework:
     secret: test
     session:
         storage_id: session.storage.mock_file
-    form: ~
     csrf_protection: false
-    validation: false
+    validation: true
 
 services:
     _defaults:
