@@ -20,8 +20,8 @@ use AE\ConnectBundle\Streaming\PlatformEvent;
 use AE\ConnectBundle\AuthProvider\OAuthProvider;
 use AE\ConnectBundle\AuthProvider\SoapProvider;
 use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
-use AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension;
 use AE\ConnectBundle\Streaming\Client;
+use AE\ConnectBundle\Streaming\Extension\ReplayExtension;
 use AE\ConnectBundle\Streaming\Topic;
 use Psr\Log\LoggerAwareInterface;
 use Symfony\Component\Config\FileLocator;
@@ -86,6 +86,12 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 ];
             }
 
+            if (!array_key_exists('ae_connect_replay', $providers)) {
+                $providerConfig['ae_connect_replay'] = [
+                    'type' => 'file_system',
+                ];
+            }
+
             $container->prependExtensionConfig(
                 'doctrine_cache',
                 [
@@ -112,6 +118,8 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 // Alias Auth Provider Cache
                 $cacheProviderId = "doctrine_cache.providers.{$connection['config']['cache']['auth_provider']}";
                 $container->setAlias("ae_connect.connection.$name.cache.auth_provider", $cacheProviderId);
+                $replayCacheProviderId = "doctrine_cache.providers.{$connection['config']['cache']['replay_provider']}";
+                $container->setAlias("ae_connect.connection.$name.cache.replay_extension", $replayCacheProviderId);
 
                 if (isset($connection['login']['entity'])) {
                     $this->createMetadataRegistryService(
@@ -149,7 +157,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                     $this->createStreamingClientService($name, $connection, $container);
                     $this->createRestClientService($name, $container);
                     $this->createBulkClientExtension($name, $container);
-                    $this->createReplayExtensionService($connection, $name, $container);
+                    $this->createReplayExtensionService($connection, $name, $replayCacheProviderId, $container);
                     $this->createMetadataRegistryService(
                         $connection,
                         $name,
@@ -428,11 +436,13 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
     private function createReplayExtensionService(
         array $config,
         string $connectionName,
+        string $replayCacheId,
         ContainerBuilder $container
     ): void {
         $container->register("ae_connect.connection.$connectionName.replay_extension", ReplayExtension::class)
                   ->setArguments(
                       [
+                          new Reference($replayCacheId),
                           $config['config']['replay_start_id'],
                       ]
                   )

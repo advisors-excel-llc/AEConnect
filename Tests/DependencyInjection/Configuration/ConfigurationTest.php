@@ -98,6 +98,7 @@ class ConfigurationTest extends TestCase
                             'cache'                   => [
                                 'metadata_provider' => 'ae_connect_metadata',
                                 'auth_provider'     => 'ae_connect_auth',
+                                'replay_provider'   => 'ae_connect_replay',
                             ],
                             'use_change_data_capture' => true,
                             'bulk_api_min_count'      => 100000,
@@ -166,6 +167,7 @@ class ConfigurationTest extends TestCase
                                 'cache'                   => [
                                     'metadata_provider' => 'test_metadata',
                                     'auth_provider'     => 'test_auth',
+                                    'replay_provider'   => 'test_auth',
                                 ],
                                 'use_change_data_capture' => true,
                                 'bulk_api_min_count'      => PHP_INT_MAX,
@@ -201,6 +203,7 @@ class ConfigurationTest extends TestCase
                             'cache'                   => [
                                 'metadata_provider' => 'ae_connect_metadata',
                                 'auth_provider'     => 'ae_connect_auth',
+                                'replay_provider' => 'ae_connect_replay',
                             ],
                             'use_change_data_capture' => true,
                             'bulk_api_min_count'      => 100000,
@@ -234,6 +237,7 @@ class ConfigurationTest extends TestCase
                             'cache'                   => [
                                 'metadata_provider' => 'test_metadata',
                                 'auth_provider'     => 'test_auth',
+                                'replay_provider'   => 'test_auth',
                             ],
                             'use_change_data_capture' => true,
                             'bulk_api_min_count'      => PHP_INT_MAX,
