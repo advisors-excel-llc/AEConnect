@@ -10,6 +10,7 @@ namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 
 use Doctrine\DBAL\DBALException;
 use Doctrine\DBAL\Types\Type;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class DateTimeTransformer extends AbstractTransformerPlugin
@@ -26,8 +27,8 @@ class DateTimeTransformer extends AbstractTransformerPlugin
 
     protected function supportsInbound(TransformerPayload $payload): bool
     {
-        $value    = $payload->getValue();
-        $field    = $payload->getFieldMetadata()->describe();
+        $value = $payload->getValue();
+        $field = $payload->getFieldMetadata()->describe();
 
         return (is_string($value) || $value instanceof \DateTimeInterface)
             && null !== $field
@@ -36,8 +37,8 @@ class DateTimeTransformer extends AbstractTransformerPlugin
 
     protected function supportsOutbound(TransformerPayload $payload): bool
     {
-        $value    = $payload->getValue();
-        $field    = $payload->getFieldMetadata()->describe();
+        $value = $payload->getValue();
+        $field = $payload->getFieldMetadata()->describe();
 
         return $value instanceof \DateTimeInterface
             && null !== $field
@@ -51,9 +52,10 @@ class DateTimeTransformer extends AbstractTransformerPlugin
      */
     public function transformInbound(TransformerPayload $payload)
     {
-        $platform = $this->registry->getEntityManagerForClass($payload->getClassMetadata()->getName())
-                                   ->getConnection()
-                                   ->getDatabasePlatform()
+        /** @var EntityManagerInterface $manager */
+        $manager  = $this->registry->getManagerForClass($payload->getClassMetadata()->getName());
+        $platform = $manager->getConnection()
+                            ->getDatabasePlatform()
         ;
 
         $value     = $payload->getValue();
@@ -71,11 +73,13 @@ class DateTimeTransformer extends AbstractTransformerPlugin
             $type = Type::getType($type);
         }
 
-        $dateTime = false != preg_match('/_immutable$/', $type->getName()) ?
-            new \DateTimeImmutable($value) :
-            new \DateTime($value);
+        $dateTime = false != preg_match('/_immutable$/', $type->getName())
+            ? new \DateTimeImmutable($value)
+            : new \DateTime($value);
+
         if ($dateTime) {
             $payload->setValue($dateTime);
+
             return;
         }
 
