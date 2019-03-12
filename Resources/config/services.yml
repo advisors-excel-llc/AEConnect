@@ -79,10 +79,21 @@ services:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
-    AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue:
-        $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+    AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+    AE\ConnectBundle\Salesforce\Bulk\BulkApiProcessor:
+        arguments:
+            $preprocessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor'
+            $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+        calls:
+            - ['setLogger', ['@Psr\Log\LoggerInterface']]
+    AE\ConnectBundle\Salesforce\Bulk\CompositeApiProcessor:
+        $preprocessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor'
+        $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+    AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue:
         $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker'
+        $bulkApiProcssor: '@AE\ConnectBundle\Salesforce\Bulk\BulkApiProcessor'
+        $compositeApiProcessor: '@AE\ConnectBundle\Salesforce\Bulk\CompositeApiProcessor'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue:
         $compiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
@@ -122,6 +133,15 @@ services:
     AE\ConnectBundle\Command\DebugMetadataCommand:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        tags: ['console.command']
+    AE\ConnectBundle\Command\DebugStreamingCommand:
+        arguments:
+            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        tags: ['console.command']
+    AE\ConnectBundle\Command\QueryImportCommand:
+        arguments:
+            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+            $processor: '@AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue'
         tags: ['console.command']
     AE\ConnectBundle\Driver\DbalConnectionDriver:
         arguments:
