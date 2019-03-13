@@ -27,7 +27,9 @@ class PollingService implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
-    public const CACHE_ID = 'ae_connect_poll_last_updated';
+    public const CACHE_ID            = 'ae_connect_poll_last_updated';
+    public const MAX_TYPES_PER_CHUNK = 5;
+
     /**
      * @var array
      */
@@ -116,7 +118,7 @@ class PollingService implements LoggerAwareInterface
             return;
         }
 
-        $chunks = array_chunk($objects, 12);
+        $chunks = array_chunk($objects, self::MAX_TYPES_PER_CHUNK);
 
         foreach ($chunks as $chunk) {
             $builder = new CompositeRequestBuilder();
@@ -140,6 +142,7 @@ class PollingService implements LoggerAwareInterface
             $request  = $builder->build();
             $response = $client->sendCompositeRequest($request);
             $builder  = new CompositeRequestBuilder();
+            $requests = [];
             $updates  = [];
             $removals = [];
 
@@ -155,8 +158,21 @@ class PollingService implements LoggerAwareInterface
                         foreach ($connection->getMetadataRegistry()->findMetadataBySObjectType($type) as $metadata) {
                             $fields = array_merge($fields, array_values($metadata->getPropertyMap()));
                         }
-                        if ($body->getIds()) {
-                            $builder->getSObjectCollection($result->getReferenceId(), $type, $body->getIds(), $fields);
+                        $ids = array_chunk($body->getIds(), 2000);
+                        foreach ($ids as $index => $chunk) {
+                            if ($builder->countRequests() === self::MAX_TYPES_PER_CHUNK) {
+                                $requests[] = $builder->build();
+
+                                $builder = new CompositeRequestBuilder();
+                            }
+
+                            $referenceId = $result->getReferenceId().'_'.$index;
+                            $builder->getSObjectCollection(
+                                $referenceId,
+                                $type,
+                                $chunk,
+                                $fields
+                            );
                         }
                     } elseif ($body instanceof DeletedResponse) {
                         /** @var DeletedRecord[] $records */
@@ -168,18 +184,32 @@ class PollingService implements LoggerAwareInterface
                 }
             }
 
-            try {
-                $response = $client->sendCompositeRequest($builder->build());
-                foreach ($response->getCompositeResponse() as $result) {
-                    if ($result->getHttpStatusCode() === 200) {
-                        /** @var CompositeSObject[] $body */
-                        $body    = $result->getBody();
-                        $updates = array_merge($updates, $body);
+            if ($builder->countRequests() > 0) {
+                $requests[] = $builder->build();
+            }
+
+            foreach ($requests as $subRequest) {
+                try {
+                    $response = $client->sendCompositeRequest($subRequest);
+                    foreach ($response->getCompositeResponse() as $result) {
+                        if ($result->getHttpStatusCode() === 200) {
+                            /** @var CompositeSObject[] $body */
+                            $body    = $result->getBody();
+                            $updates = array_merge($updates, $body);
+                        } else {
+                            $this->logger->error(
+                                "Received status code {code}: {msg}",
+                                [
+                                    'code' => $result->getHttpStatusCode(),
+                                    'msg'  => json_encode($result->getBody()),
+                                ]
+                            );
+                        }
                     }
+                } catch (\RuntimeException $e) {
+                    // A runtime exception is thrown if there are no requests to build.
+                    $this->logger->critical($e->getMessage());
                 }
-            } catch (\RuntimeException $e) {
-                // A runtime exception is thrown if there are no requests to build.
-                $this->logger->critical($e->getMessage());
             }
 
             if (empty($updates) && empty($removals)) {
