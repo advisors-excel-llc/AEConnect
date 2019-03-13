@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Driver;
 
+use AE\ConnectBundle\AuthProvider\NullProvider;
 use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Connection\Dbal\AuthCredentialsInterface;
 use AE\ConnectBundle\Connection\Dbal\ConnectionProxy;
@@ -23,10 +24,10 @@ use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
 use AE\ConnectBundle\Streaming\Topic;
-use AE\SalesforceRestSdk\AuthProvider\AuthProviderInterface;
-use AE\SalesforceRestSdk\AuthProvider\OAuthProvider;
-use AE\SalesforceRestSdk\AuthProvider\SoapProvider;
+use AE\ConnectBundle\AuthProvider\OAuthProvider;
+use AE\ConnectBundle\AuthProvider\SoapProvider;
 use AE\ConnectBundle\Streaming\Client as StreamingClient;
+use AE\SalesforceRestSdk\AuthProvider\AuthProviderInterface;
 use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
 use AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension;
 use AE\SalesforceRestSdk\Bayeux\Extension\SfdcExtension;
@@ -130,6 +131,10 @@ class DbalConnectionDriver
                         $entity->setActive(false);
                         $manager->flush();
                         $this->logger->critical($e->getMessage());
+                        $authProvider    = new NullProvider();
+                        $restClient      = $this->createRestClient($authProvider);
+                        $bulkClient      = $this->createBulkClient($authProvider);
+                        $streamingClient = $this->createStreamingClient($config, $authProvider, $entity->getName());
                     }
 
                     // Build a MetadataRegistry for the new connection based on the proxy registry
@@ -228,7 +233,7 @@ class DbalConnectionDriver
         ?LoggerInterface $logger = null
     ): AuthProviderInterface {
         if ($entity->getType() === AuthCredentialsInterface::SOAP) {
-            return new SoapProvider($entity->getUsername(), $entity->getPassword(), $entity->getLoginUrl());
+            return new SoapProvider($cache, $entity->getUsername(), $entity->getPassword(), $entity->getLoginUrl());
         }
 
         if ($entity->getType() === AuthCredentialsInterface::OAUTH) {
