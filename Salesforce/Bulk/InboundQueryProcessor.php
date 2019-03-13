@@ -53,7 +53,7 @@ class InboundQueryProcessor
 
             foreach ($metadata as $metadatum) {
                 if ($wildCard) {
-                    $fields = array_values($metadatum->getPropertyMap());
+                    $fields = array_merge($fields, array_values($metadatum->getPropertyMap()));
                 } else {
                     foreach ($queryFields as $field) {
                         if (null !== $metadatum->getMetadataForField($field)) {
