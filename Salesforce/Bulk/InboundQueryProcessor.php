@@ -48,8 +48,7 @@ class InboundQueryProcessor
             $objectType  = $matches['objectType'];
             $where       = $matches['where'];
             $metadata    = $connection->getMetadataRegistry()->findMetadataBySObjectType($objectType);
-            $queryFields = explode(',', $matches['fields']);
-            array_walk($queryFields, 'trim');
+            $queryFields = array_map('trim', explode(',', $matches['fields']));
 
             foreach ($metadata as $metadatum) {
                 foreach ($queryFields as $field) {
