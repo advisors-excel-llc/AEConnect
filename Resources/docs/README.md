@@ -9,3 +9,4 @@
 * [Inbound and Outbound Validation](validation/README.mds)
 * [Data Transformation](transformers/README.md)
 * [Bulk Synchronization](bulk/README.md)
+* [Command and Debugging Reference](commands/README.md)
