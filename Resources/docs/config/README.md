@@ -240,11 +240,10 @@ It's true. Not all objects are supported for use with the Streaming API, and Use
 to worry about it. Any objects declared in the `objects` configuration that aren't supported by the Streaming API
 will be polled for changes intermittently... given that they are supported by the Rest API.
 
-**NEW!**
-
-Since Change Data Capture isn't fully GA at this time, you now have the option to force objects to poll. It's
-as easy as a simple configuration setting. When CDC becomes GA and is available in your Org (most likely Spring '19),
-then just remove the settings in your config and that's it!
+Since Change Data Capture is finally fully GA but you must request the feature be enabled by Salesforce.
+While you wait for this feature to be enabled, you have the option to force objects to poll. It's
+as easy as a simple configuration setting. When CDC becomes available in your Org,
+just remove the settings in your config and that's it!
 
 ```yaml
 ae_connect:

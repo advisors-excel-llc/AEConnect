@@ -49,11 +49,16 @@ class InboundQueryProcessor
             $where       = $matches['where'];
             $metadata    = $connection->getMetadataRegistry()->findMetadataBySObjectType($objectType);
             $queryFields = array_map('trim', explode(',', $matches['fields']));
+            $wildCard    = in_array('*', $queryFields);
 
             foreach ($metadata as $metadatum) {
-                foreach ($queryFields as $field) {
-                    if (null !== $metadatum->getMetadataForField($field)) {
-                        $fields[] = $field;
+                if ($wildCard) {
+                    $fields = array_values($metadatum->getPropertyMap());
+                } else {
+                    foreach ($queryFields as $field) {
+                        if (null !== $metadatum->getMetadataForField($field)) {
+                            $fields[] = $field;
+                        }
                     }
                 }
             }
