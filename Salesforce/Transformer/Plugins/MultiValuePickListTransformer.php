@@ -43,7 +43,7 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
             $type = Type::getType($type);
         }
 
-        return is_string($value) && false !== strpos($value, ';')
+        return is_string($value)
             && null !== $field
             && ($type instanceof ArrayType || $type instanceof JsonType || $type instanceof SimpleArrayType)
             && count($field->getPicklistValues()) > 0 && $field->getLength() === 4099;
@@ -51,8 +51,8 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
 
     protected function supportsOutbound(TransformerPayload $payload): bool
     {
-        $value    = $payload->getValue();
-        $field    = $payload->getFieldMetadata()->describe();
+        $value = $payload->getValue();
+        $field = $payload->getFieldMetadata()->describe();
 
         return is_array($value)
             && null !== $field
@@ -64,7 +64,7 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
      */
     public function transformInbound(TransformerPayload $payload)
     {
-        $value     = explode(';', $payload->getValue());
+        $value = explode(';', $payload->getValue());
 
         $payload->setValue(
             $value
@@ -76,12 +76,12 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
      */
     public function transformOutbound(TransformerPayload $payload)
     {
-        $value    = $payload->getValue();
-        $field    = $payload->getFieldMetadata()->describe();
+        $value = $payload->getValue();
+        $field = $payload->getFieldMetadata()->describe();
 
         if ($field->isRestrictedPicklist()) {
             $values = $field->getPicklistValues();
-            $new = [];
+            $new    = [];
             foreach ($values as $item) {
                 if ($item->isActive() && in_array($item->getValue(), $value)) {
                     $new[] = $item->getValue();

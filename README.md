@@ -24,6 +24,7 @@ composer require ae/connect-bundle
 * [Inbound and Outbound Validation](Resources/docs/validation/README.md)
 * [Data Transformation](Resources/docs/transformers/README.md)
 * [Bulk Synchronization](Resources/docs/bulk/README.md)
+* [Command and Debugging Reference](Resources/docs/commands/README.md)
 
 ## Resources
 * [Enqueue](https://github.com/php-enqueue/enqueue-dev)
