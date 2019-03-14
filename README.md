@@ -1,5 +1,7 @@
 # AEConnect
 
+**END OF LIFE FOR VERSION 1.2 IS April 1, 2019. UPGRADE TO 1.3**
+
 ## Requirements
 
 * PHP 7.1+
