@@ -197,14 +197,15 @@ class SalesforceConnector implements LoggerAwareInterface
                     continue;
                 }
                 $manager->transactional(
-                    function ($em) {
+                    function ($em) use ($class) {
                         $em->flush();
+                        $em->clear($class);
                     }
                 );
             } catch (\Throwable $t) {
                 $this->logger->critical($t->getMessage());
+                $manager->clear($class);
             }
-            $manager->clear($class);
         }
 
         return true;
