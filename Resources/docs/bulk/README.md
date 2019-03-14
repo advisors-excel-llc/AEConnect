@@ -48,6 +48,42 @@ $ bin/console ae_connect:bulk default -t Account -t Contact -i -o -c
 
 ```
 
+## Query Data from Salesforce
+
+There may be times when you just need to get very specific data from your Salesforce Org. Perhaps there's a million
+Account records that typically sync when using the bulk command above and you really only need 100,000 of them and you
+know the criteria that explicitly defines the data you want.
+
+Using Bulk Query Command, you can provide a SOQL query to specify the data you want from Salesforce along with which
+Salesforce connection to run the query against.
+
+```bash
+$ bin/console ae_connect:bulk:import:query "SELECT Name, AccountNumber FROM Account WHERE CreatedDate >= TODAY" -c [connection name or else it uses default]
+```
+
+The fields defined in the `SELECT` portion of the query are compared against the metadata in AE Connect and any fields that
+are not mapped to an entity are removed from the query. The `WHERE` condition is used as-is, so fields used with `WHERE`
+are not altered.
+
+A count query is run prior to the query argument to determine if the Bulk API or the Composite API should be used.
+
+> **WARNING**
+>
+> Only the fields supplied in the SELECT statement are used. New entities that do not exist in the local database
+> will be created using the data as defined in the SOQL query. If an entity does not permit null values on certain
+> columns and those columns' mapped SObject fields are not specified in the SOQL query, errors can occur, preventing
+> the creation of these new entities.
+
+> **WILDCARD**
+>
+> In an effort to make it easier to query Salesforce, the Query Data command supports the `*` wildcard in the SELECT statement of the
+> SOQL query. SOQL, itself, DOES NOT SUPPORT wildcards. AE Connect replaces the wildcard with all of the mapped metadata
+> fields for the given connection.
+>
+> ```bash
+>  $ bin/console ae_connect:bulk:import:query "SELECT * FROM Account WHERE CreatedDate >= TODAY" -c [connection name or else it uses default]
+>  ```
+
 ## Configuration Options
 
 AE Connect tries to be smart about API limits. For that purpose, bulk operations don't actually use the Bulk API unless
