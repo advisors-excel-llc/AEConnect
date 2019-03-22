@@ -17,6 +17,7 @@ use Enqueue\Fs\FsMessage;
 use Interop\Queue\Context;
 use Interop\Queue\Message;
 use Interop\Queue\Processor;
+use JMS\Serializer\Exception\RuntimeException;
 use JMS\Serializer\SerializerInterface;
 
 /**
@@ -61,14 +62,18 @@ class OutboundProcessor implements Processor, TopicSubscriberInterface
      */
     public function process(Message $message, Context $context): string
     {
-        /** @var CompilerResult $payload */
-        $payload = $this->serializer->deserialize(
-            $message->getBody(),
-            CompilerResult::class,
-            'json'
-        );
+        try {
+            /** @var CompilerResult $payload */
+            $payload = $this->serializer->deserialize(
+                $message->getBody(),
+                CompilerResult::class,
+                'json'
+            );
 
-        if (!$payload) {
+            if (!$payload) {
+                return Result::REJECT;
+            }
+        } catch (RuntimeException $e) {
             return Result::REJECT;
         }
 
