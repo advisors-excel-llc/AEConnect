@@ -101,3 +101,6 @@ ae_connect:
         db_test:
             login:
                 entity: 'AE\ConnectBundle\Tests\Entity\OrgConnection'
+        db_oauth_test:
+            login:
+                entity: 'AE\ConnectBundle\Tests\Entity\Organization'

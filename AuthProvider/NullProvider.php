@@ -18,10 +18,7 @@ class NullProvider implements AuthProviderInterface
      */
     public function authorize()
     {
-        throw new SessionExpiredOrInvalidException(
-            "Null authentication provider in use. Update connection credentials and clear cache.",
-            'INVALID_LOGIN_CREDENTIALS'
-        );
+        return '';
     }
 
     /**
