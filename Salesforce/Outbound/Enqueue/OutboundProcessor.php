@@ -17,6 +17,7 @@ use Enqueue\Fs\FsMessage;
 use Interop\Queue\PsrContext;
 use Interop\Queue\PsrMessage;
 use Interop\Queue\PsrProcessor;
+use JMS\Serializer\Exception\RuntimeException;
 use JMS\Serializer\SerializerInterface;
 
 /**
@@ -61,14 +62,18 @@ class OutboundProcessor implements PsrProcessor, TopicSubscriberInterface
      */
     public function process(PsrMessage $message, PsrContext $context): string
     {
-        /** @var CompilerResult $payload */
-        $payload = $this->serializer->deserialize(
-            $message->getBody(),
-            CompilerResult::class,
-            'json'
-        );
+        try {
+            /** @var CompilerResult $payload */
+            $payload = $this->serializer->deserialize(
+                $message->getBody(),
+                CompilerResult::class,
+                'json'
+            );
 
-        if (!$payload) {
+            if (!$payload) {
+                return Result::REJECT;
+            }
+        } catch (RuntimeException $e) {
             return Result::REJECT;
         }
 
