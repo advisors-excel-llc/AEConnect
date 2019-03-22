@@ -250,8 +250,18 @@ class DbalConnectionDriver
                     ''
                 );
 
-                $provider->setToken($entity->getToken());
-                $provider->setRefreshToken($entity->getRefreshToken());
+                $token        = $entity->getToken();
+                $refreshToken = $entity->getRefreshToken();
+
+                if (null === $token) {
+                    throw new \RuntimeException("Cannot authorize a grant code without a token.");
+                }
+
+                $provider->setToken($token);
+
+                if (null !== $refreshToken) {
+                    $provider->setRefreshToken($refreshToken);
+                }
 
                 if ($provider instanceof LoggerAwareInterface) {
                     $provider->setLogger($logger ?: new NullLogger());
