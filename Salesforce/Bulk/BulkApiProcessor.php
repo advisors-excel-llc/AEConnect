@@ -139,7 +139,7 @@ class BulkApiProcessor implements LoggerAwareInterface
             $object->__SOBJECT_TYPE__ = $objectType;
 
             if (!$updateEntities) {
-                $this->preProcessor->preProcess($object, $connection);
+                $object = $this->preProcessor->preProcess($object, $connection);
             }
 
             $objects[] = $object;

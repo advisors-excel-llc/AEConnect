@@ -63,7 +63,11 @@ class BulkPreprocessor
         // If we have values to change, then we change them
         // If the object is new, $values will be empty and so we don't want to affect the incoming data
         if (!empty($values)) {
-            $object->setFields($values);
+            $values['__SOBJECT_TYPE__'] = $object->__SOBJECT_TYPE__;
+
+            return new SObject($values);
         }
+
+        return $object;
     }
 }
