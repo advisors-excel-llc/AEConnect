@@ -50,10 +50,10 @@ class CompositeApiProcessor
         do {
             $records = $query->getRecords();
             if (!empty($records)) {
-                foreach ($records as $record) {
+                foreach ($records as &$record) {
                     $record->__SOBJECT_TYPE__ = $sObjectType;
                     if (!$updateEntity) {
-                        $this->preProcessor->preProcess($record, $connection);
+                        $record = $this->preProcessor->preProcess($record, $connection);
                     }
                 }
                 $this->connector->enable();
