@@ -10,6 +10,7 @@ namespace AE\ConnectBundle\Tests\Salesforce\Bulk;
 
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue;
+use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Role;
@@ -81,5 +82,48 @@ class InboundBulkQueueTest extends DatabaseTestCase
         );
 
         $this->assertCount(1, $filtered);
+    }
+
+    public function testNoUpdate()
+    {
+        /** @var ConnectionManagerInterface $connectionManager */
+        $connectionManager = $this->get(ConnectionManagerInterface::class);
+        $connection        = $connectionManager->getConnection();
+        /** @var SalesforceConnector $connector */
+        $connector = $this->get(SalesforceConnector::class);
+        $connector->disable();
+
+        /** @var InboundBulkQueue $inboundQueue */
+        $inboundQueue = $this->get(InboundBulkQueue::class);
+
+        $inboundQueue->process($connection, ['Account'], true);
+
+        /** @var Account[] $accounts */
+        $accounts = $this->doctrine->getManager()->getRepository(Account::class)->findAll();
+
+        $this->assertNotEmpty($accounts);
+        $account = $accounts[0];
+        $this->assertNotNull($account->getSfid());
+
+        $rand = mt_rand(1000, 100000);
+        $account->setName("Testo Accounto For Sync $rand");
+
+        $this->doctrine->getManager()->flush();
+
+        $bAccount =  $this->doctrine->getManager()->getRepository(Account::class)->findOneBy([
+            'name' => "Testo Accounto For Sync $rand"
+        ]);
+
+        $this->assertNotNull($bAccount);
+
+        $inboundQueue->process($connection, ['Account'], false);
+
+        $fAccount =  $this->doctrine->getManager()->getRepository(Account::class)->findOneBy([
+            'name' => "Testo Accounto For Sync $rand"
+        ]);
+
+        $this->assertNotNull($fAccount);
+
+        $connector->enable();
     }
 }
