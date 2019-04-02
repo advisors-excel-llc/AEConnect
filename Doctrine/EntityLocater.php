@@ -67,8 +67,8 @@ class EntityLocater implements LoggerAwareInterface
         $criteria      = $builder->expr()->andX();
         $extIdCriteria = $builder->expr()->andX();
         $sfidCriteria  = $builder->expr()->andX();
-        $extIdProps = [];
-        $sfidProps = [];
+        $extIdProps    = [];
+        $sfidProps     = [];
 
         // External Identifiers are the best way to lookup an entity. Even if the SFID is wrong but the
         // External Id matches, then we want to use the entity with this External ID
@@ -134,12 +134,13 @@ class EntityLocater implements LoggerAwareInterface
                         }
                     }
                 } elseif ($classMetadata->hasField($prop)) {
+                    $preCount = $extIdCriteria->count();
                     // The connection is a field, such aa a string value
                     $extIdCriteria->add($builder->expr()->eq("o.$prop", ":conn"));
                     $sfidCriteria->add($builder->expr()->eq("o.$prop", ":conn"));
-                    $builder->setParameter('conn', $conn);
+                    $extIdProps['conn'] = $conn;
 
-                    if ($extIdCriteria->count() > 1) {
+                    if ($preCount > 0) {
                         $criteria->add($extIdCriteria);
                         foreach ($extIdProps as $prop => $value) {
                             $builder->setParameter($prop, $value);
