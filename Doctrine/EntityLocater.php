@@ -139,6 +139,7 @@ class EntityLocater implements LoggerAwareInterface
                     $extIdCriteria->add($builder->expr()->eq("o.$prop", ":conn"));
                     $sfidCriteria->add($builder->expr()->eq("o.$prop", ":conn"));
                     $extIdProps['conn'] = $conn;
+                    $sfidProps['conn']  = $conn;
 
                     if ($preCount > 0) {
                         $criteria->add($extIdCriteria);
