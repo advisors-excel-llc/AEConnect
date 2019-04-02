@@ -224,7 +224,7 @@ class InboundBulkQueueTest extends DatabaseTestCase
 
         $builder = $repository->createQueryBuilder('a');
         $builder->join('a.sfids', 's')
-                ->join('s.connection', 'c')
+                ->join('a.connections', 'c')
             ->where(
                 $builder->expr()->eq('c.name', ':conn_name'),
                 $builder->expr()->eq('s.salesforceId', ':sfid')

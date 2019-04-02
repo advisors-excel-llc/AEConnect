@@ -113,27 +113,23 @@ class EntityCompiler
             // If the entity doesn't exist, creatre a new one
             if (null === $entity) {
                 $entity = new $class();
-            }
 
-            // If the entity supports a connection name, set it
-            if (null !== $connectionProp
-                && (!$this->hasConnection($entity, $connection, $metadata)
-                    || $this->canHaveConnection($entity, $connection, $metadata)
-                )
-            ) {
-                $value = $this->fieldCompiler->compile(
-                    $connection->getName(),
-                    $object,
-                    $metadata->getConnectionNameField()
-                );
-                $connectionProp->setValueForEntity($entity, $value);
+                // If the entity supports a connection name, set it
+                if (null !== $connectionProp) {
+                    $value = $this->fieldCompiler->compile(
+                        $connection->getName(),
+                        $object,
+                        $metadata->getConnectionNameField()
+                    );
+                    $connectionProp->setValueForEntity($entity, $value);
+                }
             }
 
             // Check if the entity is meant for this connection, if the connection value for the entity is null,
             // don't check, allow the entity to be created, given that validation passes
             if (null !== $connectionProp
                 && null !== $connectionProp->getValueFromEntity($entity)
-                && !$this->canHaveConnection(
+                && !$this->hasConnection(
                     $entity,
                     $connection,
                     $metadata
@@ -262,24 +258,5 @@ class EntityCompiler
         }
 
         return false;
-    }
-
-    /**
-     * @param $entity
-     * @param ConnectionInterface $connection
-     * @param Metadata $metadata
-     *
-     * @return bool
-     */
-    private function canHaveConnection($entity, ConnectionInterface $connection, Metadata $metadata): bool
-    {
-        if ($this->hasConnection($entity, $connection, $metadata)) {
-            return true;
-        }
-
-        $connectionProp = $metadata->getConnectionNameField();
-        $conn           = $connectionProp->getValueFromEntity($entity);
-
-        return is_array($conn) || $conn instanceof \ArrayAccess;
     }
 }

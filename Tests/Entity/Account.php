@@ -70,7 +70,7 @@ class Account
 
     /**
      * @var OrgConnection[]|Collection|array
-     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\OrgConnection", cascade={"persist"})
+     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\OrgConnection", cascade={"persist", "merge"})
      * @AEConnect\Connection(connections={"db_test"})
      */
     private $connections;
