@@ -12,6 +12,7 @@ use AE\ConnectBundle\Annotations as AEConnect;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Ramsey\Uuid\Uuid;
 
 /**
  * Class Account
@@ -69,7 +70,7 @@ class Account
 
     /**
      * @var OrgConnection[]|Collection|array
-     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\OrgConnection", cascade={"persist"})
+     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\OrgConnection", cascade={"persist", "merge"})
      * @AEConnect\Connection(connections={"db_test"})
      */
     private $connections;
@@ -171,19 +172,19 @@ class Account
     }
 
     /**
-     * @return string
+     * @return string|null|Uuid
      */
-    public function getSfid(): ?string
+    public function getSfid()
     {
         return $this->sfid;
     }
 
     /**
-     * @param string $sfid
+     * @param string|Uuid $sfid
      *
      * @return Account
      */
-    public function setSfid(?string $sfid): Account
+    public function setSfid($sfid): Account
     {
         $this->sfid = $sfid;
 

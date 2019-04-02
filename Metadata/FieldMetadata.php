@@ -171,6 +171,10 @@ class FieldMetadata extends AbstractFieldMetadata
         $refClass  = ClassUtils::newReflectionObject($entity);
         $className = $refClass->getName();
 
+        if ($entity instanceof Proxy && !$entity->__isInitialized()) {
+            $entity->__load();
+        }
+
         if (null !== $this->setter && method_exists($className, $this->setter)) {
             $method = $refClass->getMethod($this->setter);
             $method->setAccessible(true);

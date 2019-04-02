@@ -32,7 +32,7 @@ services:
     AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
-        $transformer: '@AE\ConnectBundle\Salesforce\Transformer\Transformer'
+        $transformer: '@AE\ConnectBundle\Salesforce\Transformer\TransformerInterface'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\SalesforceConnector:
@@ -52,7 +52,7 @@ services:
         $cache: '@doctrine_cache.providers.ae_connect_outbound_queue'
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
-        $transformer: '@AE\ConnectBundle\Salesforce\Transformer\Transformer'
+        $transformer: '@AE\ConnectBundle\Salesforce\Transformer\TransformerInterface'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Doctrine\Subscriber\EntitySubscriber:
         arguments:
@@ -63,10 +63,20 @@ services:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         tags: ['doctrine.event_subscriber']
+    AE\ConnectBundle\Doctrine\EntityLocater:
+        arguments:
+            $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+            $fieldCompiler: '@AE\ConnectBundle\Salesforce\Inbound\Compiler\FieldCompiler'
+        calls:
+            - ['setLogger', ['@Psr\Log\LoggerInterface']]
+    AE\ConnectBundle\Salesforce\Inbound\Compiler\FieldCompiler:
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $transformer: '@AE\ConnectBundle\Salesforce\Transformer\TransformerInterface'
     AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
-        $transformer: '@AE\ConnectBundle\Salesforce\Transformer\Transformer'
+        $fieldCompiler: '@AE\ConnectBundle\Salesforce\Inbound\Compiler\FieldCompiler'
+        $entityLocater: '@AE\ConnectBundle\Doctrine\EntityLocater'
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Inbound\SObjectConsumer:
@@ -80,7 +90,7 @@ services:
     AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor:
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $entityLocater: '@AE\ConnectBundle\Doctrine\EntityLocater'
     AE\ConnectBundle\Salesforce\Bulk\BulkApiProcessor:
         arguments:
             $preprocessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor'
@@ -123,7 +133,7 @@ services:
     AE\ConnectBundle\Command\ListenCommand:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
-            $logger: '@?logger'
+            $logger: '@?Psr\Log\LoggerInterface'
         tags: ['console.command']
     AE\ConnectBundle\Command\PollCommand:
         arguments:
@@ -151,5 +161,5 @@ services:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
             $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
             $pollingService: '@AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService'
-            $logger: '@?logger'
+            $logger: '@?Psr\Log\LoggerInterface'
         public: true

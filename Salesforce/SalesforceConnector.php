@@ -17,6 +17,8 @@ use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Mapping\MappingException;
+use Doctrine\ORM\ORMException;
 use Enqueue\Client\Message;
 use Enqueue\Client\ProducerInterface;
 use JMS\Serializer\SerializerInterface;
@@ -130,10 +132,14 @@ class SalesforceConnector implements LoggerAwareInterface
      * @param SObject|SObject[] $object
      * @param string $intent
      * @param string $connectionName
+     * @param bool $validate
+     *
+     * @throws MappingException
+     * @throws ORMException
      *
      * @return bool
      */
-    public function receive($object, string $intent, string $connectionName = 'default'): bool
+    public function receive($object, string $intent, string $connectionName = 'default', $validate = true): bool
     {
         if (!$this->enabled) {
             return false;
@@ -146,7 +152,7 @@ class SalesforceConnector implements LoggerAwareInterface
         try {
             $entities = [];
             foreach ($object as $obj) {
-                $entities = array_merge($entities, $this->entityCompiler->compile($obj, $connectionName));
+                $entities = array_merge($entities, $this->entityCompiler->compile($obj, $connectionName, $validate));
             }
         } catch (\RuntimeException $e) {
             $this->logger->warning($e->getMessage());

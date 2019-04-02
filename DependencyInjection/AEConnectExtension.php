@@ -44,8 +44,8 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
     public function load(array $configs, ContainerBuilder $container)
     {
         $loader = new YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
-        $loader->load('services.yml');
         $loader->load('transformers.yml');
+        $loader->load('services.yml');
 
         $config = $this->processConfiguration(new Configuration\Configuration(), $configs);
 

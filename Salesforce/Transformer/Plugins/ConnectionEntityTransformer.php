@@ -14,6 +14,7 @@ use AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\MappingException;
@@ -61,11 +62,21 @@ class ConnectionEntityTransformer extends AbstractTransformerPlugin implements L
             $association = $payload->getClassMetadata()->getAssociationMapping($payload->getPropertyName());
 
             // Set the payload value. If the $connection is null, no connection entity was found and that is ok
-            $payload->setValue(
-                null !== $connection && $association['type'] & ClassMetadataInfo::TO_MANY
-                    ? new ArrayCollection([$connection])
-                    : $connection
-            );
+            if (null !== $connection && $association['type'] & ClassMetadataInfo::TO_MANY) {
+                $values = $payload->getFieldMetadata()->getValueFromEntity($payload->getEntity());
+
+                if (null === $values) {
+                    $values = new ArrayCollection();
+                }
+
+                if ($values instanceof Collection && !$values->contains($connection)) {
+                    $values->add($connection);
+                }
+
+                $payload->setValue($values);
+            } else {
+                $payload->setValue($connection);
+            }
         } catch (MappingException $e) {
             $this->logger->warning($e->getMessage());
             $this->logger->debug($e->getTraceAsString());
