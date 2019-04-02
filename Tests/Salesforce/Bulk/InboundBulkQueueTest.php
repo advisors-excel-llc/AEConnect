@@ -14,7 +14,9 @@ use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Role;
+use AE\ConnectBundle\Tests\Entity\SalesforceId;
 use Doctrine\ORM\EntityRepository;
+use function foo\func;
 
 class InboundBulkQueueTest extends DatabaseTestCase
 {
@@ -62,11 +64,11 @@ class InboundBulkQueueTest extends DatabaseTestCase
 
         /** @var EntityRepository $repo */
         $repo = $this->doctrine->getManager()->getRepository(Account::class);
-        $qb = $repo->createQueryBuilder('a');
+        $qb   = $repo->createQueryBuilder('a');
         $qb->join('a.sfids', 's')
-            ->join('s.connection', 'c')
-            ->where('c.name = :conn')
-            ->setParameter('conn', 'db_test_org1')
+           ->join('s.connection', 'c')
+           ->where('c.name = :conn')
+           ->setParameter('conn', 'db_test_org1')
         ;
 
         /** @var array|Account[] $accounts */
@@ -103,26 +105,139 @@ class InboundBulkQueueTest extends DatabaseTestCase
 
         $this->assertNotEmpty($accounts);
         $account = $accounts[0];
-        $this->assertNotNull($account->getSfid());
+        $sfid    = $account->getSfid();
+        $this->assertNotNull($sfid);
 
         $rand = mt_rand(1000, 100000);
         $account->setName("Testo Accounto For Sync $rand");
+        $account->setSfid(null);
 
         $this->doctrine->getManager()->flush();
 
-        $bAccount =  $this->doctrine->getManager()->getRepository(Account::class)->findOneBy([
-            'name' => "Testo Accounto For Sync $rand"
-        ]);
+        /** @var Account $bAccount */
+        $bAccount = $this->doctrine->getManager()->getRepository(Account::class)->findOneBy(
+            [
+                'name' => "Testo Accounto For Sync $rand",
+            ]
+        )
+        ;
 
         $this->assertNotNull($bAccount);
+        $this->assertNull($bAccount->getSfid());
 
         $inboundQueue->process($connection, ['Account'], false);
 
-        $fAccount =  $this->doctrine->getManager()->getRepository(Account::class)->findOneBy([
-            'name' => "Testo Accounto For Sync $rand"
-        ]);
+        $cAccount = $this->doctrine->getManager()->getRepository(Account::class)->findOneBy(
+            [
+                'name' => "Testo Accounto For Sync $rand",
+            ]
+        )
+        ;
 
-        $this->assertNotNull($fAccount);
+        $this->assertNotNull($cAccount);
+
+        /** @var Account $dAccount */
+        $dAccount = $this->doctrine->getManager()->getRepository(Account::class)->findOneBy(
+            [
+                'sfid'       => $sfid,
+                'connection' => $connection->getName(),
+            ]
+        )
+        ;
+
+        $this->assertNotNull($dAccount);
+        $this->assertEquals($sfid, $dAccount->getSfid());
+        $this->assertEquals($account->getName(), $dAccount->getName());
+
+        $connector->enable();
+    }
+
+    public function testNoUpdateMulti()
+    {
+        /** @var ConnectionManagerInterface $connectionManager */
+        $connectionManager = $this->get(ConnectionManagerInterface::class);
+        $connName          = 'db_test_org1';
+        $connection        = $connectionManager->getConnection($connName);
+        /** @var SalesforceConnector $connector */
+        $connector = $this->get(SalesforceConnector::class);
+        $connector->disable();
+
+        /** @var InboundBulkQueue $inboundQueue */
+        $inboundQueue = $this->get(InboundBulkQueue::class);
+
+        $inboundQueue->process($connection, ['Account'], true);
+
+        /** @var EntityRepository $repository */
+        $repository = $this->doctrine->getManager()->getRepository(Account::class);
+        /** @var Account[] $accounts */
+        $accounts = $repository->findAll();
+
+        $this->assertNotEmpty($accounts);
+        $account = $accounts[0];
+        $sfids   = $account->getSfids();
+        /** @var SalesforceId $sfid */
+        $sfid    = $sfids->filter(
+            function (SalesforceId $salesforceId) use ($connName) {
+                return $salesforceId->getConnection()->getName() === $connName;
+            }
+        )->first()
+        ;
+
+        $rand = mt_rand(1000, 100000);
+        $account->setName("Testo Accounto For Sync $rand");
+        $account->setSfids(
+            $sfids->filter(
+                function (SalesforceId $salesforceId) use ($connName) {
+                    return $salesforceId->getConnection()->getName() !== $connName;
+                }
+            )
+        );
+
+        $this->doctrine->getManager()->flush();
+
+        /** @var Account $bAccount */
+        $bAccount = $repository->findOneBy(
+            [
+                'name' => "Testo Accounto For Sync $rand",
+            ]
+        );
+
+        $this->assertNotNull($bAccount);
+        $this->assertCount(
+            0,
+            $bAccount->getSfids()->filter(
+                function (SalesforceId $salesforceId) use ($connName) {
+                    return $salesforceId->getConnection()->getName() === $connName;
+                }
+            )
+        );
+
+        $inboundQueue->process($connection, ['Account'], false);
+
+        $cAccount = $repository->findOneBy(
+            [
+                'name' => "Testo Accounto For Sync $rand",
+            ]
+        );
+
+        $this->assertNotNull($cAccount);
+
+        $builder = $repository->createQueryBuilder('a');
+        $builder->join('a.sfids', 's')
+                ->join('s.connection', 'c')
+            ->where(
+                $builder->expr()->eq('c.name', ':conn_name'),
+                $builder->expr()->eq('s.salesforceId', ':sfid')
+            )
+            ->setParameter(':conn_name', $connName)
+            ->setParameter(':sfid', $sfid->getSalesforceId())
+        ;
+
+        /** @var Account $dAccount */
+        $dAccount = $builder->getQuery()->getOneOrNullResult();
+
+        $this->assertNotNull($dAccount);
+        $this->assertEquals($account->getName(), $dAccount->getName());
 
         $connector->enable();
     }

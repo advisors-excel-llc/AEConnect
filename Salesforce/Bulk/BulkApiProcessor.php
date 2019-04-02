@@ -15,6 +15,8 @@ use AE\SalesforceRestSdk\Bulk\BatchInfo;
 use AE\SalesforceRestSdk\Bulk\JobInfo;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
 use AE\SalesforceRestSdk\Psr7\CsvStream;
+use Doctrine\ORM\Mapping\MappingException;
+use Doctrine\ORM\ORMException;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\NullLogger;
@@ -114,6 +116,9 @@ class BulkApiProcessor implements LoggerAwareInterface
      * @param string $objectType
      * @param ConnectionInterface $connection
      * @param bool $updateEntities
+     *
+     * @throws MappingException
+     * @throws ORMException
      */
     public function save(
         CsvStream $result,
@@ -155,7 +160,12 @@ class BulkApiProcessor implements LoggerAwareInterface
                     ]
                 );
                 $this->connector->enable();
-                $this->connector->receive($objects, SalesforceConsumerInterface::UPDATED, $connection->getName());
+                $this->connector->receive(
+                    $objects,
+                    SalesforceConsumerInterface::UPDATED,
+                    $connection->getName(),
+                    $updateEntities
+                );
                 $this->connector->disable();
                 $objects = [];
             }
@@ -172,7 +182,12 @@ class BulkApiProcessor implements LoggerAwareInterface
                 ]
             );
             $this->connector->enable();
-            $this->connector->receive($objects, SalesforceConsumerInterface::UPDATED, $connection->getName());
+            $this->connector->receive(
+                $objects,
+                SalesforceConsumerInterface::UPDATED,
+                $connection->getName(),
+                $updateEntities
+            );
             $this->connector->disable();
         }
 

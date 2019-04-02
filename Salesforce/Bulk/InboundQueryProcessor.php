@@ -46,7 +46,7 @@ class InboundQueryProcessor
         )) {
             $fields      = [];
             $objectType  = $matches['objectType'];
-            $where       = $matches['where'];
+            $where       = array_key_exists('where', $matches) ? $matches['where'] : null;
             $metadata    = $connection->getMetadataRegistry()->findMetadataBySObjectType($objectType);
             $queryFields = array_map('trim', explode(',', $matches['fields']));
             $wildCard    = in_array('*', $queryFields);
