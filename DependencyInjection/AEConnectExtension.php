@@ -257,6 +257,14 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 $config['config']['use_change_data_capture']
             );
         }
+
+        if (!empty($config['change_events'])) {
+            $this->buildChangeEvents($connectionName, $config['change_events'], $container, $def);
+        }
+
+        if (!empty($config['polling'])) {
+            $this->buildPolling($connectionName, $config['polling'], $container);
+        }
     }
 
     private function createTopic(array $config): Definition
@@ -317,6 +325,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
      * @param ContainerBuilder $container
      * @param Definition $def
      * @param bool $useCdc
+     * @deprecated
      */
     private function buildObjects(
         string $name,
@@ -325,9 +334,8 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
         Definition $def,
         bool $useCdc = true
     ): void {
-        $pollObjects = $container->hasParameter('ae_connect.poll_objects')
-            ? $container->getParameter('ae_connect.poll_objects')
-            : [];
+        $pollObjects   = [];
+        $changeObjects = [];
 
         foreach ($config as $objectName) {
             if ($useCdc && (preg_match('/__(c|C)$/', $objectName) == true
@@ -354,18 +362,69 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                         ]
                     ))
             ) {
+                $changeObjects[] = $objectName;
+            } else {
+                $pollObjects[] = $objectName;
+            }
+
+            if (!empty($changeObjects)) {
+                $this->buildChangeEvents($name, $changeObjects, $container, $def);
+            }
+
+            if (!empty($pollObjects)) {
+                $this->buildPolling($name, $pollObjects, $container);
+            }
+        }
+    }
+
+    private function buildChangeEvents(string $name, array $objects, ContainerBuilder $container, Definition $def)
+    {
+        foreach ($objects as $objectName) {
+            if ((preg_match('/__(c|C)$/', $objectName) == true
+                || in_array(
+                    $objectName,
+                    [
+                        'Account',
+                        'Asset',
+                        'Campaign',
+                        'Case',
+                        'Contact',
+                        'ContractLineItem',
+                        'Entitlement',
+                        'Lead',
+                        'LiveChatTranscript',
+                        'Opportunity',
+                        'Order',
+                        'OrderItem',
+                        'Product2',
+                        'Quote',
+                        'QuoteLineItem',
+                        'ServiceContract',
+                        'User',
+                    ]
+                ))
+            ) {
                 $event   = new Definition(ChangeEvent::class, [$objectName]);
                 $eventId = "ae_connect.connection.$name.change_event.$objectName";
 
                 $container->setDefinition($eventId, $event);
 
                 $def->addMethodCall('addSubscriber', [new Reference($eventId)]);
-            } else {
-                $pollObjects[$name][] = $objectName;
             }
-
-            $container->setParameter('ae_connect.poll_objects', $pollObjects);
         }
+    }
+
+    private function buildPolling(string $name, array $objects, ContainerBuilder $container)
+    {
+        $pollObjects = $container->hasParameter('ae_connect.poll_objects')
+            ? $container->getParameter('ae_connect.poll_objects')
+            : [];
+
+        foreach ($objects as $object) {
+            $pollObjects[$name][] = $object;
+        }
+
+        $container->setParameter('ae_connect.poll_objects', $pollObjects);
     }
 
     /**

@@ -90,8 +90,9 @@ ae_connect:
                 username: "%env(SF_USER)%"
                 password: "%env(SF_PASS)%"
                 url: "https://login.salesforce.com"
-            objects:
+            change_events:
                 - Account
+            polling:
                 - UserRole
             topics:
                 TestObjects:
