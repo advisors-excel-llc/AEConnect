@@ -8,6 +8,9 @@
 
 namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 
+use Doctrine\DBAL\Types\Type;
+use Ramsey\Uuid\Doctrine\UuidBinaryOrderedTimeType;
+use Ramsey\Uuid\Doctrine\UuidBinaryType;
 use Ramsey\Uuid\Doctrine\UuidType;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
@@ -16,8 +19,18 @@ class UuidTransformerPlugin extends AbstractTransformerPlugin
 {
     public function supportsInbound(TransformerPayload $payload): bool
     {
+        $type = $payload->getClassMetadata()->getTypeOfField($payload->getPropertyName());
+
+        if (is_string($type)) {
+            $type = Type::getType($type);
+        }
+
         return is_string($payload->getValue())
-            && $payload->getClassMetadata()->getTypeOfField($payload->getPropertyName()) instanceof UuidType
+            && (
+                $type instanceof UuidType
+                || $type instanceof UuidBinaryType
+                || $type instanceof UuidBinaryOrderedTimeType
+            )
             ;
     }
 

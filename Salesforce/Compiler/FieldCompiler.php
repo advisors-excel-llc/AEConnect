@@ -6,7 +6,7 @@
  * Time: 12:40 PM
  */
 
-namespace AE\ConnectBundle\Salesforce\Inbound\Compiler;
+namespace AE\ConnectBundle\Salesforce\Compiler;
 
 use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
@@ -40,7 +40,7 @@ class FieldCompiler
      *
      * @return mixed
      */
-    public function compile($value, SObject $object, FieldMetadata $fieldMetadata)
+    public function compileInbound($value, SObject $object, FieldMetadata $fieldMetadata)
     {
         $metadata  = $fieldMetadata->getMetadata();
         $className = $fieldMetadata->getMetadata()->getClassName();
@@ -64,6 +64,38 @@ class FieldCompiler
                                      ->setValue(is_string($value) && strlen($value) === 0 ? null : $value)
         ;
 
+        $this->transformer->transform($payload);
+
+        return $payload->getValue();
+    }
+
+    /**
+     * @param $value
+     * @param $entity
+     * @param FieldMetadata $fieldMetadata
+     *
+     * @return mixed
+     */
+    public function compileOutbound($value, $entity, FieldMetadata $fieldMetadata)
+    {
+        $metadata  = $fieldMetadata->getMetadata();
+        $className = $fieldMetadata->getMetadata()->getClassName();
+
+        if (null === $className) {
+            throw new \RuntimeException("No class found in metadata");
+        }
+        /** @var EntityManagerInterface $manager */
+        $manager       = $this->registry->getManagerForClass($className);
+        $classMetadata = $manager->getClassMetadata($className);
+        $payload       = TransformerPayload::outbound()
+                                           ->setValue($value)
+                                           ->setPropertyName($fieldMetadata->getProperty())
+                                           ->setFieldName($fieldMetadata->getField())
+                                           ->setFieldMetadata($fieldMetadata)
+                                           ->setEntity($entity)
+                                           ->setMetadata($metadata)
+                                           ->setClassMetadata($classMetadata)
+        ;
         $this->transformer->transform($payload);
 
         return $payload->getValue();

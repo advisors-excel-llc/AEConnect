@@ -13,6 +13,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Ramsey\Uuid\Uuid;
+use Ramsey\Uuid\UuidInterface;
 
 /**
  * Class Account
@@ -32,7 +33,7 @@ class Account
     private $id;
 
     /**
-     * @var string
+     * @var Uuid
      * @AEConnect\Field("S3F__hcid__c", connections={"default"})
      * @AEConnect\Field("AE_Connect_Id__c", connections={"db_test"})
      * @AEConnect\ExternalId()
@@ -112,19 +113,19 @@ class Account
     }
 
     /**
-     * @return string
+     * @return UuidInterface
      */
-    public function getExtId(): string
+    public function getExtId(): UuidInterface
     {
         return $this->extId;
     }
 
     /**
-     * @param string $extId
+     * @param UuidInterface $extId
      *
      * @return Account
      */
-    public function setExtId(string $extId): Account
+    public function setExtId(UuidInterface $extId): Account
     {
         $this->extId = $extId;
 

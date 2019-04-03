@@ -15,6 +15,7 @@ use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Contact;
+use Ramsey\Uuid\Uuid;
 
 class SObjectCompilerTest extends DatabaseTestCase
 {
@@ -106,5 +107,40 @@ class SObjectCompilerTest extends DatabaseTestCase
         $this->assertEquals('McTesterson', $sObject->LastName);
         $this->assertEquals('Contact', $sObject->getType());
         $this->assertInstanceOf(ReferencePlaceholder::class, $sObject->AccountId);
+    }
+
+    public function testUpdate()
+    {
+        $manager = $this->doctrine->getManager();
+        $extId   = Uuid::uuid4();
+        $account = new Account();
+        $account->setName('Test Update')
+                ->setConnection('default')
+                ->setSfid('000111000111001')
+                ->setExtId($extId)
+        ;
+
+        $manager->persist($account);
+        $manager->flush();
+
+        $account->setName('Test Update Name')
+        ;
+        $manager->merge($account);
+
+        $compiled = $this->compiler->compile($account);
+
+        $this->assertEquals(CompilerResult::UPDATE, $compiled->getIntent());
+        $this->assertEquals(Account::class, $compiled->getClassName());
+        $this->assertEquals('default', $compiled->getConnectionName());
+
+        $object = $compiled->getSObject();
+
+        $this->assertEquals('Test Update Name', $object->Name);
+        $this->assertEquals($extId->toString(), $object->S3F__hcid__c);
+        $this->assertEquals('000111000111001', $object->Id);
+        $this->assertNull($object->S3F__Test_Picklist__c);
+
+        $manager->remove($account);
+        $manager->flush();
     }
 }

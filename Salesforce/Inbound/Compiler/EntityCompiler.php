@@ -12,21 +12,13 @@ use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use AE\ConnectBundle\Doctrine\EntityLocater;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
-use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Metadata\Metadata;
-use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
-use AE\ConnectBundle\Salesforce\Transformer\Transformer;
-use AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder;
+use AE\ConnectBundle\Salesforce\Compiler\FieldCompiler;
 use AE\SalesforceRestSdk\Model\SObject;
-use Doctrine\Common\Collections\Collection;
-use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Mapping\ClassMetadata;
-use Doctrine\ORM\Query\Expr\Join;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Ramsey\Uuid\Doctrine\UuidType;
-use Ramsey\Uuid\Uuid;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -116,7 +108,7 @@ class EntityCompiler
 
                 // If the entity supports a connection name, set it
                 if (null !== $connectionProp) {
-                    $value = $this->fieldCompiler->compile(
+                    $value = $this->fieldCompiler->compileInbound(
                         $connection->getName(),
                         $object,
                         $metadata->getConnectionNameField()
@@ -155,7 +147,7 @@ class EntityCompiler
                     continue;
                 }
 
-                $newValue = $this->fieldCompiler->compile($value, $object, $fieldMetadata);
+                $newValue = $this->fieldCompiler->compileInbound($value, $object, $fieldMetadata);
 
                 if (null !== $newValue) {
                     $fieldMetadata->setValueForEntity($entity, $newValue);
