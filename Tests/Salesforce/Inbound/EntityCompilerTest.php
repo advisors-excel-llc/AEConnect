@@ -40,7 +40,7 @@ class EntityCompilerTest extends DatabaseTestCase
         $accountSfid->setConnection($conn)
                     ->setSalesforceId('111000111000111ADA')
         ;
-        $accountUuid = Uuid::uuid4()->toString();
+        $accountUuid = Uuid::uuid4();
 
         $account = new Account();
         $account->setName('New Test Account')
@@ -49,7 +49,7 @@ class EntityCompilerTest extends DatabaseTestCase
         ;
         $manager->persist($account);
 
-        $oldAccountUuid = Uuid::uuid4()->toString();
+        $oldAccountUuid = Uuid::uuid4();
         $oldAccount     = new Account();
         $oldAccount->setName('Old Test Account')
                    ->setConnections(new ArrayCollection([$conn]))
@@ -64,7 +64,7 @@ class EntityCompilerTest extends DatabaseTestCase
             [
                 'Id'               => '111000111000111ADF',
                 'Name'             => 'New Test Account Updated',
-                'AE_Connect_Id__c' => $accountUuid,
+                'AE_Connect_Id__c' => $accountUuid->toString(),
                 '__SOBJECT_TYPE__' => 'Account',
             ]
         );
@@ -81,7 +81,7 @@ class EntityCompilerTest extends DatabaseTestCase
             [
                 'Id'               => '111000111000111ADA',
                 'Name'             => 'Old Test Account Updated',
-                'AE_Connect_Id__c' => $oldAccountUuid,
+                'AE_Connect_Id__c' => $oldAccountUuid->toString(),
                 '__SOBJECT_TYPE__' => 'Account',
             ]
         );

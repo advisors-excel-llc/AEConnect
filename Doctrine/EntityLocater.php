@@ -3,14 +3,17 @@
 namespace AE\ConnectBundle\Doctrine;
 
 use AE\ConnectBundle\Metadata\Metadata;
-use AE\ConnectBundle\Salesforce\Inbound\Compiler\FieldCompiler;
+use AE\ConnectBundle\Salesforce\Compiler\FieldCompiler;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\NullLogger;
+use Ramsey\Uuid\Doctrine\UuidBinaryOrderedTimeType;
+use Ramsey\Uuid\Doctrine\UuidBinaryType;
 use Ramsey\Uuid\Doctrine\UuidType;
 use Ramsey\Uuid\Uuid;
 use Symfony\Bridge\Doctrine\RegistryInterface;
@@ -85,7 +88,16 @@ class EntityLocater implements LoggerAwareInterface
             }
 
             if (null !== $value && is_string($value) && strlen($value) > 0) {
-                if ($classMetadata->getTypeOfField($field) instanceof UuidType) {
+                $typeOfField = $classMetadata->getTypeOfField($prop);
+
+                if (is_string($typeOfField)) {
+                    $typeOfField = Type::getType($typeOfField);
+                }
+
+                if ($typeOfField instanceof UuidType
+                    || $typeOfField instanceof UuidBinaryType
+                    || $typeOfField instanceof UuidBinaryOrderedTimeType
+                ) {
                     $value = Uuid::fromString($value);
                 }
                 $extIdCriteria->add($builder->expr()->eq("o.$prop", ":$prop"));
@@ -99,7 +111,7 @@ class EntityLocater implements LoggerAwareInterface
         $conn      = null;
         if (null !== $connField) {
             $prop = $connField->getProperty();
-            $conn = $this->fieldCompiler->compile($metadata->getConnectionName(), $object, $connField);
+            $conn = $this->fieldCompiler->compileInbound($metadata->getConnectionName(), $object, $connField);
 
             if ($conn instanceof Collection) {
                 $conn = $conn->first();
@@ -159,7 +171,7 @@ class EntityLocater implements LoggerAwareInterface
         // If there's an SFID, use it to find the entity, in case the External Id isn't found in the database or one
         // wasn't provided from Salesforce
         if (null !== $object->Id && strlen($object->Id) > 0 && null !== ($property = $metadata->getIdFieldProperty())) {
-            $sfidVal = $this->fieldCompiler->compile($object->Id, $object, $metadata->getMetadataForField('Id'));
+            $sfidVal = $this->fieldCompiler->compileInbound($object->Id, $object, $metadata->getMetadataForField('Id'));
 
             if ($sfidVal instanceof Collection) {
                 $sfidVal = $sfidVal->first();
@@ -210,6 +222,12 @@ class EntityLocater implements LoggerAwareInterface
             throw new \RuntimeException("No restricting parameters found");
         }
 
-        return $builder->getQuery()->getOneOrNullResult();
+        $result = $builder->getQuery()->getOneOrNullResult();
+
+        if (null === $result) {
+            $this->logger->warning('No result found');
+        }
+
+        return $result;
     }
 }
