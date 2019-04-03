@@ -25,7 +25,7 @@ ae_connect:
             login:
                 username: someuser@mysalesforceorg.com
                 password: MYPASSWORD_my_user_token
-            objects:
+            change_events:
                 - Account
                 - Contact
                 - SomeCustomObject__c
@@ -197,7 +197,7 @@ But before a Change Event can be dispatched, Salesforce must first be told to en
 
 To enable Change Events for an object:
 * Click **Setup** in the Settings menu in the top, right-hand corner
-* Type **Change Data Capture** in the search field above the left-hand navigatoin
+* Type **Change Data Capture** in the search field above the left-hand navigation
 * Click **Change Data Capture** under the **Integrations** menu
 * Select all the objects you want to enable Change Events for and move them from the left column to the right column
 * Click Save and you're done!
@@ -210,6 +210,17 @@ AE Connect will handle all the heavy lifting and sync the data to your database 
 
 Of course, you can create your own custom consumer if you'd like! See [Inbound Data from Salesforce](../inbound/README.md)
 for how to set that up.
+
+> **NOTE ABOUT LICENSES**
+>
+> There is a max limit of 5 object types for the standard CDC license with Salesforce. In order to subscribe to more
+> than 5 change events, you must purchase a license
+
+> **DEPRECATION NOTICE**
+>
+> In versions prior to 1.3.16, the `objects` node was where change event objects were set. As of 1.3.16, the
+> `change_events` node is now used. This was changed to allow for control over which objects are supposed to use CDC
+> and which are meant to be polled for.
 
 ```yaml
 # app/config.yml (or config/ae_connect.yaml if you're using flex)
@@ -225,35 +236,41 @@ ae_connect:
                 # ...
             generic_events:
                 # ...
-            objects:
+            change_events:
                 - Account
                 - User
                 - UserRole
 ```
 
-##### Object Polling
+#### Object Polling
 
-*Hey! Wait a minute. UserRole wasn't listed in the **Change Data Capture** field in Salesforce. How can I listen to change
-events on it?*
+Not all objects are supported for use with the Streaming API; UserRole is one of them, there are others. Likewise,
+if you don't have an extended CDC license for your Salesforce Org, you are only limited to 5 objects. In order to get
+changes on objects that aren't using CDC or topics, simple add them to the `polling` node under than connection's config.
 
-It's true. Not all objects are supported for use with the Streaming API, and UserRole is one of them. However, no need
-to worry about it. Any objects declared in the `objects` configuration that aren't supported by the Streaming API
-will be polled for changes intermittently... given that they are supported by the Rest API.
-
-Since Change Data Capture is finally fully GA but you must request the feature be enabled by Salesforce.
-While you wait for this feature to be enabled, you have the option to force objects to poll. It's
-as easy as a simple configuration setting. When CDC becomes available in your Org,
-just remove the settings in your config and that's it!
+> **DEPRECATION NOTICE**
+>
+> Prior to version 1.3.16, `objects` node was used instead of `polling`. Any objects that weren't supported by CDC
+> were immediately added to the polling service. If your org was not using CDC at all and you wanted all objects to be
+> polled for, your configuration would be as below. As of 1.3.16, you can just use `polling`
+> ```yaml
+>  # Before Version 1.3.16
+>  connections:
+>     connection:
+>         default:
+>             objects:
+>                 # ... all your objects
+>             config:
+>                 use_change_data_capture: false
 
 ```yaml
+# As of Version 1.3.16
 ae_connect:
     connections:
         default:
             #...
-            objects:
-                # ...
-            config:
-                use_change_data_capture: false
+            polling:
+                - UserRole
 ```
 
 Objects that require polling require a command to be run at certain intervals, most likely via Cron:
@@ -281,7 +298,7 @@ ae_connect:
             login:
                 username: someuser@mysalesforceorg.com
                 password: MYPASSWORD_my_user_token
-            objects:
+            change_events:
                 - Account
                 - Contact
                 - SomeCustomObject__c
@@ -289,12 +306,13 @@ ae_connect:
             login:
                 username: someotheruser@myothersforg.com
                 password: PASSWORD_user_token
-            objects:
+            change_events:
                 - Account
                 - Contact
                 - AnotherCustomObject__c
-                - UserRole
                 - User
+            polling:
+                - UserRole
 ```
 
 The key under `connections` is the connection name. If a connection is named `default` it is always the default connection.
@@ -337,7 +355,7 @@ ae_connect:
             login:
                 username: someuser@mysalesforceorg.com
                 password: MYPASSWORD_my_user_token
-            objects:
+            change_events:
                 - Account
                 - Contact
                 - SomeCustomObject__c
