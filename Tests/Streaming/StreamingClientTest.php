@@ -17,6 +17,7 @@ use AE\SalesforceRestSdk\Bayeux\ChannelInterface;
 use AE\SalesforceRestSdk\Bayeux\Consumer;
 use AE\SalesforceRestSdk\Bayeux\Message;
 use AE\SalesforceRestSdk\Model\SObject;
+use Ramsey\Uuid\Uuid;
 
 class StreamingClientTest extends DatabaseTestCase
 {
@@ -52,6 +53,7 @@ class StreamingClientTest extends DatabaseTestCase
                                               new SObject(
                                                   [
                                                       'Name' => 'Test Streaming Account',
+                                                      'S3F_Hcid__c' => Uuid::uuid4()
                                                   ]
                                               )
                                           );
@@ -99,6 +101,7 @@ class StreamingClientTest extends DatabaseTestCase
                                               new SObject(
                                                   [
                                                       'Name' => 'Test Streaming Object',
+                                                      'S3F__HCID__c' => Uuid::uuid4(),
                                                   ]
                                               )
                                           );

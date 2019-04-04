@@ -11,6 +11,8 @@ namespace AE\ConnectBundle\Salesforce\Bulk;
 use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Salesforce\Inbound\SalesforceConsumerInterface;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
+use Doctrine\ORM\Mapping\MappingException;
+use Doctrine\ORM\ORMException;
 
 class CompositeApiProcessor
 {
@@ -38,6 +40,8 @@ class CompositeApiProcessor
      *
      * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
      * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws MappingException
+     * @throws ORMException
      */
     public function process(
         ConnectionInterface $connection,
@@ -57,7 +61,12 @@ class CompositeApiProcessor
                     }
                 }
                 $this->connector->enable();
-                $this->connector->receive($records, SalesforceConsumerInterface::UPDATED, $connection->getName());
+                $this->connector->receive(
+                    $records,
+                    SalesforceConsumerInterface::UPDATED,
+                    $connection->getName(),
+                    $updateEntity
+                );
                 $this->connector->disable();
             }
         } while (!($query = $client->query($query))->isDone());

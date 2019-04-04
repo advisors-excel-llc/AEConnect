@@ -27,7 +27,7 @@ ae_connect:
         my_dbal_connection: # <- this will be what you use in your metadata annotations for connections={}
             login:
                 entity: 'App\Entity\OrgConnection'
-            objects:
+            change_events:
                 - #...
 ```
 

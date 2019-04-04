@@ -16,9 +16,9 @@ class Configuration implements ConfigurationInterface
 {
     public function getConfigTreeBuilder()
     {
-        $tree = new TreeBuilder();
+        $tree = new TreeBuilder('ae_connect');
 
-        $tree->root('ae_connect')
+        $tree->getRootNode()
              ->children()
                 ->arrayNode('paths')
                     ->defaultValue([])
@@ -47,15 +47,17 @@ class Configuration implements ConfigurationInterface
 
     private function buildConnectionTree()
     {
-        $tree = new TreeBuilder();
+        $tree = new TreeBuilder('connections');
 
-        $node = $tree->root('connections')
+        $node = $tree->getRootNode()
                 ->prototype('array')
                     ->children()
                         ->append($this->buildLoginTree())
                         ->append($this->buildTopicsTree())
                         ->append($this->buildPlatformEventsTree())
                         ->append($this->buildObjectsTree())
+                        ->append($this->buildChangeEventsTree())
+                        ->append($this->buildPollingTree())
                         ->append($this->buildGenericEventsTree())
                         ->append($this->buildConfigTree())
                     ->end()
@@ -67,9 +69,9 @@ class Configuration implements ConfigurationInterface
 
     private function buildLoginTree()
     {
-        $tree = new TreeBuilder();
+        $tree = new TreeBuilder('login');
 
-        $node = $tree->root('login')
+        $node = $tree->getRootNode()
                 ->children()
                     ->scalarNode('key')->end()
                     ->scalarNode('secret')->end()
@@ -91,9 +93,9 @@ class Configuration implements ConfigurationInterface
 
     private function buildConfigTree()
     {
-        $tree = new TreeBuilder();
+        $tree = new TreeBuilder('config');
 
-        $node = $tree->root('config')
+        $node = $tree->getRootNode()
                 ->addDefaultsIfNotSet()
                 ->children()
                     ->scalarNode('replay_start_id')
@@ -123,7 +125,13 @@ class Configuration implements ConfigurationInterface
                             ->end()
                         ->end()
                     ->end()
-                    ->booleanNode('use_change_data_capture')->defaultTrue()->end()
+                    ->booleanNode('use_change_data_capture')
+                        ->defaultTrue()
+                        ->setDeprecated(
+                            'If use_change_data_capture is true, use change_events instead, otherwise use polling. '.
+                            'objects node will be remove in 1.4'
+                        )
+                    ->end()
                     ->scalarNode('bulk_api_min_count')
                         ->defaultValue(100000)
                         ->cannotBeEmpty()
@@ -143,9 +151,9 @@ class Configuration implements ConfigurationInterface
 
     private function buildTopicsTree()
     {
-        $tree = new TreeBuilder();
+        $tree = new TreeBuilder('topics');
 
-        $node = $tree->root('topics')
+        $node = $tree->getRootNode()
                 ->prototype('array')
                     ->children()
                         ->scalarNode('type')->isRequired()->end()
@@ -161,21 +169,50 @@ class Configuration implements ConfigurationInterface
 
     private function buildPlatformEventsTree()
     {
-        $tree = new TreeBuilder();
+        $tree = new TreeBuilder('platform_events');
 
-        $node = $tree->root('platform_events')
-            ->scalarPrototype()->end()
-            ;
+        $node = $tree->getRootNode()
+                        ->scalarPrototype()
+                     ->end()
+        ;
 
         return $node;
     }
 
     private function buildObjectsTree()
     {
-        $tree = new TreeBuilder();
+        $tree = new TreeBuilder('objects');
 
-        $node = $tree->root('objects')
-                     ->scalarPrototype()->end()
+        $node = $tree->getRootNode()
+                        ->setDeprecated(
+                            'Use change_events and polling in place of objects, which will be removed in 1.4'
+                        )
+                        ->scalarPrototype()
+                     ->end()
+        ;
+
+        return $node;
+    }
+
+    private function buildChangeEventsTree()
+    {
+        $tree = new TreeBuilder('change_events');
+
+        $node = $tree->getRootNode()
+                    ->scalarPrototype()
+                ->end()
+        ;
+
+        return $node;
+    }
+
+    private function buildPollingTree()
+    {
+        $tree = new TreeBuilder('polling');
+
+        $node = $tree->getRootNode()
+                        ->scalarPrototype()
+                     ->end()
         ;
 
         return $node;
@@ -183,10 +220,12 @@ class Configuration implements ConfigurationInterface
 
     private function buildGenericEventsTree()
     {
-        $tree = new TreeBuilder();
+        $tree = new TreeBuilder('generic_events');
 
-        $node = $tree->root('generic_events')
-            ->scalarPrototype()->end();
+        $node = $tree->getRootNode()
+                        ->scalarPrototype()
+                     ->end()
+        ;
 
         return $node;
     }

@@ -92,7 +92,7 @@ class BulkDataProcessor
 
         foreach ($connections as $connection) {
             if ($updateFlag & self::UPDATE_SFIDS) {
-                $this->clearSalesforceIds($connection);
+                $this->clearSalesforceIds($connection, $types);
             }
             $this->inboundQueue->process($connection, $types, self::UPDATE_INCOMING & $updateFlag);
             $this->outboundQueue->process($connection, $types, self::UPDATE_OUTGOING & $updateFlag);
@@ -109,9 +109,13 @@ class BulkDataProcessor
      * @param ConnectionInterface $connection
      * @throws MappingException
      */
-    private function clearSalesforceIds(ConnectionInterface $connection)
+    private function clearSalesforceIds(ConnectionInterface $connection, array $types)
     {
         foreach ($connection->getMetadataRegistry()->getMetadata() as $metadata) {
+            if (!in_array($metadata->getSObjectType(), $types)) {
+                continue;
+            }
+
             $describeSObject = $metadata->getDescribe();
             // We only want to clear the Ids on objects that will be acted upon
             if (!$describeSObject->isQueryable()

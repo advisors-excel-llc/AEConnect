@@ -12,6 +12,7 @@ use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Metadata\Metadata;
+use AE\ConnectBundle\Salesforce\Compiler\FieldCompiler;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
 use AE\ConnectBundle\Salesforce\Transformer\Transformer;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
@@ -40,9 +41,9 @@ class SObjectCompiler
     private $registry;
 
     /**
-     * @var Transformer
+     * @var FieldCompiler
      */
-    private $transformer;
+    private $fieldCompiler;
 
     /**
      * @var ValidatorInterface
@@ -52,13 +53,13 @@ class SObjectCompiler
     public function __construct(
         ConnectionManagerInterface $connectionManager,
         RegistryInterface $registry,
-        Transformer $transformer,
+        FieldCompiler $fieldCompiler,
         ValidatorInterface $validator,
         ?LoggerInterface $logger = null
     ) {
         $this->connectionManager = $connectionManager;
         $this->registry          = $registry;
-        $this->transformer       = $transformer;
+        $this->fieldCompiler     = $fieldCompiler;
         $this->validator         = $validator;
 
         $this->setLogger($logger ?: new NullLogger());
@@ -118,12 +119,10 @@ class SObjectCompiler
         $idProp  = $metadata->getIdFieldProperty();
 
         if (null !== $idProp) {
-            $sObject->Id = $this->compileProperty(
-                $idProp,
+            $sObject->Id = $this->fieldCompiler->compileOutbound(
                 $classMetadata->getFieldValue($entity, $idProp),
                 $entity,
-                $metadata,
-                $classMetadata
+                $metadata->getMetadataForProperty($idProp)
             );
         }
 
@@ -137,7 +136,7 @@ class SObjectCompiler
 
         switch ($intent) {
             case CompilerResult::INSERT:
-                $this->compileForInsert($entity, $metadata, $classMetadata, $sObject);
+                $this->compileForInsert($entity, $metadata, $sObject);
                 if (null !== $sObject->Id) {
                     $intent = CompilerResult::UPDATE;
                 }
@@ -188,48 +187,13 @@ class SObjectCompiler
     }
 
     /**
-     * @param $property
-     * @param $value
      * @param $entity
-     * @param Metadata $metadata
-     * @param ClassMetadata $classMetadata
-     *
-     * @return mixed
-     */
-    private function compileProperty(
-        $property,
-        $value,
-        $entity,
-        Metadata $metadata,
-        ClassMetadata $classMetadata
-    ) {
-        $payload       = TransformerPayload::outbound();
-        $fieldName     = $metadata->getFieldByProperty($property);
-        $fieldMetadata = $metadata->getMetadataForField($fieldName);
-
-        $payload->setValue($value)
-                ->setPropertyName($property)
-                ->setFieldName($fieldName)
-                ->setFieldMetadata($fieldMetadata)
-                ->setEntity($entity)
-                ->setMetadata($metadata)
-                ->setClassMetadata($classMetadata)
-        ;
-        $this->transformer->transform($payload);
-
-        return $payload->getValue();
-    }
-
-    /**
-     * @param $entity
-     * @param $classMetadata
      * @param $metadata
      * @param $sObject
      */
     private function compileForInsert(
         $entity,
         Metadata $metadata,
-        ClassMetadata $classMetadata,
         CompositeSObject $sObject
     ): void {
         $fields = $metadata->getPropertyMap();
@@ -258,12 +222,10 @@ class SObjectCompiler
 
             $value = $fieldMetadata->getValueFromEntity($entity);
             if (null !== $value) {
-                $sObject->$field = $this->compileProperty(
-                    $property,
+                $sObject->$field = $this->fieldCompiler->compileOutbound(
                     $value,
                     $entity,
-                    $metadata,
-                    $classMetadata
+                    $fieldMetadata
                 );
             }
         }
@@ -308,17 +270,19 @@ class SObjectCompiler
 
                 $value = $fieldMetadata->getValueFromEntity($entity);
                 if (null !== $value) {
-                    $sObject->$field = $this->compileProperty(
-                        $property,
+                    $sObject->$field = $this->fieldCompiler->compileOutbound(
                         $value,
                         $entity,
-                        $metadata,
-                        $classMetadata
+                        $fieldMetadata
                     );
                 }
             } elseif (ucwords($field) === 'Id'
                 && null !== ($id = $classMetadata->getFieldValue($entity, $property))) {
-                $sObject->Id = $this->compileProperty($property, $id, $entity, $metadata, $classMetadata);
+                $sObject->Id = $this->fieldCompiler->compileOutbound(
+                    $id,
+                    $entity,
+                    $metadata->getMetadataForField('Id')
+                );
             }
         }
     }
@@ -347,6 +311,10 @@ class SObjectCompiler
             throw new \RuntimeException("Attempted to delete an entity without a Salesforce Id.");
         }
 
-        $sObject->Id = $this->compileProperty($property, $id, $entity, $metadata, $classMetadata);
+        $sObject->Id = $this->fieldCompiler->compileOutbound(
+            $id,
+            $entity,
+            $metadata->getMetadataForField('Id')
+        );
     }
 }
