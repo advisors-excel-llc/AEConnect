@@ -61,9 +61,12 @@ class ConfigurationTest extends TestCase
                             'platform_events' => [
                                 'TestEvent__e',
                             ],
-                            'objects'         => [
+                            'change_events'   => [
                                 'Account',
                                 'CustomObject__c',
+                            ],
+                            'polling'         => [
+                                'User',
                             ],
                             'generic_events'  => [
                                 'TestGenericEvent',
@@ -107,9 +110,13 @@ class ConfigurationTest extends TestCase
                         'platform_events' => [
                             'TestEvent__e',
                         ],
-                        'objects'         => [
+                        'objects'         => [],
+                        'change_events'   => [
                             'Account',
                             'CustomObject__c',
+                        ],
+                        'polling'         => [
+                            'User',
                         ],
                         'generic_events'  => [
                             'TestGenericEvent',
@@ -203,7 +210,7 @@ class ConfigurationTest extends TestCase
                             'cache'                   => [
                                 'metadata_provider' => 'ae_connect_metadata',
                                 'auth_provider'     => 'ae_connect_auth',
-                                'replay_provider' => 'ae_connect_replay',
+                                'replay_provider'   => 'ae_connect_replay',
                             ],
                             'use_change_data_capture' => true,
                             'bulk_api_min_count'      => 100000,
@@ -212,6 +219,8 @@ class ConfigurationTest extends TestCase
                         'platform_events' => [],
                         'objects'         => [],
                         'generic_events'  => [],
+                        'change_events'   => [],
+                        'polling'         => [],
                     ],
                     'non_default' => [
                         'login'           => [
@@ -245,6 +254,8 @@ class ConfigurationTest extends TestCase
                         ],
                         'platform_events' => [],
                         'objects'         => [],
+                        'change_events'   => [],
+                        'polling'         => [],
                         'generic_events'  => [],
                     ],
                 ],
