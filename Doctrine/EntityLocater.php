@@ -222,12 +222,6 @@ class EntityLocater implements LoggerAwareInterface
             throw new \RuntimeException("No restricting parameters found");
         }
 
-        $result = $builder->getQuery()->getOneOrNullResult();
-
-        if (null === $result) {
-            $this->logger->warning('No result found');
-        }
-
-        return $result;
+        return $builder->getQuery()->getOneOrNullResult();
     }
 }
