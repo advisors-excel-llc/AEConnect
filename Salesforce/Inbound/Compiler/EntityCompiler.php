@@ -171,8 +171,11 @@ class EntityCompiler
                     );
                 }
 
+                $entityId = $classMetadata->getSingleIdReflectionProperty()->getValue($entity);
+
                 // Validate against entity assertions to ensure that entity can be written to the database
-                if ($validate) {
+                // Always validate if entity is new or if the validation flag is true
+                if (null === $entityId || $validate) {
                     $this->validate($entity, $connection);
                 }
 
