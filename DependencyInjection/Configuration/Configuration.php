@@ -18,7 +18,13 @@ class Configuration implements ConfigurationInterface
     {
         $tree = new TreeBuilder('ae_connect');
 
-        $tree->getRootNode()
+        if (method_exists($tree, 'getRootNode')) {
+            $root = $tree->getRootNode();
+        } else {
+            $root = $tree->root('ae_connect');
+        }
+
+        $root
              ->children()
                 ->arrayNode('paths')
                     ->defaultValue([])
@@ -49,8 +55,13 @@ class Configuration implements ConfigurationInterface
     {
         $tree = new TreeBuilder('connections');
 
-        $node = $tree->getRootNode()
-                ->prototype('array')
+        if (method_exists($tree, 'getRootNode')) {
+            $root = $tree->getRootNode();
+        } else {
+            $root = $tree->root('connections');
+        }
+
+        return $root->prototype('array')
                     ->children()
                         ->append($this->buildLoginTree())
                         ->append($this->buildTopicsTree())
@@ -63,16 +74,19 @@ class Configuration implements ConfigurationInterface
                     ->end()
                 ->end()
         ;
-
-        return $node;
     }
 
     private function buildLoginTree()
     {
         $tree = new TreeBuilder('login');
 
-        $node = $tree->getRootNode()
-                ->children()
+        if (method_exists($tree, 'getRootNode')) {
+            $root = $tree->getRootNode();
+        } else {
+            $root = $tree->root('login');
+        }
+
+        return $root->children()
                     ->scalarNode('key')->end()
                     ->scalarNode('secret')->end()
                     ->scalarNode('username')->end()
@@ -87,16 +101,19 @@ class Configuration implements ConfigurationInterface
                     ->thenInvalid('Either a database entity or a username and password must be provided')
                 ->end()
         ;
-
-        return $node;
     }
 
     private function buildConfigTree()
     {
         $tree = new TreeBuilder('config');
 
-        $node = $tree->getRootNode()
-                ->addDefaultsIfNotSet()
+        if (method_exists($tree, 'getRootNode')) {
+            $root = $tree->getRootNode();
+        } else {
+            $root = $tree->root('config');
+        }
+
+        return $root->addDefaultsIfNotSet()
                 ->children()
                     ->scalarNode('replay_start_id')
                         ->cannotBeEmpty()
@@ -145,15 +162,19 @@ class Configuration implements ConfigurationInterface
                     ->scalarNode('connection_logger')->defaultValue('logger')->end()
                 ->end()
         ;
-
-        return $node;
     }
 
     private function buildTopicsTree()
     {
         $tree = new TreeBuilder('topics');
 
-        $node = $tree->getRootNode()
+        if (method_exists($tree, 'getRootNode')) {
+            $root = $tree->getRootNode();
+        } else {
+            $root = $tree->root('topics');
+        }
+
+        return $root
                 ->prototype('array')
                     ->children()
                         ->scalarNode('type')->isRequired()->end()
@@ -163,70 +184,88 @@ class Configuration implements ConfigurationInterface
                     ->end()
                 ->end()
         ;
-
-        return $node;
     }
 
     private function buildPlatformEventsTree()
     {
         $tree = new TreeBuilder('platform_events');
 
-        $node = $tree->getRootNode()
+        if (method_exists($tree, 'getRootNode')) {
+            $root = $tree->getRootNode();
+        } else {
+            $root = $tree->root('platform_events');
+        }
+
+        return $root
                         ->scalarPrototype()
                      ->end()
         ;
-
-        return $node;
     }
 
     private function buildObjectsTree()
     {
         $tree = new TreeBuilder('objects');
 
-        $node = $tree->getRootNode()
+        if (method_exists($tree, 'getRootNode')) {
+            $root = $tree->getRootNode();
+        } else {
+            $root = $tree->root('objects');
+        }
+
+        return $root
                         ->setDeprecated(
                             'Use change_events and polling in place of objects, which will be removed in 1.4'
                         )
                         ->scalarPrototype()
                      ->end()
         ;
-
-        return $node;
     }
 
     private function buildChangeEventsTree()
     {
         $tree = new TreeBuilder('change_events');
 
-        $node = $tree->getRootNode()
+        if (method_exists($tree, 'getRootNode')) {
+            $root = $tree->getRootNode();
+        } else {
+            $root = $tree->root('change_events');
+        }
+
+        return $root
                     ->scalarPrototype()
                 ->end()
         ;
-
-        return $node;
     }
 
     private function buildPollingTree()
     {
         $tree = new TreeBuilder('polling');
 
-        $node = $tree->getRootNode()
+        if (method_exists($tree, 'getRootNode')) {
+            $root = $tree->getRootNode();
+        } else {
+            $root = $tree->root('polling');
+        }
+
+        return $root
                         ->scalarPrototype()
                      ->end()
         ;
-
-        return $node;
     }
 
     private function buildGenericEventsTree()
     {
         $tree = new TreeBuilder('generic_events');
 
-        $node = $tree->getRootNode()
+        if (method_exists($tree, 'getRootNode')) {
+            $root = $tree->getRootNode();
+        } else {
+            $root = $tree->root('generic_events');
+        }
+
+        return $root
                         ->scalarPrototype()
                      ->end()
         ;
-
-        return $node;
     }
 }
