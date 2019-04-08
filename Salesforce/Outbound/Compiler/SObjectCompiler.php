@@ -127,7 +127,11 @@ class SObjectCompiler
         }
 
         foreach ($metadata->getIdentifyingFields() as $prop => $field) {
-            $sObject->$field = $classMetadata->getFieldValue($entity, $prop);
+            $value = $classMetadata->getFieldValue($entity, $prop);
+            if (null !== $value && null !== $field) {
+                $fieldMetadata = $metadata->getMetadataForField($field);
+                $sObject->$field = $this->fieldCompiler->compileOutbound($value, $entity, $fieldMetadata);
+            }
         }
 
         $intent = UnitOfWork::STATE_REMOVED === $uow->getEntityState($entity)
