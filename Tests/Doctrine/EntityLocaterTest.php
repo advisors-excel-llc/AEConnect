@@ -189,7 +189,12 @@ class EntityLocaterTest extends DatabaseTestCase
 
         $this->assertNotNull($foundByBoth);
 
-        $account->setSfid(null);
+        foreach ($account->getSfids() as $sfid) {
+            $manager->remove($sfid);
+            $manager->flush();
+        }
+        $account->setSfids(new ArrayCollection());
+        $manager->merge($account);
         $manager->flush();
 
         $foundWithMissingSfid = $this->entityLocater->locate(
@@ -204,8 +209,14 @@ class EntityLocaterTest extends DatabaseTestCase
 
         $this->assertNotNull($foundWithMissingSfid);
 
-        $account->setSfid('000111000111000');
-        $account->setExtId(Uuid::uuid4());
+        $sfid = new SalesforceId();
+        $sfid->setConnection($org);
+        $sfid->setSalesforceId('000111000111000');
+        $manager->persist($sfid);
+
+        $account->getSfids()->add($sfid);
+        $newExt = Uuid::uuid4();
+        $account->setExtId($newExt);
 
         $manager->flush();
 
@@ -213,13 +224,25 @@ class EntityLocaterTest extends DatabaseTestCase
             new SObject(
                 [
                     'Id'           => '000111000111000',
-                    'AE_Connect_Id__c' => $extId->toString(),
+                    'AE_Connect_Id__c' => $newExt->toString(),
                 ]
             ),
             $metadata
         );
 
         $this->assertNotNull($foundWithMissingExtId);
+
+        $foundWithBadSFID = $this->entityLocater->locate(
+            new SObject(
+                [
+                    'Id'           => '000111000111002',
+                    'AE_Connect_Id__c' => $newExt->toString(),
+                ]
+            ),
+            $metadata
+        );
+
+        $this->assertNotNull($foundWithBadSFID);
     }
 
     protected function tearDown()
