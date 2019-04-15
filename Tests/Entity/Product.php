@@ -12,6 +12,8 @@ use AE\ConnectBundle\Annotations\ExternalId;
 use AE\ConnectBundle\Annotations\Field;
 use AE\ConnectBundle\Annotations\SalesforceId;
 use AE\ConnectBundle\Annotations\SObjectType;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Ramsey\Uuid\Uuid;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -20,7 +22,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Class Product
  *
  * @package AE\ConnectBundle\Tests\Entity
- * @SObjectType("Product2")
+ * @SObjectType("Product2", connections={"*"})
  * @ORM\Entity()
  * @ORM\Table(name="product")
  * @ORM\HasLifecycleCallbacks()
@@ -38,30 +40,41 @@ class Product
     /**
      * @var string
      * @ORM\Column(length=80, nullable=false)
-     * @Field(name="Name")
+     * @Field(name="Name", connections={"*"})
      */
     private $name;
 
     /**
      * @var bool
      * @ORM\Column(type="boolean")
+     * @Field("IsActive", connections={"*"})
      */
     private $active;
 
     /**
      * @var string
-     * @Field(value="S3F__hcid__c")
+     * @Field(value="S3F__hcid__c", connections={"default"})
+     * @Field(value="AE_Connect_Id__c", connections={"db_test"})
      * @ExternalId()
      * @ORM\Column(type="guid", length=36, nullable=false, unique=true)
      */
     private $extId;
 
     /**
-     * @var string|null
-     * @SalesforceId()
-     * @ORM\Column(length=18, nullable=true, unique=true)
+     * @var SalesforceId[]|Collection
+     * @SalesforceId(connection="default")
+     * @SalesforceId(connection="db_test")
+     * @ORM\ManyToMany(targetEntity="AE\ConnectBundle\Tests\Entity\SalesforceId",
+     *     cascade={"persist", "merge", "remove"},
+     *     orphanRemoval=true
+     *     )
      */
-    private $sfid;
+    private $sfids;
+
+    public function __construct()
+    {
+        $this->sfids = new ArrayCollection();
+    }
 
     /**
      * @return int|null
@@ -144,21 +157,21 @@ class Product
     }
 
     /**
-     * @return null|string
+     * @return Collection
      */
-    public function getSfid(): ?string
+    public function getSfids(): Collection
     {
-        return $this->sfid;
+        return $this->sfids;
     }
 
     /**
-     * @param null|string $sfid
+     * @param Collection $sfids
      *
      * @return Product
      */
-    public function setSfid(?string $sfid): Product
+    public function setSfids(Collection $sfids): Product
     {
-        $this->sfid = $sfid;
+        $this->sfids = $sfids;
 
         return $this;
     }

@@ -13,6 +13,7 @@ use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
+use AE\ConnectBundle\Tests\Entity\Product;
 use AE\ConnectBundle\Tests\Entity\SalesforceId;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -47,6 +48,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $conn = $this->doctrine->getConnection();
         $conn->exec("DELETE FROM salesforce_id");
         $conn->exec("DELETE FROM account");
+        $conn->exec("DELETE FROM product");
     }
 
     public function testDefault()
@@ -211,7 +213,7 @@ class EntityLocaterTest extends DatabaseTestCase
 
         $sfid = new SalesforceId();
         $sfid->setConnection($org);
-        $sfid->setSalesforceId('000111000111000');
+        $sfid->setSalesforceId('000111000111001');
         $manager->persist($sfid);
 
         $account->getSfids()->add($sfid);
@@ -223,7 +225,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $foundWithMissingExtId = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id'           => '000111000111000',
+                    'Id'           => '000111000111001',
                     'AE_Connect_Id__c' => $newExt->toString(),
                 ]
             ),
@@ -245,6 +247,119 @@ class EntityLocaterTest extends DatabaseTestCase
         $this->assertNotNull($foundWithBadSFID);
     }
 
+    public function testDBNoConn()
+    {
+        $connection = $this->connectionManager->getConnection('db_test_org1');
+        $metadata   = $connection->getMetadataRegistry()->findMetadataByClass(Product::class);
+        $org        = $this->connectionFinder->find($connection->getName(), $metadata);
+        $manager    = $this->doctrine->getManager();
+        $extId      = Uuid::uuid4();
+
+        $product = new Product();
+        $product->setName('Test Product For Finding');
+        $product->setExtId($extId);
+        $product->setActive(true);
+
+        $sfid = new SalesforceId();
+        $sfid->setConnection($org);
+        $sfid->setSalesforceId('021111000111000');
+        $manager->persist($sfid);
+
+        $product->setSfids(new ArrayCollection([$sfid]));
+
+        $manager->persist($product);
+        $manager->flush();
+
+        $foundBySfid = $this->entityLocater->locate(
+            new SObject(
+                [
+                    'Id' => '021111000111000',
+                ]
+            ),
+            $metadata
+        );
+
+        $this->assertNotNull($foundBySfid);
+
+        $foundByExtId = $this->entityLocater->locate(
+            new SObject(
+                [
+                    'AE_Connect_Id__c' => $extId->toString(),
+                ]
+            ),
+            $metadata
+        );
+
+        $this->assertNotNull($foundByExtId);
+
+        $foundByBoth = $this->entityLocater->locate(
+            new SObject(
+                [
+                    'Id'           => '021111000111000',
+                    'AE_Connect_Id__c' => $extId->toString(),
+                ]
+            ),
+            $metadata
+        );
+
+        $this->assertNotNull($foundByBoth);
+
+        foreach ($product->getSfids() as $sfid) {
+            $manager->remove($sfid);
+            $manager->flush();
+        }
+        $product->setSfids(new ArrayCollection());
+        $manager->merge($product);
+        $manager->flush();
+
+        $foundWithMissingSfid = $this->entityLocater->locate(
+            new SObject(
+                [
+                    'Id'           => '021111000111000',
+                    'AE_Connect_Id__c' => $extId->toString(),
+                ]
+            ),
+            $metadata
+        );
+
+        $this->assertNotNull($foundWithMissingSfid);
+
+        $sfid = new SalesforceId();
+        $sfid->setConnection($org);
+        $sfid->setSalesforceId('021111000111001');
+        $manager->persist($sfid);
+
+        $product->getSfids()->add($sfid);
+        $newExt = Uuid::uuid4();
+        $product->setExtId($newExt);
+
+        $manager->flush();
+
+        $foundWithMissingExtId = $this->entityLocater->locate(
+            new SObject(
+                [
+                    'Id'           => '021111000111001',
+                    'AE_Connect_Id__c' => $newExt->toString(),
+                ]
+            ),
+            $metadata
+        );
+
+        $this->assertNotNull($foundWithMissingExtId);
+
+        $foundWithBadSFID = $this->entityLocater->locate(
+            new SObject(
+                [
+                    'Id'           => '021111000111002',
+                    'AE_Connect_Id__c' => $newExt->toString(),
+                ]
+            ),
+            $metadata
+        );
+
+        $this->assertNotNull($foundWithBadSFID);
+    }
+
     protected function tearDown()
     {
         parent::tearDown();
@@ -252,5 +367,6 @@ class EntityLocaterTest extends DatabaseTestCase
         $conn = $this->doctrine->getConnection();
         $conn->exec("DELETE FROM salesforce_id");
         $conn->exec("DELETE FROM account");
+        $conn->exec("DELETE FROM product");
     }
 }
