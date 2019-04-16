@@ -12,14 +12,7 @@ use AE\ConnectBundle\Driver\DbalConnectionDriver;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
-use AE\ConnectBundle\Tests\Entity\Contact;
-use AE\ConnectBundle\Tests\Entity\Order;
-use AE\ConnectBundle\Tests\Entity\OrderProduct;
 use AE\ConnectBundle\Tests\Entity\OrgConnection;
-use AE\ConnectBundle\Tests\Entity\Product;
-use AE\ConnectBundle\Tests\Entity\Role;
-use AE\ConnectBundle\Tests\Entity\Task;
-use AE\ConnectBundle\Tests\Entity\TestObject;
 
 class ConnectionManagerTest extends DatabaseTestCase
 {

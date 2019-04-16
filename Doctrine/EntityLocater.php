@@ -153,6 +153,8 @@ class EntityLocater implements LoggerAwareInterface
                     $extIdProps['conn'] = $conn;
                     $sfidProps['conn']  = $conn;
 
+                    // There must be at least one extId condition prior to adding the connection criteria
+                    // This extId condition should be the external id by which to filter
                     if ($preCount > 0) {
                         $criteria->add($extIdCriteria);
                         foreach ($extIdProps as $prop => $value) {
@@ -160,6 +162,12 @@ class EntityLocater implements LoggerAwareInterface
                         }
                     }
                 }
+            }
+        } elseif ($extIdCriteria->count() > 0) {
+            // If there's no connection field, we still need to filter by external id
+            $criteria->add($extIdCriteria);
+            foreach ($extIdProps as $prop => $value) {
+                $builder->setParameter($prop, $value);
             }
         }
 

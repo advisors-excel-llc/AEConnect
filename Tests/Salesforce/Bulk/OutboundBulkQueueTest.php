@@ -12,15 +12,8 @@ use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
-use AE\ConnectBundle\Tests\Entity\Contact;
-use AE\ConnectBundle\Tests\Entity\Order;
-use AE\ConnectBundle\Tests\Entity\OrderProduct;
 use AE\ConnectBundle\Tests\Entity\OrgConnection;
-use AE\ConnectBundle\Tests\Entity\Product;
-use AE\ConnectBundle\Tests\Entity\Role;
 use AE\ConnectBundle\Tests\Entity\SalesforceId;
-use AE\ConnectBundle\Tests\Entity\Task;
-use AE\ConnectBundle\Tests\Entity\TestObject;
 use Doctrine\Common\Collections\ArrayCollection;
 
 class OutboundBulkQueueTest extends DatabaseTestCase
