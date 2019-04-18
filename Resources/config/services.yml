@@ -112,11 +112,13 @@ services:
         $outboundQueue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
         $reader: '@Doctrine\Common\Annotations\Reader'
         $logger: '@Psr\Log\LoggerInterface'
+    AE\ConnectBundle\Salesforce\Bulk\SfidReset:
+        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $inboundBulkQueue: '@AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue'
         $outboundBulkQueue: '@AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue'
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $sfidReset: '@AE\ConnectBundle\Salesforce\Bulk\SfidReset'
         $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
     AE\ConnectBundle\Salesforce\Bulk\InboundQueryProcessor:
         $bulkApiProcessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkApiProcessor'

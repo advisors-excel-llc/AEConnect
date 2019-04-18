@@ -152,7 +152,7 @@ class SalesforceConnector implements LoggerAwareInterface
         try {
             $entities = [];
             foreach ($object as $obj) {
-                $entities = $entities + $this->entityCompiler->compile($obj, $connectionName, $validate);
+                $entities = array_merge($entities, $this->entityCompiler->compile($obj, $connectionName, $validate));
             }
         } catch (\RuntimeException $e) {
             $this->logger->warning($e->getMessage());
