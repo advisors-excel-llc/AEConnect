@@ -173,7 +173,7 @@ class Account
     }
 
     /**
-     * @return string|null|Uuid
+     * @return string|null
      */
     public function getSfid()
     {
@@ -181,7 +181,7 @@ class Account
     }
 
     /**
-     * @param string|Uuid $sfid
+     * @param string $sfid
      *
      * @return Account
      */
