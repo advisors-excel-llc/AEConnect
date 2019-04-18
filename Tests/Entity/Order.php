@@ -74,9 +74,9 @@ class Order
     private $extId;
 
     /**
-     * @var string
+     * @var AltSalesforceId
      * @SalesforceId()
-     * @ORM\Column(length=18, nullable=true, unique=true)
+     * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\AltSalesforceId", cascade={"all"})
      */
     private $sfid;
 
@@ -201,19 +201,19 @@ class Order
     }
 
     /**
-     * @return string
+     * @return AltSalesforceId
      */
-    public function getSfid(): ?string
+    public function getSfid(): ?AltSalesforceId
     {
         return $this->sfid;
     }
 
     /**
-     * @param string $sfid
+     * @param AltSalesforceId $sfid
      *
      * @return Order
      */
-    public function setSfid(string $sfid): Order
+    public function setSfid(AltSalesforceId $sfid): Order
     {
         $this->sfid = $sfid;
 
