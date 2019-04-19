@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Salesforce\Compiler;
 
+use AE\ConnectBundle\AuthProvider\SoapProvider;
 use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
 use AE\ConnectBundle\Salesforce\Transformer\TransformerInterface;
@@ -37,10 +38,11 @@ class FieldCompiler
      * @param $value
      * @param SObject $object
      * @param FieldMetadata $fieldMetadata
+     * @param Mixed $entity
      *
      * @return mixed
      */
-    public function compileInbound($value, SObject $object, FieldMetadata $fieldMetadata)
+    public function compileInbound($value, SObject $object, FieldMetadata $fieldMetadata, $entity = null)
     {
         $metadata  = $fieldMetadata->getMetadata();
         $className = $fieldMetadata->getMetadata()->getClassName();
@@ -56,7 +58,8 @@ class FieldCompiler
 
         $payload = TransformerPayload::inbound()
                                      ->setClassMetadata($classMetadata)
-                                     ->setEntity($object)
+                                     ->setEntity($entity)
+                                     ->setSObject($object)
                                      ->setMetadata($metadata)
                                      ->setFieldMetadata($fieldMetadata)
                                      ->setFieldName($field)
@@ -73,10 +76,11 @@ class FieldCompiler
      * @param $value
      * @param $entity
      * @param FieldMetadata $fieldMetadata
+     * @param SObject $sobject
      *
      * @return mixed
      */
-    public function compileOutbound($value, $entity, FieldMetadata $fieldMetadata)
+    public function compileOutbound($value, $entity, FieldMetadata $fieldMetadata, ?SObject $sobject = null)
     {
         $metadata  = $fieldMetadata->getMetadata();
         $className = $fieldMetadata->getMetadata()->getClassName();
@@ -93,6 +97,7 @@ class FieldCompiler
                                            ->setFieldName($fieldMetadata->getField())
                                            ->setFieldMetadata($fieldMetadata)
                                            ->setEntity($entity)
+                                           ->setSObject($sobject)
                                            ->setMetadata($metadata)
                                            ->setClassMetadata($classMetadata)
         ;

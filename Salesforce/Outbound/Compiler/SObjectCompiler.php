@@ -122,7 +122,8 @@ class SObjectCompiler
             $sObject->Id = $this->fieldCompiler->compileOutbound(
                 $classMetadata->getFieldValue($entity, $idProp),
                 $entity,
-                $metadata->getMetadataForProperty($idProp)
+                $metadata->getMetadataForProperty($idProp),
+                $sObject
             );
         }
 
@@ -130,7 +131,7 @@ class SObjectCompiler
             $value = $classMetadata->getFieldValue($entity, $prop);
             if (null !== $value && null !== $field) {
                 $fieldMetadata = $metadata->getMetadataForField($field);
-                $sObject->$field = $this->fieldCompiler->compileOutbound($value, $entity, $fieldMetadata);
+                $sObject->$field = $this->fieldCompiler->compileOutbound($value, $entity, $fieldMetadata, $sObject);
             }
         }
 
@@ -229,7 +230,8 @@ class SObjectCompiler
                 $sObject->$field = $this->fieldCompiler->compileOutbound(
                     $value,
                     $entity,
-                    $fieldMetadata
+                    $fieldMetadata,
+                    $sObject
                 );
             }
         }
@@ -277,7 +279,8 @@ class SObjectCompiler
                     $sObject->$field = $this->fieldCompiler->compileOutbound(
                         $value,
                         $entity,
-                        $fieldMetadata
+                        $fieldMetadata,
+                        $sObject
                     );
                 }
             } elseif (ucwords($field) === 'Id'
@@ -318,7 +321,8 @@ class SObjectCompiler
         $sObject->Id = $this->fieldCompiler->compileOutbound(
             $id,
             $entity,
-            $metadata->getMetadataForField('Id')
+            $metadata->getMetadataForField('Id'),
+            $sObject
         );
     }
 }

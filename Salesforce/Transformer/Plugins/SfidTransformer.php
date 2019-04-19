@@ -17,6 +17,7 @@ use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
+use Doctrine\Common\Collections\Collection;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -200,11 +201,30 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
                 }
             }
 
-            $payload->setValue(
-                null !== $sfid && $association['type'] & ClassMetadataInfo::TO_MANY
-                    ? new ArrayCollection([$sfid])
-                    : $sfid
-            );
+            if (null !== $sfid && $association['type'] & ClassMetadataInfo::TO_MANY) {
+                $entity = $payload->getEntity();
+                // If there isn't an entity on the payload, then we can't merge with existing.
+                // In this case, we'll return what has been found
+                if (null === $entity) {
+                    $payload->setValue(new ArrayCollection([$sfid]));
+                    return;
+                }
+
+                // If there is an entity, process accordingly
+                $val    = $payload->getFieldMetadata()->getValueFromEntity($entity);
+                if ($val instanceof Collection) {
+                    $sfids = $val->toArray();
+                    $sfids[] = $sfid;
+                    $payload->setValue(new ArrayCollection($sfids));
+                    return;
+                }
+
+                $payload->setValue(new ArrayCollection([$sfid]));
+                return;
+            }
+
+            $payload->setValue($sfid);
+            return;
         } catch (\Exception $e) {
             $this->logger->debug($e->getMessage());
         }

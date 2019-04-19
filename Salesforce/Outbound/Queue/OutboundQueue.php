@@ -10,18 +10,12 @@ namespace AE\ConnectBundle\Salesforce\Outbound\Queue;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
+use AE\ConnectBundle\Salesforce\Compiler\FieldCompiler;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
-use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
-use AE\ConnectBundle\Salesforce\Transformer\TransformerInterface;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CollectionResponse;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeResponse;
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Collections\Collection;
-use Doctrine\DBAL\DBALException;
-use Doctrine\DBAL\Driver\IBMDB2\DB2Exception;
-use Doctrine\DBAL\Types\Type;
-use Doctrine\ORM\Mapping\ClassMetadata;
-use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -50,9 +44,9 @@ class OutboundQueue implements LoggerAwareInterface
     private $registry;
 
     /**
-     * @var TransformerInterface
+     * @var FieldCompiler
      */
-    private $transformer;
+    private $fieldCompiler;
 
     /**
      * @var array
@@ -63,13 +57,13 @@ class OutboundQueue implements LoggerAwareInterface
         CacheProvider $cache,
         ConnectionManagerInterface $connectionManager,
         RegistryInterface $registry,
-        TransformerInterface $transformer,
+        FieldCompiler $fieldCompiler,
         ?LoggerInterface $logger = null
     ) {
         $this->connectionManager = $connectionManager;
         $this->cache             = $cache;
         $this->registry          = $registry;
-        $this->transformer       = $transformer;
+        $this->fieldCompiler     = $fieldCompiler;
 
         $this->messages = $this->cache->fetch(self::CACHE_ID_MESSAGES) ?? [];
 
@@ -295,21 +289,9 @@ class OutboundQueue implements LoggerAwareInterface
         $entity  = $repo->findOneBy($idMap);
 
         if (null !== $entity) {
-            /** @var ClassMetadata $classMetadata */
-            $classMetadata      = $manager->getClassMetadata($metadata->getClassName());
-            $fieldMetadata      = $metadata->getMetadataForField('Id');
-            $transformerPayload = TransformerPayload::inbound()
-                                                    ->setValue($id)
-                                                    ->setFieldMetadata($fieldMetadata)
-                                                    ->setMetadata($metadata)
-                                                    ->setClassMetadata($classMetadata)
-                                                    ->setEntity($object)
-                                                    ->setFieldName('Id')
-                                                    ->setPropertyName($fieldMetadata->getProperty())
-            ;
-
-            $this->transformer->transform($transformerPayload);
-            $fieldMetadata->setValueForEntity($entity, $transformerPayload->getValue());
+            $fieldMetadata = $metadata->getMetadataForField('Id');
+            $value         = $this->fieldCompiler->compileInbound($id, $object, $fieldMetadata, $entity);
+            $fieldMetadata->setValueForEntity($entity, $value);
             $manager->flush();
         }
     }

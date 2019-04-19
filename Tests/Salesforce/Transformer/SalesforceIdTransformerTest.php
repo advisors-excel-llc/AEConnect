@@ -14,11 +14,15 @@ use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
 use AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder;
 use AE\ConnectBundle\Tests\DatabaseTestTrait;
 use AE\ConnectBundle\Tests\Entity\Account;
+use AE\ConnectBundle\Tests\Entity\AltProduct;
+use AE\ConnectBundle\Tests\Entity\AltSalesforceId;
 use AE\ConnectBundle\Tests\Entity\Contact;
 use AE\ConnectBundle\Tests\Entity\OrgConnection;
 use AE\ConnectBundle\Tests\Entity\SalesforceId;
+use AE\ConnectBundle\Tests\Salesforce\SfidGenerator;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Annotations\Reader;
+use Doctrine\Common\Collections\ArrayCollection;
 use Faker\Test\Provider\Collection;
 
 class SalesforceIdTransformerTest extends AbstractTransformerTest
@@ -56,13 +60,16 @@ class SalesforceIdTransformerTest extends AbstractTransformerTest
                                                ->findMetadataBySObjectType('Account')
         ;
 
+        $entity = new Account();
+
         $this->assertNotEmpty($metadatas);
 
         $metadata      = $metadatas[0];
         $fieldMetadata = $metadata->getMetadataForField('Id');
         $payload       = TransformerPayload::inbound()
                                            ->setValue($account->Id)
-                                           ->setEntity($account)
+                                           ->setSObject($account)
+                                           ->setEntity($entity)
                                            ->setFieldName('Id')
                                            ->setPropertyName($fieldMetadata->getProperty())
                                            ->setFieldMetadata($fieldMetadata)
@@ -97,7 +104,7 @@ class SalesforceIdTransformerTest extends AbstractTransformerTest
         $fieldMetadata  = $metadata->getMetadataForField('Id');
         $contactPayload = TransformerPayload::inbound()
                                             ->setValue($contact->Id)
-                                            ->setEntity($contact)
+                                            ->setSObject($contact)
                                             ->setFieldName('Id')
                                             ->setPropertyName($fieldMetadata->getProperty())
                                             ->setFieldMetadata($fieldMetadata)
@@ -152,6 +159,7 @@ class SalesforceIdTransformerTest extends AbstractTransformerTest
         $fieldMetadata = $metadata->getMetadataForField('Id');
         $payload       = TransformerPayload::inbound()
                                            ->setValue($account->Id)
+                                           ->setSObject($account)
                                            ->setEntity($account)
                                            ->setFieldName('Id')
                                            ->setPropertyName($fieldMetadata->getProperty())
@@ -201,7 +209,8 @@ class SalesforceIdTransformerTest extends AbstractTransformerTest
         $fieldMetadata  = $metadata->getMetadataForField('Id');
         $contactPayload = TransformerPayload::inbound()
                                             ->setValue($contact->Id)
-                                            ->setEntity($contact)
+                                            ->setSObject($contact)
+                                            ->setEntity($entity)
                                             ->setFieldName('Id')
                                             ->setPropertyName($fieldMetadata->getProperty())
                                             ->setFieldMetadata($fieldMetadata)
@@ -214,6 +223,82 @@ class SalesforceIdTransformerTest extends AbstractTransformerTest
         $this->assertInstanceOf(SalesforceId::class, $contactPayload->getValue());
         $this->assertEquals('111000111000111AQA', $contactPayload->getValue()->getSalesforceId());
         $this->assertNotNull($contactPayload->getValue()->getId());
+    }
+
+    public function testInboundManyToMany()
+    {
+        $this->loadOrgConnections();
+
+        $transformer = new SfidTransformer(
+            $this->getDoctrine(),
+            $this->get(Reader::class),
+            $this->get(SfidFinder::class)
+        );
+
+        $manager = $this->getDoctrine()->getManager();
+
+        $product = new AltProduct();
+        $product->setName('Test Many Sfid Update')
+                ->setActive(true)
+        ;
+
+        $defSfid = SfidGenerator::generate();
+
+        $sfid = new AltSalesforceId();
+        $sfid->setConnection('default')
+             ->setSalesforceId($defSfid)
+        ;
+
+        $product->getSfids()->add($sfid);
+
+        /** @var AltProduct $product */
+        $product = $manager->merge($product);
+        $manager->flush();
+
+        $metadata      = $this->connectionManager->getConnection('db_test_org1')
+                                                 ->getMetadataRegistry()
+                                                 ->findMetadataForEntity($product)
+        ;
+        $fieldMetadata = $metadata->getMetadataForField('Id');
+
+        $newSfid = SfidGenerator::generate();
+
+        // Test Singular
+        $sobject = new SObject(
+            [
+                'Name'     => 'Test Product Many2Many',
+                'IsActive' => true,
+                'Id'       => $newSfid,
+            ]
+        );
+
+        $payload = TransformerPayload::inbound()
+                                     ->setValue($sobject->Id)
+                                     ->setSObject($sobject)
+                                     ->setEntity($product)
+                                     ->setFieldName('Id')
+                                     ->setPropertyName($fieldMetadata->getProperty())
+                                     ->setFieldMetadata($fieldMetadata)
+                                     ->setMetadata($metadata)
+                                     ->setClassMetadata($manager->getClassMetadata(AltProduct::class))
+        ;
+
+        $this->assertTrue($transformer->supports($payload));
+        $transformer->transform($payload);
+
+        /** @var ArrayCollection $sfids */
+        $sfids = $payload->getValue();
+
+        $this->assertInstanceOf(ArrayCollection::class, $sfids);
+        $this->assertCount(2, $sfids);
+        $sfidMap = $sfids->map(
+            function (AltSalesforceId $salesforceId) {
+                return $salesforceId->getSalesforceId();
+            }
+        );
+
+        $this->assertContains($defSfid, $sfidMap);
+        $this->assertContains($newSfid, $sfidMap);
     }
 
     public function testOutbound()

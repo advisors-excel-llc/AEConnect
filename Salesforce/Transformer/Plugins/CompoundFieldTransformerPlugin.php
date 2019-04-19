@@ -32,7 +32,7 @@ class CompoundFieldTransformerPlugin implements TransformerPluginInterface
             $fieldMeta = $metadata->getMetadataForField($field);
 
             if (null !== $fieldMeta) {
-                $payload->getEntity()->$field = $fieldValue;
+                $payload->getSObject()->$field = $fieldValue;
             }
         }
 
