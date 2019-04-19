@@ -63,7 +63,10 @@ class ConnectionEntityTransformer extends AbstractTransformerPlugin implements L
 
             // Set the payload value. If the $connection is null, no connection entity was found and that is ok
             if (null !== $connection && $association['type'] & ClassMetadataInfo::TO_MANY) {
-                $values = $payload->getFieldMetadata()->getValueFromEntity($payload->getEntity());
+                $entity = $payload->getEntity();
+                $values = null !== $entity
+                    ? $payload->getFieldMetadata()->getValueFromEntity($entity)
+                    : new ArrayCollection();
 
                 if (null === $values) {
                     $values = new ArrayCollection();

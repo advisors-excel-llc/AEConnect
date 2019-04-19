@@ -38,8 +38,8 @@ class CompoundFieldTransformerPluginTest extends AbstractTransformerTest
         $transformer->transform($payload);
 
         $this->assertEquals('Bob McGuillicutty', $payload->getValue());
-        $this->assertEquals('Bob', $payload->getEntity()->FirstName);
-        $this->assertEquals('McGuillicutty', $payload->getEntity()->LastName);
+        $this->assertEquals('Bob', $payload->getSObject()->FirstName);
+        $this->assertEquals('McGuillicutty', $payload->getSObject()->LastName);
     }
 
     private function createPayload(): TransformerPayload
@@ -61,7 +61,7 @@ class CompoundFieldTransformerPluginTest extends AbstractTransformerTest
 
         $payload = TransformerPayload::inbound()
                                      ->setValue($sobject->Name)
-                                     ->setEntity($sobject)
+                                     ->setSObject($sobject)
                                      ->setFieldName('Name')
                                      ->setPropertyName($fieldMetadata->getProperty())
                                      ->setMetadata($metadata)

@@ -102,7 +102,7 @@ class EntityCompiler
 
             $connectionProp = $metadata->getConnectionNameField();
 
-            // If the entity doesn't exist, creatre a new one
+            // If the entity doesn't exist, create a new one
             if (null === $entity) {
                 $entity = new $class();
 
@@ -111,7 +111,8 @@ class EntityCompiler
                     $value = $this->fieldCompiler->compileInbound(
                         $connection->getName(),
                         $object,
-                        $metadata->getConnectionNameField()
+                        $metadata->getConnectionNameField(),
+                        $entity
                     );
                     $connectionProp->setValueForEntity($entity, $value);
                 }
@@ -147,7 +148,7 @@ class EntityCompiler
                     continue;
                 }
 
-                $newValue = $this->fieldCompiler->compileInbound($value, $object, $fieldMetadata);
+                $newValue = $this->fieldCompiler->compileInbound($value, $object, $fieldMetadata, $entity);
 
                 if (null !== $newValue) {
                     $fieldMetadata->setValueForEntity($entity, $newValue);
