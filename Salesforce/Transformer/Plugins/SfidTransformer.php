@@ -213,6 +213,12 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
                 // If there is an entity, process accordingly
                 $val    = $payload->getFieldMetadata()->getValueFromEntity($entity);
                 if ($val instanceof Collection) {
+                    // Don't add the sfid twice if it already exists
+                    if ($val->contains($sfid)) {
+                        $payload->setValue(new ArrayCollection($val->toArray()));
+                        return;
+                    }
+
                     $sfids = $val->toArray();
                     $sfids[] = $sfid;
                     $payload->setValue(new ArrayCollection($sfids));
