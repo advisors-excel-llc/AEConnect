@@ -11,6 +11,7 @@ namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\SalesforceRestSdk\Model\Rest\Metadata\Field;
+use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\ORM\Mapping\ClassMetadata;
 
 class TransformerPayload
@@ -36,6 +37,11 @@ class TransformerPayload
      * @var mixed
      */
     private $entity;
+
+    /**
+     * @var SObject|null
+     */
+    private $sObject;
 
     /**
      * @var Metadata
@@ -148,6 +154,26 @@ class TransformerPayload
     public function setEntity($entity)
     {
         $this->entity = $entity;
+
+        return $this;
+    }
+
+    /**
+     * @return SObject|null
+     */
+    public function getSObject(): ?SObject
+    {
+        return $this->sObject;
+    }
+
+    /**
+     * @param SObject|null $sObject
+     *
+     * @return TransformerPayload
+     */
+    public function setSObject(?SObject $sObject): TransformerPayload
+    {
+        $this->sObject = $sObject;
 
         return $this;
     }
