@@ -94,6 +94,27 @@ class InboundQueryProcessorTest extends DatabaseTestCase
         $this->assertContains('Item 1', $account->getTestPicklist());
     }
 
+    public function testSuffix()
+    {
+        /** @var Connection $conn */
+        $conn = $this->doctrine->getConnection();
+        $conn->exec("DELETE FROM account");
+
+        $connection = $this->connectionManager->getConnection();
+        $query = "SELECT * FROM Account WHERE Name='Inbound Query Processor' ORDER BY Id LIMIT 1 OFFSET 0";
+        $this->processor->process($connection, $query);
+
+        $manager = $this->doctrine->getManagerForClass(Account::class);
+        $repo = $manager->getRepository(Account::class);
+        /** @var Account[] $accounts */
+        $accounts = $repo->findAll();
+
+        $this->assertCount(1, $accounts);
+        $account = $accounts[0];
+        $this->assertEquals('Inbound Query Processor', $account->getName());
+        $this->assertContains('Item 1', $account->getTestPicklist());
+    }
+
     protected function tearDown()
     {
         $client = $this->connectionManager->getConnection()->getRestClient()->getSObjectClient();
