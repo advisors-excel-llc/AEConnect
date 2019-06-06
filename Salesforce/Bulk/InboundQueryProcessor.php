@@ -40,16 +40,32 @@ class InboundQueryProcessor
         $matches = [];
 
         if (preg_match(
-            '/^SELECT\s+(?P<fields>.+?)\s+FROM\s+(?P<objectType>[^\s]+)(\s+(?P<where>.+))?$/i',
+            '/^SELECT\s+(?P<fields>.+?)\s+FROM\s+(?P<objectType>[^\s]+)(\s+(?P<where>.+?))?(\s+ORDER BY\s+(?P<orderBy>.+?)\s*)?(LIMIT\s+(?P<limit>\d+?)\s*)?(OFFSET\s+(?P<offset>\d+?))?$/i',
             $query,
             $matches
         )) {
             $fields      = [];
             $objectType  = $matches['objectType'];
             $where       = array_key_exists('where', $matches) ? $matches['where'] : null;
+            $orderBy     = array_key_exists('orderBy', $matches) ? $matches['orderBy'] : null;
+            $limit       = array_key_exists('limit', $matches) ? $matches['limit'] : null;
+            $offset      = array_key_exists('offset', $matches) ? $matches['offset'] : null;
             $metadata    = $connection->getMetadataRegistry()->findMetadataBySObjectType($objectType);
             $queryFields = array_map('trim', explode(',', $matches['fields']));
             $wildCard    = in_array('*', $queryFields);
+            $suffix      = "";
+
+            if (null !== $orderBy) {
+                $suffix .= " ORDER BY $orderBy";
+            }
+
+            if (null !== $limit) {
+                $suffix .= " LIMIT $limit";
+            }
+
+            if (null !== $offset) {
+                $suffix .= " OFFSET $offset";
+            }
 
             foreach ($metadata as $metadatum) {
                 if ($wildCard) {
@@ -76,10 +92,10 @@ class InboundQueryProcessor
             }
 
             $records    = $countQuery->getRecords();
-            $updateSOQL = "SELECT ".implode(',', $fields)." FROM $objectType $where";
+            $updateSOQL = "SELECT ".implode(',', $fields)." FROM $objectType $where$suffix";
             $total      = $records[0]->total;
 
-            if ($total == 0) {
+            if ($total == 0 || $offset >= $total) {
                 throw new \RuntimeException("No results returned for the given query");
             }
 
