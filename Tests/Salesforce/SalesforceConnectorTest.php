@@ -20,8 +20,11 @@ use AE\ConnectBundle\Tests\Entity\Contact;
 use AE\ConnectBundle\Tests\Entity\Order;
 use AE\ConnectBundle\Tests\Entity\OrgConnection;
 use AE\ConnectBundle\Tests\Entity\Product;
+use AE\ConnectBundle\Tests\Entity\Task;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\DBAL\Connection;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use Enqueue\Client\DriverInterface;
 use Enqueue\Consumption\Result;
@@ -376,6 +379,121 @@ class SalesforceConnectorTest extends DatabaseTestCase
 
         $this->assertNotNull($account);
         $this->assertEquals('Test Recieving DBAL', $account->getName());
+    }
+
+    public function testDeadEntityManager()
+    {
+        /** @var Connection $conn */
+        $conn = $this->doctrine->getConnection();
+        $conn->exec("DELETE FROM task");
+        $sfid = SfidGenerator::generate();
+
+        $this->connector->receive(
+            new SObject(
+                [
+                    'Id'               => $sfid,
+                    'Type'             => 'Task',
+                    'Subject'          => 'Test Valid Insert',
+                    'Status'           => 'Open',
+                    '__SOBJECT_TYPE__' => 'Task',
+                ]
+            ),
+            SalesforceConsumerInterface::CREATED
+        );
+
+        /** @var EntityManagerInterface $objectManager */
+        $objectManager = $this->doctrine->getManagerForClass(Task::class);
+        /** @var Account $account */
+        $task = $objectManager
+            ->getRepository(Task::class)
+            ->findOneBy(['sfid' => $sfid])
+        ;
+        $this->assertNotNull($task);
+
+        $this->connector->receive(
+            new SObject(
+                [
+                    'Id'               => SfidGenerator::generate(),
+                    'Type'             => 'Task',
+                    'Subject'          => 'Test Failed Task',
+                    '__SOBJECT_TYPE__' => 'Task',
+                ]
+            ),
+            SalesforceConsumerInterface::CREATED
+        );
+
+        $this->assertFalse($this->doctrine->getManagerForClass(Task::class)->isOpen());
+
+        $sfid2 = SfidGenerator::generate();
+
+        $this->connector->receive(
+            new SObject(
+                [
+                    'Id'               => $sfid2,
+                    'Subject'          => 'Test After Failed Account',
+                    'Type'             => 'Task',
+                    '__SOBJECT_TYPE__' => 'Task',
+                    'Status'           => 'Open',
+                ]
+            ),
+            SalesforceConsumerInterface::CREATED
+        );
+
+        $account2 = $objectManager->getRepository(Account::class)->findBy(['sfid' => $sfid2]);
+        $this->assertNotNull($account2);
+    }
+
+    public function testDeadEntityManagerBulk()
+    {
+        /** @var Connection $conn */
+        $conn = $this->doctrine->getConnection();
+        $conn->exec("DELETE FROM task");
+        $sfid = SfidGenerator::generate();
+        $sfid2 = SfidGenerator::generate();
+
+        $this->connector->receive(
+            [
+                new SObject(
+                    [
+                        'Id'               => $sfid,
+                        'Type'             => 'Task',
+                        'Subject'          => 'Test Valid Insert',
+                        'Status'           => 'Open',
+                        '__SOBJECT_TYPE__' => 'Task',
+                    ]
+                ),
+                new SObject(
+                    [
+                        'Id'               => SfidGenerator::generate(),
+                        'Type'             => 'Task',
+                        'Subject'          => 'Test Failed Task',
+                        '__SOBJECT_TYPE__' => 'Task',
+                    ]
+                ),
+                new SObject(
+                    [
+                        'Id'               => $sfid2,
+                        'Subject'          => 'Test After Failed Account',
+                        'Type'             => 'Task',
+                        '__SOBJECT_TYPE__' => 'Task',
+                        'Status'           => 'Open',
+                    ]
+                ),
+            ],
+            SalesforceConsumerInterface::CREATED
+        );
+
+        /** @var EntityManagerInterface $objectManager */
+        $objectManager = $this->doctrine->getManagerForClass(Task::class);
+        /** @var Account $account */
+        $task = $objectManager
+            ->getRepository(Task::class)
+            ->findOneBy(['sfid' => $sfid])
+        ;
+        $this->assertNotNull($task);
+        $this->assertFalse($this->doctrine->getManagerForClass(Task::class)->isOpen());
+        $account2 = $objectManager->getRepository(Account::class)->findBy(['sfid' => $sfid2]);
+        $this->assertNotNull($account2);
     }
 
     private function createOrder(array &$queue, string $connectionName = 'default')
