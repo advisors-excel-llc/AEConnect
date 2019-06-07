@@ -357,8 +357,10 @@ class RequestBuilderTest extends DatabaseTestCase
         /** @var Account $account */
         foreach ($accounts as $account) {
             $task = new Task();
-            $task->setAccount($account);
-            $task->setSubject('Test Task for '.$account->getName());
+            $task->setAccount($account)
+                 ->setSubject('Test Task for '.$account->getName())
+                ->setStatus('Open')
+            ;
             $manager->persist($task);
             $result = $this->compiler->compile($task);
             $queue->add($result);
