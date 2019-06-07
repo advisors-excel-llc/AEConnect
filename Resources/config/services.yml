@@ -152,6 +152,10 @@ services:
     AE\ConnectBundle\Command\DebugStreamingCommand:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+            $sfdcExtension: '@AE\SalesforceRestSdk\Bayeux\Extension\SfdcExtension'
+            $logger: '@?Psr\Log\LoggerInterface'
+        calls:
+            - ['setContainer', ['@service_container']]
         tags: ['console.command']
     AE\ConnectBundle\Command\QueryImportCommand:
         arguments:

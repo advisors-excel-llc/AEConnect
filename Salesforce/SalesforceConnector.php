@@ -13,7 +13,6 @@ use AE\ConnectBundle\Salesforce\Inbound\SalesforceConsumerInterface;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
 use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
-use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
@@ -129,15 +128,15 @@ class SalesforceConnector implements LoggerAwareInterface
     }
 
     /**
-     * @param SObject|SObject[] $object
+     * @param $object
      * @param string $intent
      * @param string $connectionName
      * @param bool $validate
      *
+     * @return bool
      * @throws MappingException
      * @throws ORMException
-     *
-     * @return bool
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      */
     public function receive($object, string $intent, string $connectionName = 'default', $validate = true): bool
     {
@@ -161,58 +160,8 @@ class SalesforceConnector implements LoggerAwareInterface
             return false;
         }
 
-        /** @var EntityManagerInterface[] $managers */
-        $managers = [];
-
-        foreach ($entities as $entity) {
-            $class = ClassUtils::getClass($entity);
-
-            if (!array_key_exists($class, $managers)) {
-                $managers[$class] = $this->registry->getManagerForClass($class);
-            }
-
-            $manager = $managers[$class];
-
-            // If an exceptino is thrown by the entity manager, it can force it to close
-            // This is how we can reopen it for future transactions
-            if (!$manager->isOpen()) {
-                $manager = $managers[$class] = EntityManager::create(
-                    $manager->getConnection(),
-                    $manager->getConfiguration(),
-                    $manager->getEventManager()
-                );
-            }
-
-            switch ($intent) {
-                case SalesforceConsumerInterface::CREATED:
-                case SalesforceConsumerInterface::UPDATED:
-                    $manager->merge($entity);
-                    break;
-                case SalesforceConsumerInterface::DELETED:
-                    $manager->remove($entity);
-                    break;
-            }
-
-            $this->logger->info('{intent} entity of type {type}', ['intent' => $intent, 'type' => $class]);
-        }
-
-        foreach ($managers as $class => $manager) {
-            try {
-                // Again, another check to make sure the manager is open
-                if (!$manager->isOpen()) {
-                    continue;
-                }
-                $manager->transactional(
-                    function ($em) use ($class) {
-                        $em->flush();
-                        $em->clear($class);
-                    }
-                );
-            } catch (\Throwable $t) {
-                $this->logger->critical($t->getMessage());
-                $manager->clear($class);
-            }
-        }
+        // Attempt to save all entities in as few transactions as possible
+        $this->saveEntitiesToDB($intent, $entities);
 
         return true;
     }
@@ -235,5 +184,103 @@ class SalesforceConnector implements LoggerAwareInterface
         $this->enabled = false;
 
         return $this;
+    }
+
+    /**
+     * @param string $intent
+     * @param $entities
+     * @param bool $transactional
+     *
+     * @throws ORMException
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
+     */
+    private function saveEntitiesToDB(string $intent, $entities, bool $transactional = true): void
+    {
+        /** @var EntityManagerInterface[] $managers */
+        $managers = [];
+
+        if (!is_array($entities)) {
+            $entities = [$entities];
+        }
+
+        $entityMap = [];
+
+        foreach ($entities as $entity) {
+            $class = ClassUtils::getClass($entity);
+
+            if (!array_key_exists($class, $managers)) {
+                $managers[$class] = $this->registry->getManagerForClass($class);
+            }
+
+            $manager = $managers[$class];
+
+            // If an exception is thrown by the entity manager, it can force it to close
+            // This is how we can reopen it for future transactions
+            if (!$manager->isOpen()) {
+                $manager = $managers[$class] = EntityManager::create(
+                    $manager->getConnection(),
+                    $manager->getConfiguration(),
+                    $manager->getEventManager()
+                );
+            }
+
+            switch ($intent) {
+                case SalesforceConsumerInterface::CREATED:
+                case SalesforceConsumerInterface::UPDATED:
+                    $manager->merge($entity);
+                    break;
+                case SalesforceConsumerInterface::DELETED:
+                    $manager->remove($entity);
+                    break;
+            }
+
+            if ($transactional) {
+                // When running transactionally, we need to keep track of things in case of an error
+                $entityMap[$class][$intent][] = $entity;
+            } else {
+                // If not running transactional, flush the entity now
+                try {
+                    $manager->flush();
+                } catch (\Throwable $t) {
+                    // If an error occurs, log it and carry on
+                    $this->logger->critical($t->getMessage());
+                }
+                // Clear memory to prevent buildup
+                $manager->clear($class);
+            }
+
+            $this->logger->info('{intent} entity of type {type}', ['intent' => $intent, 'type' => $class]);
+        }
+
+
+        // In a transactional run, run through each of the managers for a class (in case they differ) and flush the
+        // contents
+        if ($transactional) {
+            foreach ($managers as $class => $manager) {// Again, another check to make sure the manager is open
+                if (!$manager->isOpen()) {
+                    continue;
+                }
+                try {
+                    $manager->transactional(
+                        function (EntityManagerInterface $em) use ($class) {
+                            $em->flush();
+                            $em->clear($class);
+                        }
+                    );
+                } catch (\Throwable $t) {
+                    $this->logger->critical($t->getMessage());
+                    // Clear the current entity manager to save memory
+                    $manager->clear($class);
+                    // If a transaction fails, try to save entries one by one
+                    if (array_key_exists($class, $entityMap)) {
+                        foreach ($entityMap[$class] as $intent => $ens) {
+                            $this->saveEntitiesToDB($intent, $ens, false);
+                        }
+                        // Clear entity map to save memory
+                        unset($entityMap[$class]);
+                    }
+                }
+            }
+        }
     }
 }

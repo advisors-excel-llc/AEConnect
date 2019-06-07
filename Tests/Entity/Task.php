@@ -60,7 +60,7 @@ class Task
      * @ORM\Column(length=8, nullable=false)
      * @Field("Status")
      */
-    private $status = "Open";
+    private $status;
 
     /**
      * @var string
