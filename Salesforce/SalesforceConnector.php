@@ -227,6 +227,7 @@ class SalesforceConnector implements LoggerAwareInterface
             switch ($intent) {
                 case SalesforceConsumerInterface::CREATED:
                 case SalesforceConsumerInterface::UPDATED:
+                case SalesforceConsumerInterface::UNDELETED:
                     $manager->merge($entity);
                     break;
                 case SalesforceConsumerInterface::DELETED:
@@ -243,7 +244,7 @@ class SalesforceConnector implements LoggerAwareInterface
                     $manager->flush();
                 } catch (\Throwable $t) {
                     // If an error occurs, log it and carry on
-                    $this->logger->critical($t->getMessage());
+                    $this->logger->warning($t->getMessage());
                 }
                 // Clear memory to prevent buildup
                 $manager->clear($class);
@@ -268,7 +269,7 @@ class SalesforceConnector implements LoggerAwareInterface
                         }
                     );
                 } catch (\Throwable $t) {
-                    $this->logger->critical($t->getMessage());
+                    $this->logger->warning($t->getMessage());
                     // Clear the current entity manager to save memory
                     $manager->clear($class);
                     // If a transaction fails, try to save entries one by one

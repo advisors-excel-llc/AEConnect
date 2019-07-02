@@ -198,6 +198,9 @@ class DbalConnectionDriver
 
                     $connection->setAlias($proxy->getName());
                     $connection->setActive($entity->isActive());
+                    $connection->setAppName($config['app_name']);
+                    $connection->setAppFilteringEnabled($config['config']['app_filtering']['enabled']);
+                    $connection->setPermittedFilteredObjects($config['config']['app_filtering']['permitted_objects']);
 
                     try {
                         if ($connection->isActive()) {

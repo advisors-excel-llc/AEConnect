@@ -32,6 +32,7 @@ class ConfigurationTest extends TestCase
                 'default_connection' => 'default',
                 'enqueue'            => 'default',
                 'connections'        => [],
+                'app_name'           => null,
             ]
         );
     }
@@ -79,8 +80,10 @@ class ConfigurationTest extends TestCase
                 'paths'              => ['%kernel.project_dir%/src/App/Entity'],
                 'default_connection' => 'default',
                 'enqueue'            => 'default',
+                'app_name'           => null,
                 'connections'        => [
                     'default' => [
+                        'version'         => '44.0',
                         'login'           => [
                             'key'      => 'client_key',
                             'secret'   => 'client_secret',
@@ -106,6 +109,10 @@ class ConfigurationTest extends TestCase
                             'use_change_data_capture' => true,
                             'bulk_api_min_count'      => 100000,
                             'connection_logger'       => 'logger',
+                            'app_filtering'           => [
+                                'enabled'           => true,
+                                'permitted_objects' => [],
+                            ],
                         ],
                         'platform_events' => [
                             'TestEvent__e',
@@ -134,6 +141,7 @@ class ConfigurationTest extends TestCase
                 'ae_connect' => [
                     'paths'       => ['%kernel.project_dir%/src/App/Entity'],
                     'enqueue'     => 'some_config',
+                    'app_name'    => 'testing_app',
                     'connections' => [
                         'default'     => [
                             'login'  => [
@@ -152,10 +160,11 @@ class ConfigurationTest extends TestCase
                             ],
                         ],
                         'non_default' => [
-                            'login'  => [
+                            'version' => '46.0',
+                            'login'   => [
                                 'entity' => 'App\\Entity\\Connection',
                             ],
-                            'topics' => [
+                            'topics'  => [
                                 'TestTopic'  => [
                                     'type'   => 'Account',
                                     'filter' => [
@@ -169,7 +178,7 @@ class ConfigurationTest extends TestCase
                                     ],
                                 ],
                             ],
-                            'config' => [
+                            'config'  => [
                                 'replay_start_id'         => -1,
                                 'cache'                   => [
                                     'metadata_provider' => 'test_metadata',
@@ -179,6 +188,11 @@ class ConfigurationTest extends TestCase
                                 'use_change_data_capture' => true,
                                 'bulk_api_min_count'      => PHP_INT_MAX,
                                 'connection_logger'       => 'test_logger',
+                                'app_filtering'           => [
+                                    'permitted_objects' => [
+                                        'Case',
+                                    ],
+                                ],
                             ],
                         ],
                     ],
@@ -188,8 +202,10 @@ class ConfigurationTest extends TestCase
                 'paths'              => ['%kernel.project_dir%/src/App/Entity'],
                 'default_connection' => 'default',
                 'enqueue'            => 'some_config',
+                'app_name'           => 'testing_app',
                 'connections'        => [
                     'default'     => [
+                        'version'         => '44.0',
                         'login'           => [
                             'key'      => 'client_key',
                             'secret'   => 'client_secret',
@@ -215,6 +231,10 @@ class ConfigurationTest extends TestCase
                             'use_change_data_capture' => true,
                             'bulk_api_min_count'      => 100000,
                             'connection_logger'       => 'logger',
+                            'app_filtering'           => [
+                                'enabled'           => true,
+                                'permitted_objects' => [],
+                            ],
                         ],
                         'platform_events' => [],
                         'objects'         => [],
@@ -223,6 +243,7 @@ class ConfigurationTest extends TestCase
                         'polling'         => [],
                     ],
                     'non_default' => [
+                        'version'         => '46.0',
                         'login'           => [
                             'entity' => 'App\\Entity\\Connection',
                             'url'    => 'https://login.salesforce.com',
@@ -251,6 +272,12 @@ class ConfigurationTest extends TestCase
                             'use_change_data_capture' => true,
                             'bulk_api_min_count'      => PHP_INT_MAX,
                             'connection_logger'       => 'test_logger',
+                            'app_filtering'           => [
+                                'enabled'           => true,
+                                'permitted_objects' => [
+                                    'Case',
+                                ],
+                            ],
                         ],
                         'platform_events' => [],
                         'objects'         => [],

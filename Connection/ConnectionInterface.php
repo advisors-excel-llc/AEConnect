@@ -22,7 +22,13 @@ interface ConnectionInterface
     public function getBulkClient(): BulkClient;
     public function getMetadataRegistry(): MetadataRegistry;
     public function isDefault(): bool;
-    public function isActive();
+    public function isActive(): bool;
     public function hydrateMetadataDescribe();
     public function getBulkApiMinCount(): int;
+    public function setAppName(string $name);
+    public function getAppName(): ?string;
+    public function isAppFilteringEnabled(): bool;
+    public function setAppFilteringEnabled(bool $enabled);
+    public function getPermittedFilteredObjects(): array;
+    public function setPermittedFilteredObjects(array $objects);
 }

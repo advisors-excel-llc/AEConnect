@@ -6,7 +6,7 @@
  * Time: 12:11 PM
  */
 
-namespace AE\ConnectBundle\Tests\Salesforce\Inbound;
+namespace AE\ConnectBundle\Tests\Salesforce\Inbound\Compiler;
 
 use AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
