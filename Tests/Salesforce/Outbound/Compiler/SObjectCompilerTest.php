@@ -15,6 +15,7 @@ use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Contact;
+use AE\ConnectBundle\Tests\Salesforce\SfidGenerator;
 use Ramsey\Uuid\Uuid;
 
 class SObjectCompilerTest extends DatabaseTestCase
@@ -42,6 +43,7 @@ class SObjectCompilerTest extends DatabaseTestCase
         $manager = $this->doctrine->getManager();
         $account = new Account();
         $account->setName('Test Account');
+        $account->setCreatedDate(new \DateTime());
 
         $manager->persist($account);
 
@@ -69,6 +71,7 @@ class SObjectCompilerTest extends DatabaseTestCase
                 'extId'        => 'S3F__hcid__c',
                 'sfid'         => 'Id',
                 'testPicklist' => 'S3F__Test_Picklist__c',
+                'createdDate'  => 'CreatedDate'
             ],
             $metadata->getPropertyMap()
         );
@@ -77,6 +80,14 @@ class SObjectCompilerTest extends DatabaseTestCase
         $this->assertNotNull($sObject);
         $this->assertEquals('Test Account', $sObject->Name);
         $this->assertEquals('Account', $sObject->getType());
+        $this->assertArraySubset(
+            [
+                'Id',
+                'S3F__hcid__c',
+                'Name',
+            ],
+            array_keys($sObject->getFields())
+        );
 
         $contactResult = $this->compiler->compile($contact);
         $this->assertEquals(CompilerResult::INSERT, $contactResult->getIntent());
@@ -113,11 +124,13 @@ class SObjectCompilerTest extends DatabaseTestCase
     {
         $manager = $this->doctrine->getManager();
         $extId   = Uuid::uuid4();
+        $sfid    = SfidGenerator::generate();
         $account = new Account();
         $account->setName('Test Update')
                 ->setConnection('default')
-                ->setSfid('000111000111001')
+                ->setSfid($sfid)
                 ->setExtId($extId)
+                ->setCreatedDate(new \DateTime())
         ;
 
         $manager->persist($account);
@@ -135,9 +148,17 @@ class SObjectCompilerTest extends DatabaseTestCase
 
         $object = $compiled->getSObject();
 
+        $this->assertArraySubset(
+            [
+                'Id',
+                'S3F__hcid__c',
+                'Name',
+            ],
+            array_keys($object->getFields())
+        );
         $this->assertEquals('Test Update Name', $object->Name);
         $this->assertEquals($extId->toString(), $object->S3F__hcid__c);
-        $this->assertEquals('000111000111001', $object->Id);
+        $this->assertEquals($sfid, $object->Id);
         $this->assertNull($object->S3F__Test_Picklist__c);
 
         $manager->remove($account);

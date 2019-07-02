@@ -50,9 +50,7 @@ class DebugStreamingCommand extends Command implements LoggerAwareInterface, Con
         SfdcExtension $sfdcExtension,
         ?LoggerInterface $logger = null
     ) {
-        parent::__construct('debug:ae_connect:stream')
-              ->addOption('replay-id', 'r', InputOption::VALUE_OPTIONAL)
-        ;
+        parent::__construct('debug:ae_connect:stream');
 
         $this->connectionManager = $connectionManager;
         $this->sfdcExtension     = $sfdcExtension;
@@ -64,7 +62,9 @@ class DebugStreamingCommand extends Command implements LoggerAwareInterface, Con
      */
     protected function configure()
     {
-        $this->addArgument('connection', InputArgument::OPTIONAL, 'The name of the connection to debug', 'default');
+        $this->addArgument('connection', InputArgument::OPTIONAL, 'The name of the connection to debug', 'default')
+             ->addOption('replay-id', 'r', InputOption::VALUE_OPTIONAL)
+        ;
     }
 
     /**

@@ -53,7 +53,7 @@ class StreamingClientTest extends DatabaseTestCase
                                               new SObject(
                                                   [
                                                       'Name' => 'Test Streaming Account',
-                                                      'S3F_Hcid__c' => Uuid::uuid4()
+                                                      'S3F__Hcid__c' => Uuid::uuid4()->toString()
                                                   ]
                                               )
                                           );
@@ -71,6 +71,8 @@ class StreamingClientTest extends DatabaseTestCase
                     $this->assertNotNull($payload);
                     $this->assertArrayHasKey('ChangeEventHeader', $payload);
                     $accountId = $payload['ChangeEventHeader']['recordIds'][0];
+                    $origin = $payload['ChangeEventHeader']['changeOrigin'];
+                    $this->assertEquals(';client=AEConnect', substr($origin, -17));
                     $this->streamingClient->stop();
                 }
             )
@@ -101,7 +103,7 @@ class StreamingClientTest extends DatabaseTestCase
                                               new SObject(
                                                   [
                                                       'Name' => 'Test Streaming Object',
-                                                      'S3F__HCID__c' => Uuid::uuid4(),
+                                                      'S3F__HCID__c' => Uuid::uuid4()->toString(),
                                                   ]
                                               )
                                           );

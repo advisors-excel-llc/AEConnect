@@ -14,19 +14,25 @@ use AE\SalesforceRestSdk\Bayeux\ChannelInterface;
 use AE\SalesforceRestSdk\Bayeux\Message;
 use AE\SalesforceRestSdk\Bayeux\Salesforce\Event;
 use AE\SalesforceRestSdk\Model\SObject;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 class SObjectConsumer implements SalesforceConsumerInterface
 {
     use ConnectionsTrait;
+    use LoggerAwareTrait;
 
     /**
      * @var SalesforceConnector
      */
     private $connector;
 
-    public function __construct(SalesforceConnector $connector)
+    public function __construct(SalesforceConnector $connector, ?LoggerInterface $logger = null)
     {
         $this->connector = $connector;
+
+        $this->setLogger($logger ?: new NullLogger());
     }
 
     public function channels(): array
@@ -40,6 +46,14 @@ class SObjectConsumer implements SalesforceConsumerInterface
     public function consume(ChannelInterface $channel, Message $message)
     {
         $data = $message->getData();
+
+        $this->logger->debug(
+            "LISTENER RECEIVED: Channel `{channel}` | {data}",
+            [
+                'channel' => $channel->getChannelId(),
+                'data'    => $message->getData(),
+            ]
+        );
 
         if (null !== $data) {
             if (null !== $data->getSobject()) {
@@ -61,6 +75,11 @@ class SObjectConsumer implements SalesforceConsumerInterface
         unset($payload['ChangeEventHeader']);
 
         $intent = $changeEventHeader['changeType'];
+        $origin = $changeEventHeader['changeOrigin'];
+
+        if (false !== ($pos = strpos($origin, ';'))) {
+            $origin = substr($origin, $pos + 8); // ;client=$origin
+        }
 
         switch ($intent) {
             case "CREATE":
@@ -72,16 +91,30 @@ class SObjectConsumer implements SalesforceConsumerInterface
             case "DELETE":
                 $intent = SalesforceConsumerInterface::DELETED;
                 break;
+            case "UNDELETE":
+                $intent = SalesforceConsumerInterface::UNDELETED;
+                break;
+            default:
+                return;
         }
 
         $sObject = new SObject(
             $payload + [
                 '__SOBJECT_TYPE__' => $changeEventHeader['entityName'],
-                'Id'                => $changeEventHeader['recordIds'][0],
+                'Id'               => $changeEventHeader['recordIds'][0],
             ]
         );
 
         foreach ($this->connections as $connection) {
+            if ($origin === $connection->getAppName() &&
+                !in_array(
+                    $changeEventHeader['entityName'],
+                    $connection->getPermittedFilteredObjects()
+                )
+            ) {
+                continue;
+            }
+
             $this->connector->receive($sObject, $intent, $connection->getName());
         }
     }

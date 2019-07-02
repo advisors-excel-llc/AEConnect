@@ -12,9 +12,10 @@ use AE\SalesforceRestSdk\Bayeux\ConsumerInterface;
 
 interface SalesforceConsumerInterface extends ConsumerInterface
 {
-    public const CREATED = "CREATED";
-    public const UPDATED = "UPDATED";
-    public const DELETED = "DELETED";
+    public const CREATED   = "CREATED";
+    public const UPDATED   = "UPDATED";
+    public const DELETED   = "DELETED";
+    public const UNDELETED = "UNDELETED";
 
     /**
      * Channels can be an explicit list of channel names, such as '/topic/Whatever' or an associative array of

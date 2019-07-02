@@ -86,6 +86,12 @@ class Account
      */
     private $sfids;
 
+    /**
+     * @var \DateTimeInterface|null
+     * @ORM\Column(type="datetimetz", nullable=true)
+     */
+    private $createdDate;
+
     public function __construct()
     {
         $this->connections = new ArrayCollection();
@@ -248,6 +254,27 @@ class Account
     public function setSfids($sfids)
     {
         $this->sfids = $sfids;
+
+        return $this;
+    }
+
+    /**
+     * @return \DateTimeInterface|null
+     */
+    public function getCreatedDate(): ?\DateTimeInterface
+    {
+        return $this->createdDate;
+    }
+
+    /**
+     * @param \DateTimeInterface|null $createdDate
+     * @AEConnect\Field("CreatedDate", connections={"default"})
+     *
+     * @return Account
+     */
+    public function setCreatedDate(?\DateTimeInterface $createdDate): Account
+    {
+        $this->createdDate = $createdDate;
 
         return $this;
     }

@@ -30,6 +30,7 @@ class Configuration implements ConfigurationInterface
                     ->defaultValue([])
                     ->scalarPrototype()->end()
                 ->end()
+                ->scalarNode('app_name')->defaultNull()->end()
                 ->scalarNode('default_connection')
                     ->defaultValue('default')
                 ->end()
@@ -63,6 +64,7 @@ class Configuration implements ConfigurationInterface
 
         return $root->prototype('array')
                     ->children()
+                        ->scalarNode('version')->defaultValue('44.0')->end()
                         ->append($this->buildLoginTree())
                         ->append($this->buildTopicsTree())
                         ->append($this->buildPlatformEventsTree())
@@ -160,6 +162,15 @@ class Configuration implements ConfigurationInterface
                         ->end()
                     ->end()
                     ->scalarNode('connection_logger')->defaultValue('logger')->end()
+                    ->arrayNode('app_filtering')
+                        ->addDefaultsIfNotSet()
+                        ->children()
+                            ->booleanNode('enabled')->defaultTrue()->end()
+                            ->arrayNode('permitted_objects')
+                                ->prototype('scalar')->end()
+                            ->end()
+                        ->end()
+                    ->end()
                 ->end()
         ;
     }

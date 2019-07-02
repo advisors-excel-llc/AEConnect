@@ -80,7 +80,10 @@ services:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Inbound\SObjectConsumer:
-        $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+        arguments:
+            $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+        calls:
+            - ['setLogger', ['@Psr\Log\LoggerInterface']]
     AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService:
         $cache: '@doctrine_cache.providers.ae_connect_polling'
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'

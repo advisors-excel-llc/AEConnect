@@ -67,6 +67,21 @@ class Connection implements ConnectionInterface
     private $active = true;
 
     /**
+     * @var string|null
+     */
+    private $appName;
+
+    /**
+     * @var bool
+     */
+    private $appFilteringEnabled = true;
+
+    /**
+     * @var array
+     */
+    private $permittedFilteredObjects = [];
+
+    /**
      * Connection constructor.
      *
      * @param string $name
@@ -233,5 +248,65 @@ class Connection implements ConnectionInterface
                 }
             }
         }
+    }
+
+    /**
+     * @return null|string
+     */
+    public function getAppName(): ?string
+    {
+        return $this->appName;
+    }
+
+    /**
+     * @param null|string $appName
+     *
+     * @return Connection
+     */
+    public function setAppName(?string $appName): Connection
+    {
+        $this->appName = $appName;
+
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isAppFilteringEnabled(): bool
+    {
+        return $this->appFilteringEnabled;
+    }
+
+    /**
+     * @param bool $appFilteringEnabled
+     *
+     * @return Connection
+     */
+    public function setAppFilteringEnabled(bool $appFilteringEnabled): Connection
+    {
+        $this->appFilteringEnabled = $appFilteringEnabled;
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getPermittedFilteredObjects(): array
+    {
+        return $this->permittedFilteredObjects;
+    }
+
+    /**
+     * @param array $permittedFilteredObjects
+     *
+     * @return Connection
+     */
+    public function setPermittedFilteredObjects(array $permittedFilteredObjects): Connection
+    {
+        $this->permittedFilteredObjects = $permittedFilteredObjects;
+
+        return $this;
     }
 }

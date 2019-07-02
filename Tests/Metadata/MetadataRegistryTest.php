@@ -43,7 +43,12 @@ class MetadataRegistryTest extends KernelTestCase
         $this->assertNotNull($metadatum);
 
         $this->assertArraySubset(
-            ['sfid' => 'Id', 'name' => 'Name', 'extId' => 'S3F__hcid__c', 'testPicklist' => 'S3F__Test_Picklist__c'],
+            ['sfid'         => 'Id',
+             'name'         => 'Name',
+             'extId'        => 'S3F__hcid__c',
+             'testPicklist' => 'S3F__Test_Picklist__c',
+             'createdDate'  => 'CreatedDate',
+            ],
             $metadatum->getPropertyMap()
         );
 
