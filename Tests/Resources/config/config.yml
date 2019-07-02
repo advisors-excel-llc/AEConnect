@@ -82,8 +82,10 @@ enqueue:
 
 ae_connect:
     paths: ["%kernel.project_dir%/Tests/Entity"]
+    app_name: 'AEConnect'
     connections:
         default:
+            version: "46.0"
             login:
                 key: "%env(SF_CLIENT_ID)%"
                 secret: "%env(SF_CLIENT_SECRET)%"
@@ -99,9 +101,17 @@ ae_connect:
                     type: 'S3F__Test_Object__c'
             config:
                 replay_start_id: !php/const AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension::REPLAY_SAVED
+                app_filtering:
+                    enabled: false
         db_test:
             login:
                 entity: 'AE\ConnectBundle\Tests\Entity\OrgConnection'
+            config:
+                app_filtering:
+                    enabled: false
         db_oauth_test:
             login:
                 entity: 'AE\ConnectBundle\Tests\Entity\Organization'
+            config:
+                app_filtering:
+                    enabled: false

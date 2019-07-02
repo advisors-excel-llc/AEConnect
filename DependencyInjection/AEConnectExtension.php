@@ -112,9 +112,11 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
     {
         $this->processEnqueue($config['enqueue'], $container);
         $connections = $config['connections'];
+        $appName     = $config['app_name'];
 
         if (count($connections) > 0) {
             foreach ($connections as $name => $connection) {
+                $version = $connection['version'];
                 // Alias Auth Provider Cache
                 $cacheProviderId = "doctrine_cache.providers.{$connection['config']['cache']['auth_provider']}";
                 $container->setAlias("ae_connect.connection.$name.cache.auth_provider", $cacheProviderId);
@@ -131,7 +133,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
                     $proxy = $container->register('ae_connect.connection_proxy.'.$name, ConnectionProxy::class)
                                        ->addMethodCall('setName', [$name])
-                                       ->addMethodCall('setConfig', [$connection])
+                                       ->addMethodCall('setConfig', [$connection + ['app_name' => $appName]])
                                        ->addMethodCall(
                                            'setMetadataRegistry',
                                            [new Reference("ae_connect.connection.$name.metadata_registry")]
@@ -153,10 +155,10 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                         $container,
                         $connection['config']['connection_logger']
                     );
-                    $this->createBayeuxClientService($name, $container);
+                    $this->createBayeuxClientService($name, $container, $version);
                     $this->createStreamingClientService($name, $connection, $container);
-                    $this->createRestClientService($name, $container);
-                    $this->createBulkClientExtension($name, $container);
+                    $this->createRestClientService($name, $container, $version, $appName);
+                    $this->createBulkClientExtension($name, $container, $version);
                     $this->createReplayExtensionService($connection, $name, $replayCacheProviderId, $container);
                     $this->createMetadataRegistryService(
                         $connection,
@@ -168,7 +170,10 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                         $name,
                         $name === $config['default_connection'],
                         $container,
-                        $connection['config']['bulk_api_min_count']
+                        $connection['config']['bulk_api_min_count'],
+                        $appName,
+                        $connection['config']['app_filtering']['enabled'],
+                        $connection['config']['app_filtering']['permitted_objects']
                     );
 
                     if ($name !== "default" && $name === $config['default_connection']) {
@@ -325,6 +330,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
      * @param ContainerBuilder $container
      * @param Definition $def
      * @param bool $useCdc
+     *
      * @deprecated
      */
     private function buildObjects(
@@ -448,11 +454,16 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
     /**
      * @param string $connectionName
      * @param ContainerBuilder $container
+     * @param string $version
      */
-    private function createBayeuxClientService(string $connectionName, ContainerBuilder $container): void
-    {
+    private function createBayeuxClientService(
+        string $connectionName,
+        ContainerBuilder $container,
+        string $version
+    ): void {
         $container->register("ae_connect.connection.$connectionName.bayeux_client", BayeuxClient::class)
                   ->setArgument('$authProvider', new Reference("ae_connect.connection.$connectionName.auth_provider"))
+                  ->setArgument('$version', $version)
                   ->setAutowired(true)
         ;
     }
@@ -460,14 +471,22 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
     /**
      * @param string $connectionName
      * @param ContainerBuilder $container
+     * @param string $version
+     * @param string|null $appName
      */
-    private function createRestClientService(string $connectionName, ContainerBuilder $container): void
-    {
+    private function createRestClientService(
+        string $connectionName,
+        ContainerBuilder $container,
+        string $version,
+        ?string $appName = null
+    ): void {
         $container->register(
             "ae_connect.connection.$connectionName.rest_client",
             \AE\SalesforceRestSdk\Rest\Client::class
         )
                   ->setArgument('$provider', new Reference("ae_connect.connection.$connectionName.auth_provider"))
+                  ->setArgument('$version', $version)
+                  ->setArgument('$appName', $appName)
                   ->setAutowired(true)
         ;
     }
@@ -475,14 +494,20 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
     /**
      * @param string $connectionName
      * @param ContainerBuilder $container
+     * @param string $version
      */
-    private function createBulkClientExtension(string $connectionName, ContainerBuilder $container): void
-    {
+    private
+    function createBulkClientExtension(
+        string $connectionName,
+        ContainerBuilder $container,
+        string $version
+    ): void {
         $container->register(
             "ae_connect.connection.$connectionName.bulk_client",
             \AE\SalesforceRestSdk\Bulk\Client::class
         )
                   ->setArgument('$authProvider', new Reference("ae_connect.connection.$connectionName.auth_provider"))
+                  ->setArgument('$version', $version)
                   ->setAutowired(true)
         ;
     }
@@ -490,9 +515,11 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
     /**
      * @param array $config
      * @param string $connectionName
+     * @param string $replayCacheId
      * @param ContainerBuilder $container
      */
-    private function createReplayExtensionService(
+    private
+    function createReplayExtensionService(
         array $config,
         string $connectionName,
         string $replayCacheId,
@@ -515,7 +542,8 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
      * @param ContainerBuilder $container
      * @param bool $isDefault
      */
-    private function createMetadataRegistryService(
+    private
+    function createMetadataRegistryService(
         array $config,
         string $connectionName,
         ContainerBuilder $container,
@@ -541,12 +569,19 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
      * @param bool $isDefault
      * @param ContainerBuilder $container
      * @param int $bulkQueryMinCount
+     * @param string|null $appName
+     * @param bool $appFilteringEnabled ,
+     * @param array $permittedObjects
      */
-    private function createConnectionService(
+    private
+    function createConnectionService(
         string $connectionName,
         bool $isDefault,
         ContainerBuilder $container,
-        int $bulkQueryMinCount = 100000
+        int $bulkQueryMinCount = 100000,
+        ?string $appName,
+        bool $appFilteringEnabled = true,
+        array $permittedObjects = []
     ): void {
         $container->register("ae_connect.connection.$connectionName", Connection::class)
                   ->setArguments(
@@ -571,6 +606,9 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                   ->setPublic(true)
                   ->setAutowired(true)
                   ->setAutoconfigured(true)
+                  ->addMethodCall('setAppName', [$appName])
+                  ->addMethodCall('setAppFilteringEnabled', [$appFilteringEnabled])
+                  ->addMethodCall('setPermittedFilteredObjects', [$permittedObjects])
                   ->addTag('ae_connect.connection')
         ;
     }
