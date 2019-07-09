@@ -8,7 +8,7 @@
 
 namespace AE\ConnectBundle\Tests\DependencyInjection\Configuration;
 
-use AE\ConnectBundle\DependencyInjection\Configuration\Configuration;
+use AE\ConnectBundle\DependencyInjection\Configuration;
 use Matthias\SymfonyConfigTest\PhpUnit\ConfigurationTestCaseTrait;
 use PHPUnit\Framework\TestCase;
 
