@@ -11,8 +11,11 @@ namespace AE\ConnectBundle\Tests\Metadata;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Tests\Entity\Account;
+use AE\ConnectBundle\Tests\Entity\TestMultiMapType1;
+use AE\ConnectBundle\Tests\Entity\TestMultiMapType2;
 use AE\ConnectBundle\Tests\Entity\TestObject;
 use AE\ConnectBundle\Tests\KernelTestCase;
+use AE\SalesforceRestSdk\Model\SObject;
 
 class MetadataRegistryTest extends KernelTestCase
 {
@@ -43,11 +46,12 @@ class MetadataRegistryTest extends KernelTestCase
         $this->assertNotNull($metadatum);
 
         $this->assertArraySubset(
-            ['sfid'         => 'Id',
-             'name'         => 'Name',
-             'extId'        => 'S3F__hcid__c',
-             'testPicklist' => 'S3F__Test_Picklist__c',
-             'createdDate'  => 'CreatedDate',
+            [
+                'sfid'         => 'Id',
+                'name'         => 'Name',
+                'extId'        => 'S3F__hcid__c',
+                'testPicklist' => 'S3F__Test_Picklist__c',
+                'createdDate'  => 'CreatedDate',
             ],
             $metadatum->getPropertyMap()
         );
@@ -117,5 +121,37 @@ class MetadataRegistryTest extends KernelTestCase
         $recordTypeName = $recordType->getValueFromEntity($entity);
 
         $this->assertEquals('TestType', $recordTypeName);
+    }
+
+    public function testFindMetadataBySObject()
+    {
+        $connection       = $this->connectionManager->getConnection();
+        $metadataRegistry = $connection->getMetadataRegistry();
+        $metadata1        = $metadataRegistry->findMetadataByClass(TestMultiMapType1::class);
+        $recordType1      = $metadata1->getRecordTypeId($metadata1->getRecordType()->getName());
+        $metadata2        = $metadataRegistry->findMetadataByClass(TestMultiMapType2::class);
+        $recordType2      = $metadata2->getRecordTypeId($metadata2->getRecordType()->getName());
+
+        $object = new SObject(
+            [
+                '__SOBJECT_TYPE__' => 'S3F__Test_Multi_Map__c',
+                'RecordTypeId'     => $recordType1,
+                'Name'             => 'Test Multi Map',
+            ]
+        );
+
+        $meta1 = $metadataRegistry->findMetadataBySObject($object);
+        $this->assertCount(1, $meta1);
+        $meta1 = $meta1[0];
+
+        $this->assertEquals(TestMultiMapType1::class, $meta1->getClassName());
+
+        $object->RecordTypeId = $recordType2;
+
+        $meta2 = $metadataRegistry->findMetadataBySObject($object);
+        $this->assertCount(1, $meta2);
+        $meta2 = $meta2[0];
+
+        $this->assertEquals(TestMultiMapType2::class, $meta2->getClassName());
     }
 }

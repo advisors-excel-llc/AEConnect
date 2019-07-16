@@ -15,6 +15,7 @@ use AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\Common\Collections\Collection;
@@ -129,7 +130,17 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
             $value       = $payload->getValue();
             $association = $payload->getClassMetadata()->getAssociationMapping($payload->getPropertyName());
             $targetClass = $association['targetEntity'];
-            $manager     = $this->registry->getManagerForClass($targetClass);
+            /** @var EntityManager $manager */
+            $manager = $this->registry->getManagerForClass($targetClass);
+
+            if (!$manager->isOpen()) {
+                $manager = EntityManager::create(
+                    $manager->getConnection(),
+                    $manager->getConfiguration(),
+                    $manager->getEventManager()
+                );
+            }
+
             /** @var ClassMetadata $classMetadata */
             $classMetadata = $manager->getClassMetadata($targetClass);
             $sfid          = $this->sfidFinder->find($value, $targetClass);
@@ -207,29 +218,34 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
                 // In this case, we'll return what has been found
                 if (null === $entity) {
                     $payload->setValue(new ArrayCollection([$sfid]));
+
                     return;
                 }
 
                 // If there is an entity, process accordingly
-                $val    = $payload->getFieldMetadata()->getValueFromEntity($entity);
+                $val = $payload->getFieldMetadata()->getValueFromEntity($entity);
                 if ($val instanceof Collection) {
                     // Don't add the sfid twice if it already exists
                     if ($val->contains($sfid)) {
                         $payload->setValue(new ArrayCollection($val->toArray()));
+
                         return;
                     }
 
-                    $sfids = $val->toArray();
+                    $sfids   = $val->toArray();
                     $sfids[] = $sfid;
                     $payload->setValue(new ArrayCollection($sfids));
+
                     return;
                 }
 
                 $payload->setValue(new ArrayCollection([$sfid]));
+
                 return;
             }
 
             $payload->setValue($sfid);
+
             return;
         } catch (\Exception $e) {
             $this->logger->debug($e->getMessage());

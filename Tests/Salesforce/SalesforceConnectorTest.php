@@ -53,6 +53,14 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $this->connector = $this->get(SalesforceConnector::class);
         $this->context   = $this->get('enqueue.transport.default.context');
         $this->driver    = $this->get('enqueue.client.default.driver');
+
+        /** @var Connection $conn */
+        $conn = $this->doctrine->getConnection();
+        $conn->exec('DELETE FROM account;');
+        $conn->exec('DELETE FROM contact;');
+        $conn->exec('DELETE FROM product;');
+        $conn->exec('DELETE FROM order_product;');
+        $conn->exec('DELETE FROM order_table;');
     }
 
     public function testOutgoing()
@@ -67,9 +75,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         /** @var OutboundProcessor $processor */
         $processor = $this->get(OutboundProcessor::class);
 
-        if (method_exists($this->context, 'purge')) {
-            $this->context->purge($queue);
-        }
+        $this->context->purgeQueue($queue);
 
         for ($i = 0; $i < 5; $i++) {
             $this->createOrder($items);
@@ -121,9 +127,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         /** @var OrgConnection $conn */
         $conn = $manager->getRepository(OrgConnection::class)->findOneBy(['name' => 'db_test_org1']);
 
-        if (method_exists($this->context, 'purge')) {
-            $this->context->purge($queue);
-        }
+        $this->context->purgeQueue($queue);
 
         // Create one for the non-default connection
         $account = new Account();
@@ -177,6 +181,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $manager           = $this->doctrine->getManager();
         $queue             = $this->driver->createQueue('default');
         $consumer          = $this->context->createConsumer($queue);
+
         /** @var OutboundProcessor $processor */
         $processor = $this->get(OutboundProcessor::class);
         /** @var OrgConnection $conn */
@@ -232,9 +237,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $connection = $connectionManager->getConnection('db_bad_org');
         $this->assertFalse($connection->isActive());
 
-        if (method_exists($this->context, 'purge')) {
-            $this->context->purge($queue);
-        }
+        $this->context->purgeQueue($queue);
 
         // Create one for the inactive connection, now with metadata hydrated
         $account = new Account();

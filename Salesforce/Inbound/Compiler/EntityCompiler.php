@@ -85,7 +85,7 @@ class EntityCompiler
         }
 
         $entities = [];
-        $metas    = $connection->getMetadataRegistry()->findMetadataBySObjectType($object->__SOBJECT_TYPE__);
+        $metas    = $connection->getMetadataRegistry()->findMetadataBySObject($object);
 
         foreach ($metas as $metadata) {
             $class   = $metadata->getClassName();
@@ -97,6 +97,13 @@ class EntityCompiler
             try {
                 $entity = $this->entityLocater->locate($object, $metadata);
             } catch (\Exception $e) {
+                $this->logger->info(
+                    'No existing entity found for {type} with Salesforce Id of {id}.',
+                    [
+                        'type' => $object->__SOBJECT_TYPE__,
+                        'id'   => $object->Id,
+                    ]
+                );
                 $this->logger->debug($e->getMessage());
             }
 
@@ -157,19 +164,22 @@ class EntityCompiler
 
             try {
                 $recordType = $metadata->getRecordType();
-                // Check that the RecordType matches what the Entity allows
+                // Check that the RecordType matches what the Entity allows, if not, move on to any other metadata
+                // configs
                 if (null !== $recordType
                     && null !== $object->RecordTypeId
                     && null !== ($recordTypeName = $metadata->getRecordTypeDeveloperName($object->RecordTypeId))
                     && $recordType->getValueFromEntity($entity) !== $recordTypeName
                 ) {
-                    throw new \RuntimeException(
-                        sprintf(
-                            "The record type given, %s, does not match that of the entity, %s.",
-                            $recordTypeName,
-                            $recordType->getValueFromEntity($entity)
-                        )
+                    $manager->detach($entity);
+                    $this->logger->info(
+                        "The record type given, {given}, does not match that of the entity, {match}.",
+                        [
+                            'given' => $recordTypeName,
+                            'match' => $recordType->getValueFromEntity($entity),
+                        ]
                     );
+                    continue;
                 }
 
                 $entityId = $classMetadata->getSingleIdReflectionProperty()->getValue($entity);

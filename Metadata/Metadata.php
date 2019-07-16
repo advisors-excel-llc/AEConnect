@@ -432,7 +432,9 @@ class Metadata
     {
         $this->connectionNameField = $connectionNameField;
 
-        $connectionNameField->setMetadata($this);
+        if (null !== $connectionNameField) {
+            $connectionNameField->setMetadata($this);
+        }
 
         return $this;
     }

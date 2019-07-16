@@ -8,15 +8,17 @@
 
 namespace AE\ConnectBundle\Tests\Salesforce;
 
+use AE\ConnectBundle\Metadata\Metadata;
+
 class SfidGenerator
 {
     private const EIGHTEEN_DIGIT_CHARS  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     private const EIGHTEEN_DIGIT_VALUES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
     private const PERMITTED_CHARS       = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-    public static function generate($eighteenDigit = true)
+    public static function generate($eighteenDigit = true, ?Metadata $metadata = null)
     {
-        $id = self::generateId();
+        $id = self::generateId($metadata);
 
         if ($eighteenDigit) {
             $id .= self::generateExtension($id);
@@ -34,12 +36,24 @@ class SfidGenerator
         return $id.self::generateExtension($id);
     }
 
-    private static function generateId()
+    private static function generateId(?Metadata $metadata = null)
     {
         $input_length  = strlen(self::PERMITTED_CHARS);
         $random_string = '';
+        $start = 0;
 
-        for ($i = 0; $i < 15; $i++) {
+        if (null !== $metadata) {
+            $describe = $metadata->getDescribe();
+            if (null !== $describe) {
+                $prefix = $describe->getKeyPrefix();
+                if (null !== $prefix) {
+                    $start = strlen($prefix) - 1;
+                    $random_string = $prefix;
+                }
+            }
+        }
+
+        for ($i = $start; $i < 15; $i++) {
             if ($i > 4 && $i < 10) {
                 $random_string .= '0';
                 continue;

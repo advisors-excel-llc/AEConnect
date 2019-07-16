@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Metadata;
 
+use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Util\ClassUtils;
@@ -20,7 +21,7 @@ use Doctrine\Common\Util\ClassUtils;
 class MetadataRegistry
 {
     /**
-     * @var ArrayCollection<string, Metadata>
+     * @var ArrayCollection|Metadata[]
      */
     private $metadata;
 
@@ -99,6 +100,66 @@ class MetadataRegistry
         }
 
         return $results;
+    }
+
+    /**
+     * @param SObject $object
+     *
+     * @return array|Metadata[]
+     */
+    public function findMetadataBySObject(SObject $object): array
+    {
+        if (null === $object->__SOBJECT_TYPE__) {
+            return [];
+        }
+
+        $metadata = $this->findMetadataBySObjectType($object->__SOBJECT_TYPE__);
+
+        if (null !== $object->RecordTypeId) {
+            $filtered = [];
+            foreach ($metadata as $meta) {
+                if (null === ($recordType = $meta->getRecordType())
+                    || (
+                        null === ($name = $recordType->getName())
+                        || $meta->getRecordTypeId($name) === $object->RecordTypeId
+                    )
+                ) {
+                    $filtered[] = $meta;
+                }
+            }
+
+            return $filtered;
+        }
+
+        return $metadata;
+    }
+
+    /**
+     * @param string $id
+     *
+     * @return array|Metadata[]
+     */
+    public function findMetadataBySObjectId(string $id)
+    {
+        $metadata = [];
+        foreach ($this->metadata as $metadatum) {
+            $describe = $metadatum->getDescribe();
+            if (null === $describe) {
+                continue;
+            }
+
+            $prefix = $describe->getKeyPrefix();
+
+            if (null === $prefix) {
+                continue;
+            }
+
+            if (strtolower(substr($id, 0, strlen($prefix))) === strtolower($prefix)) {
+                $metadata[] = $metadatum;
+            }
+        }
+
+        return $metadata;
     }
 
     /**
