@@ -11,6 +11,8 @@ namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use AE\ConnectBundle\Connection\Dbal\SalesforceIdEntityInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
+use AE\ConnectBundle\Metadata\Metadata;
+use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Salesforce\Outbound\ReferencePlaceholder;
 use AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder;
 use Doctrine\ORM\EntityManager;
@@ -24,6 +26,7 @@ use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bridge\Doctrine\RegistryInterface;
+use Symfony\Component\Validator\Exception\UnsupportedMetadataException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class AssociationTransformer extends AbstractTransformerPlugin
@@ -82,38 +85,77 @@ class AssociationTransformer extends AbstractTransformerPlugin
         }
 
         $classMetadata = $payload->getClassMetadata();
+        $propertyName  = $payload->getPropertyName();
+        $fieldName     = $payload->getFieldName();
 
         // If the field is not an association field, skip the forthcoming mapping exception
-        if (!$classMetadata->hasAssociation($payload->getPropertyName())) {
+        if (!$classMetadata->hasAssociation($propertyName)) {
             return false;
         }
 
         try {
-            $association = $classMetadata->getAssociationMapping($payload->getPropertyName());
-            $className   = $association['targetEntity'];
-            $metadata    = $connection->getMetadataRegistry()->findMetadataByClass($className);
+            $association = $classMetadata->getAssociationMapping($propertyName);
+            $metadata    = $this->getMetadataForClass(
+                $classMetadata,
+                $propertyName,
+                $connection->getMetadataRegistry()
+            );
 
-            if (null === $metadata
+            return !(null === $metadata
                 || !$association['isOwningSide']
                 || $association['type'] & ClassMetadataInfo::TO_MANY
-                || null === $payload->getFieldName()
-                || 'Id' === $payload->getFieldName()
-            ) {
-                return false;
-            }
-
-            return true;
+                || null === $fieldName
+                || 'Id' === $fieldName);
         } catch (MappingException $e) {
             $this->logger->error(
-                '{msg}'.PHP_EOL.'{trace}',
+                '{msg}',
                 [
-                    'msg'   => $e->getMessage(),
+                    'msg' => $e->getMessage(),
+                ]
+            );
+            $this->logger->debug(
+                '{trace}',
+                [
                     'trace' => $e->getTraceAsString(),
                 ]
             );
 
             return false;
         }
+    }
+
+    /**
+     * @param ClassMetadata $classMetadata
+     * @param string $propertyName
+     * @param MetadataRegistry $registry
+     *
+     * @return Metadata|null
+     * @throws MappingException
+     */
+    protected function getMetadataForClass(
+        ClassMetadata $classMetadata,
+        string $propertyName,
+        MetadataRegistry $registry
+    ): ?Metadata {
+        $association = $classMetadata->getAssociationMapping($propertyName);
+        $className   = $association['targetEntity'];
+        $metadata    = $registry->findMetadataByClass($className);
+
+        if (null === $metadata && !$classMetadata->isInheritanceTypeNone()) {
+            foreach ($classMetadata->discriminatorMap as $class) {
+                if (null !== ($nextMetadata = $registry->findMetadataByClass($class))) {
+                    return $nextMetadata;
+                }
+            }
+        } elseif (null === $metadata && $classMetadata->isMappedSuperclass) {
+            foreach ($classMetadata->subClasses as $class) {
+                if (null !== ($nextMetadata = $registry->findMetadataByClass($class))) {
+                    return $nextMetadata;
+                }
+            }
+        }
+
+        return $metadata;
     }
 
     /**
@@ -127,8 +169,26 @@ class AssociationTransformer extends AbstractTransformerPlugin
         $classMetadata = $payload->getClassMetadata();
         $association   = $classMetadata->getAssociationMapping($payload->getPropertyName());
         $className     = $association['targetEntity'];
-        $metadata      = $connection->getMetadataRegistry()->findMetadataByClass($className);
-        $sfidProperty  = $metadata->getIdFieldProperty();
+        try {
+            $metadata = $this->getMetadataForClass(
+                $classMetadata,
+                $payload->getPropertyName(),
+                $connection->getMetadataRegistry()
+            );
+
+            if (null === $metadata) {
+                $payload->setValue(null);
+
+                return;
+            }
+        } catch (UnsupportedMetadataException $e) {
+            $this->logger->error($e->getMessage());
+            $this->logger->debug($e->getTraceAsString());
+            $payload->setValue(null);
+
+            return;
+        }
+        $sfidProperty = $metadata->getIdFieldProperty();
 
         // If the target entity doesn't have an SFID to lookup, can't locate the source
         if (null === $sfidProperty) {
@@ -158,8 +218,8 @@ class AssociationTransformer extends AbstractTransformerPlugin
             if (null !== $sfid) {
                 $builder = $repo->createQueryBuilder('o');
                 $builder->join("o.$sfidProperty", "s")
-                    ->where($builder->expr()->eq("s.$idField", ":id"))
-                    ->setParameter("id", $targetMetadata->getFieldValue($sfid, $idField))
+                        ->where($builder->expr()->eq("s.$idField", ":id"))
+                        ->setParameter("id", $targetMetadata->getFieldValue($sfid, $idField))
                 ;
 
                 try {
@@ -185,8 +245,27 @@ class AssociationTransformer extends AbstractTransformerPlugin
         $classMetadata = $payload->getClassMetadata();
         $association   = $classMetadata->getAssociationMapping($payload->getPropertyName());
         $className     = $association['targetEntity'];
-        $metadata      = $connection->getMetadataRegistry()->findMetadataByClass($className);
-        $sfidProperty  = $metadata->getIdFieldProperty();
+        try {
+            $metadata = $this->getMetadataForClass(
+                $classMetadata,
+                $payload->getPropertyName(),
+                $connection->getMetadataRegistry()
+            );
+
+            if (null === $metadata) {
+                $payload->setValue(null);
+
+                return;
+            }
+        } catch (UnsupportedMetadataException $e) {
+            $this->logger->error($e->getMessage());
+            $this->logger->debug($e->getTraceAsString());
+            $payload->setValue(null);
+
+            return;
+        }
+
+        $sfidProperty = $metadata->getIdFieldProperty();
 
         // If the target entity doesn't have a SFID, we can't send Salesforce the ID
         if (null === $sfidProperty) {
@@ -252,5 +331,4 @@ class AssociationTransformer extends AbstractTransformerPlugin
 
         $payload->setValue($sfid);
     }
-
 }

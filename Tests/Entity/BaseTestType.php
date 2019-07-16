@@ -11,6 +11,7 @@ namespace AE\ConnectBundle\Tests\Entity;
 use AE\ConnectBundle\Annotations\ExternalId;
 use AE\ConnectBundle\Annotations\Field;
 use AE\ConnectBundle\Annotations\SalesforceId;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -34,29 +35,47 @@ abstract class BaseTestType
      * @ORM\Column(type="integer", unique=true, options={"unsigned"=true}, nullable=false)
      * @ORM\GeneratedValue(strategy="AUTO")
      */
-    private $id;
+    protected $id;
 
     /**
      * @var string
      * @ORM\Column(length=80)
-     * @Field("Name")
+     * @Field("Name", connections={"*"})
      */
-    private $name;
+    protected $name;
 
     /**
      * @var string
      * @ORM\Column(type="guid", length=36, unique=true, nullable=false)
-     * @Field("S3F__HCID__c")
+     * @Field("S3F__HCID__c", connections={"default"})
      * @ExternalId()
      */
-    private $extId;
+    protected $extId;
 
     /**
      * @var string
      * @ORM\Column(length=18, nullable=true, unique=true)
-     * @SalesforceId()
+     * @SalesforceId(connection="default")
      */
-    private $sfid;
+    protected $sfid;
+
+    /**
+     * @var BaseTestType|null
+     * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\BaseTestType", inversedBy="children")
+     * @Field("S3F__Parent__c", connections={"default"})
+     */
+    protected $parent;
+
+    /**
+     * @var ArrayCollection
+     * @ORM\OneToMany(targetEntity="AE\ConnectBundle\Tests\Entity\BaseTestType", mappedBy="parent")
+     */
+    protected $children;
+
+    public function __construct()
+    {
+        $this->children = new ArrayCollection();
+    }
 
     /**
      * @return int|null
@@ -134,6 +153,46 @@ abstract class BaseTestType
     public function setSfid(string $sfid): BaseTestType
     {
         $this->sfid = $sfid;
+
+        return $this;
+    }
+
+    /**
+     * @return BaseTestType|null
+     */
+    public function getParent(): ?BaseTestType
+    {
+        return $this->parent;
+    }
+
+    /**
+     * @param BaseTestType|null $parent
+     *
+     * @return BaseTestType
+     */
+    public function setParent(?BaseTestType $parent): BaseTestType
+    {
+        $this->parent = $parent;
+
+        return $this;
+    }
+
+    /**
+     * @return ArrayCollection
+     */
+    public function getChildren(): ArrayCollection
+    {
+        return $this->children;
+    }
+
+    /**
+     * @param ArrayCollection $children
+     *
+     * @return BaseTestType
+     */
+    public function setChildren(ArrayCollection $children): BaseTestType
+    {
+        $this->children = $children;
 
         return $this;
     }
