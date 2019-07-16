@@ -150,7 +150,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
              * Object Type in Salesforce against the Id that's been provided so we can better narrow down which
              * Metadata object best matches the given Salesforce ID
             */
-            $id = $payload->getValue();
+            $id            = $payload->getValue();
             $classMetadata = $payload->getClassMetadata();
             $association   = $classMetadata->getAssociationMapping($payload->getPropertyName());
             $className     = $association['targetEntity'];
