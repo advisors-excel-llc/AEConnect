@@ -21,7 +21,7 @@ use Doctrine\Common\Util\ClassUtils;
 class MetadataRegistry
 {
     /**
-     * @var ArrayCollection<string, Metadata>
+     * @var ArrayCollection|Metadata[]
      */
     private $metadata;
 
@@ -129,6 +129,34 @@ class MetadataRegistry
             }
 
             return $filtered;
+        }
+
+        return $metadata;
+    }
+
+    /**
+     * @param string $id
+     *
+     * @return array|Metadata[]
+     */
+    public function findMetadataBySObjectId(string $id)
+    {
+        $metadata = [];
+        foreach ($this->metadata as $metadatum) {
+            $describe = $metadatum->getDescribe();
+            if (null === $describe) {
+                continue;
+            }
+
+            $prefix = $describe->getKeyPrefix();
+
+            if (null === $prefix) {
+                continue;
+            }
+
+            if (strtolower(substr($id, 0, strlen($prefix))) === strtolower($prefix)) {
+                $metadata[] = $metadatum;
+            }
         }
 
         return $metadata;

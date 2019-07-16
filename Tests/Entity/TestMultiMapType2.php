@@ -17,6 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * @package AE\ConnectBundle\Tests\Entity
  * @ORM\Entity()
+ * @SObjectType("S3F__Test_Multi_Map__c", connections={"default"})
  * @RecordType("TestType2", connections={"default"})
  */
 class TestMultiMapType2 extends BaseTestType

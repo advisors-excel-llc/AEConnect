@@ -153,21 +153,17 @@ class AssociationTransformerTest extends DatabaseTestCase
         /** @var EntityManager $manager */
         $manager = $this->doctrine->getManager();
 
+        $accountMetadata = $this->connectionManager->getConnection()
+                                                   ->getMetadataRegistry()
+                                                   ->findMetadataByClass(Account::class)
+        ;
+
         $account = new Account();
         $account->setName('Test Account');
-        $account->setSfid(SfidGenerator::generate());
+        $account->setSfid(SfidGenerator::generate(true, $accountMetadata));
 
         $manager->persist($account);
         $manager->flush();
-
-        $sObject = new SObject(
-            [
-                'Id'        => SfidGenerator::generate(),
-                'FirstName' => 'Test',
-                'LastName'  => 'Contact',
-                'AccountId' => $account->getSfid(),
-            ]
-        );
 
         $metadatas = $this->connectionManager->getConnection()
                                              ->getMetadataRegistry()
@@ -176,7 +172,17 @@ class AssociationTransformerTest extends DatabaseTestCase
 
         $this->assertNotEmpty($metadatas);
 
-        $metadata      = $metadatas[0];
+        $metadata = $metadatas[0];
+
+        $sObject = new SObject(
+            [
+                'Id'        => SfidGenerator::generate(true, $metadata),
+                'FirstName' => 'Test',
+                'LastName'  => 'Contact',
+                'AccountId' => $account->getSfid(),
+            ]
+        );
+
         $fieldMetadata = $metadata->getMetadataForField('AccountId');
         $payload       = TransformerPayload::inbound()
                                            ->setValue($sObject->AccountId)
@@ -210,26 +216,22 @@ class AssociationTransformerTest extends DatabaseTestCase
         /** @var OrgConnection $conn */
         $conn = $manager->getRepository(OrgConnection::class)->findOneBy(['name' => 'db_test_org1']);
 
+        $accountMetadata = $this->connectionManager->getConnection()
+                                                   ->getMetadataRegistry()
+                                                   ->findMetadataByClass(Account::class)
+        ;
+
         $account = new Account();
         $account->setName('Test Account');
         $account->setConnections(new ArrayCollection([$conn]));
         $accountSfid = new SalesforceId();
         $accountSfid->setConnection($conn)
-                    ->setSalesforceId(SfidGenerator::generate())
+                    ->setSalesforceId(SfidGenerator::generate(true, $accountMetadata))
         ;
         $account->setSfids(new ArrayCollection([$accountSfid]));
 
         $manager->persist($account);
         $manager->flush();
-
-        $sObject = new SObject(
-            [
-                'Id'        => SfidGenerator::generate(),
-                'FirstName' => 'Test',
-                'LastName'  => 'Contact',
-                'AccountId' => $accountSfid->getSalesforceId(),
-            ]
-        );
 
         $metadatas = $this->connectionManager->getConnection('db_test_org1')
                                              ->getMetadataRegistry()
@@ -238,7 +240,16 @@ class AssociationTransformerTest extends DatabaseTestCase
 
         $this->assertNotEmpty($metadatas);
 
-        $metadata      = $metadatas[0];
+        $metadata = $metadatas[0];
+
+        $sObject       = new SObject(
+            [
+                'Id'        => SfidGenerator::generate(true, $metadata),
+                'FirstName' => 'Test',
+                'LastName'  => 'Contact',
+                'AccountId' => $accountSfid->getSalesforceId(),
+            ]
+        );
         $fieldMetadata = $metadata->getMetadataForField('AccountId');
         $payload       = TransformerPayload::inbound()
                                            ->setValue($sObject->AccountId)
@@ -269,15 +280,19 @@ class AssociationTransformerTest extends DatabaseTestCase
         $manager    = $this->doctrine->getManagerForClass(BaseTestType::class);
         $connection = $this->connectionManager->getConnection();
         $metadatas  = $connection->getMetadataRegistry()->findMetadataBySObjectType('S3F__Test_Multi_Map__c');
-        foreach ($metadatas as $metadata) {
-            if ($metadata->getRecordType()->getName() === 'TestType2') {
-                break;
+        $metadata1  = null;
+        $metadata   = null;
+        foreach ($metadatas as $meta) {
+            if ($meta->getRecordType()->getName() === 'TestType1') {
+                $metadata1 = $meta;
+            } else {
+                $metadata = $meta;
             }
         }
         $parent = new TestMultiMapType1();
         $parent->setName('Test Parent 1')
                ->setExtId(Uuid::uuid4())
-               ->setSfid(SfidGenerator::generate())
+               ->setSfid(SfidGenerator::generate(true, $metadata1))
         ;
 
         $manager->persist($parent);
@@ -285,7 +300,7 @@ class AssociationTransformerTest extends DatabaseTestCase
 
         $sObject = new SObject(
             [
-                'Id'               => SfidGenerator::generate(),
+                'Id'               => SfidGenerator::generate(true, $metadata),
                 'S3F__HCID__c'     => Uuid::uuid4(),
                 'S3F__Parent__c'   => $parent->getSfid(),
                 'Name'             => 'Test Child 1',

@@ -97,6 +97,13 @@ class EntityCompiler
             try {
                 $entity = $this->entityLocater->locate($object, $metadata);
             } catch (\Exception $e) {
+                $this->logger->info(
+                    'No existing entity found for {type} with Salesforce Id of {id}.',
+                    [
+                        'type' => $object->__SOBJECT_TYPE__,
+                        'id'   => $object->Id,
+                    ]
+                );
                 $this->logger->debug($e->getMessage());
             }
 
@@ -169,7 +176,7 @@ class EntityCompiler
                         "The record type given, {given}, does not match that of the entity, {match}.",
                         [
                             'given' => $recordTypeName,
-                            'match' => $recordType->getValueFromEntity($entity)
+                            'match' => $recordType->getValueFromEntity($entity),
                         ]
                     );
                     continue;
