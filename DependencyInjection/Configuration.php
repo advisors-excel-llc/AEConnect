@@ -6,7 +6,7 @@
  * Time: 5:51 PM
  */
 
-namespace AE\ConnectBundle\DependencyInjection\Configuration;
+namespace AE\ConnectBundle\DependencyInjection;
 
 use AE\SalesforceRestSdk\Bayeux\Extension\ReplayExtension;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;

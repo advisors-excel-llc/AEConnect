@@ -59,29 +59,23 @@ class Client implements ClientInterface
         $channels = $consumer->channels();
 
         foreach ($channels as $group => $channelGroup) {
-            if (is_array($channelGroup)) {
-                switch ($group) {
-                    case 'topics':
-                        $this->subscribeChannelToTopics($channelGroup, $consumer);
-                        break;
-                    case 'objects':
-                        $this->subscribeChannelToObjects($channelGroup, $consumer);
-                        break;
-                    case 'platform_events':
-                        $this->subscribeChannelToPlatformEvents($channelGroup, $consumer);
-                        break;
-                    case 'generic_events':
-                        $this->subscribeChannelToGenericEvents($channelGroup, $consumer);
-                        break;
-                }
-            } else {
-                if ($channelGroup === '*') {
-                    foreach ($this->channelSubscribers as $subscriber) {
-                        $subscriber->addConsumer($consumer);
-                    }
-                } elseif (!$this->channelSubscribers->containsKey($channelGroup)) {
-                    $this->channelSubscribers->get($channelGroup)->addConsumer($consumer);
-                }
+            if (!is_array($channelGroup)) {
+                $channelGroup = [$channelGroup];
+            }
+
+            switch ($group) {
+                case 'topics':
+                    $this->subscribeChannelToTopics($channelGroup, $consumer);
+                    break;
+                case 'objects':
+                    $this->subscribeChannelToObjects($channelGroup, $consumer);
+                    break;
+                case 'platform_events':
+                    $this->subscribeChannelToPlatformEvents($channelGroup, $consumer);
+                    break;
+                case 'generic_events':
+                    $this->subscribeChannelToGenericEvents($channelGroup, $consumer);
+                    break;
             }
         }
     }
@@ -127,7 +121,7 @@ class Client implements ClientInterface
             if ($name === '*') {
                 $keys = $this->channelSubscribers->filter(
                     function (ChannelSubscriberInterface $subscriber) {
-                        return substr($subscriber->getChannelName(), 7) === '/topic/';
+                        return substr($subscriber->getChannelName(), 0, 7) === '/topic/';
                     }
                 )->getKeys()
                 ;
@@ -158,7 +152,7 @@ class Client implements ClientInterface
             if ($name === '*') {
                 $keys = $this->channelSubscribers->filter(
                     function (ChannelSubscriberInterface $subscriber) {
-                        return substr($subscriber->getChannelName(), 7) === '/data/';
+                        return substr($subscriber->getChannelName(), 0, 6) === '/data/';
                     }
                 )->getKeys()
                 ;
@@ -186,7 +180,7 @@ class Client implements ClientInterface
             if ($name === '*') {
                 $keys = $this->channelSubscribers->filter(
                     function (ChannelSubscriberInterface $subscriber) {
-                        return substr($subscriber->getChannelName(), 7) === '/event/';
+                        return substr($subscriber->getChannelName(), 0, 7) === '/event/';
                     }
                 )->getKeys()
                 ;
@@ -216,7 +210,7 @@ class Client implements ClientInterface
             if ($name === '*') {
                 $keys = $this->channelSubscribers->filter(
                     function (ChannelSubscriberInterface $subscriber) {
-                        return substr($subscriber->getChannelName(), 7) === '/u/';
+                        return substr($subscriber->getChannelName(), 0, 3) === '/u/';
                     }
                 )->getKeys()
                 ;

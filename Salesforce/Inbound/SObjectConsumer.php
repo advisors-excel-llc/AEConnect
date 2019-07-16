@@ -105,6 +105,17 @@ class SObjectConsumer implements SalesforceConsumerInterface
             ]
         );
 
+        // Find Compound Fields in the object and assign their nexted values back to the SObject
+        foreach ($payload as $field => $value) {
+            if (is_array($value)) {
+                foreach ($value as $subField => $innerValue) {
+                    if (null === $sObject->$subField) {
+                        $sObject->$subField = $innerValue;
+                    }
+                }
+            }
+        }
+
         foreach ($this->connections as $connection) {
             if ($origin === $connection->getAppName() &&
                 !in_array(

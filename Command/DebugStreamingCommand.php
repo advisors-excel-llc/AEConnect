@@ -81,7 +81,7 @@ class DebugStreamingCommand extends Command implements LoggerAwareInterface, Con
             return;
         }
 
-        $replayExtension = $this->container->get("ae_connect.connection.$connectionName.replay_extension");
+        $replayExtension = $this->container->get("ae_connect.connection.{$connection->getName()}.replay_extension");
         $replayId        = $input->getOption('replay-id');
         $replayExt       = new ReplayExtension($replayId ?: $replayExtension->getReplayId());
         $client          = $connection->getStreamingClient();

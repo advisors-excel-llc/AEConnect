@@ -47,7 +47,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
         $loader->load('transformers.yml');
         $loader->load('services.yml');
 
-        $config = $this->processConfiguration(new Configuration\Configuration(), $configs);
+        $config = $this->processConfiguration(new Configuration(), $configs);
 
         $this->createAnnotationDriver($container, $config);
         $this->processConnections($container, $config);
@@ -533,6 +533,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                       ]
                   )
                   ->addTag('ae_connect.extension', ['connections' => $connectionName])
+                  ->setPrivate(false)
         ;
     }
 
