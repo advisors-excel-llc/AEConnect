@@ -208,7 +208,12 @@ class EntityCompiler
      */
     private function validate($entity, ConnectionInterface $connection)
     {
-        $groups = ['ae_connect_inbound', 'ae_connect_inbound.'.$connection->getName()];
+        $groups = [
+            'ae_connect.inbound',
+            'ae_connect.inbound.'.$connection->getName(),
+            'ae_connect_inbound', // Deprecated
+            'ae_connect_inbound.'.$connection->getName(), // Deprecated
+        ];
 
         if ($connection->isDefault() && 'default' !== $connection->getName()) {
             $groups[] = 'ae_connect_inbound.default';
