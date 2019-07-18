@@ -12,8 +12,8 @@ determine if an Entity should be sent to Salesforce or synced from Salesforce.
 
 ## Inbound Validation
 
-When syncing inbound data, AE Connect uses the `ae_connect_inbound` group, as well as a group with the connection
-name appended to it; `ae_connect_inbound.[some_connection_name]` or `ae_connect_inbound.default`. The group without the
+When syncing inbound data, AE Connect uses the `ae_connect.inbound` group, as well as a group with the connection
+name appended to it; `ae_connect.inbound.[some_connection_name]` or `ae_connect.inbound.default`. The group without the
 connection name is used for all connections. So if you only want a constraint used in for with a particular
 connection, make sure you append the connection name as above.
 
@@ -24,8 +24,8 @@ and ignored.
 
 ## Outbound Validation
 
-Similar to inbound, outbound data to Salesforce is validated using the group `ae_connect_outbound`, as well as a group with the
-connection name appended to it: `ae_connect_outbound.default`. The group without the connection name is used for all
+Similar to inbound, outbound data to Salesforce is validated using the group `ae_connect.outbound`, as well as a group with the
+connection name appended to it: `ae_connect.outbound.default`. The group without the connection name is used for all
 connections. So if you only want a constraint used in for with a particular connection, make sure you append the
 connection name as above.
 

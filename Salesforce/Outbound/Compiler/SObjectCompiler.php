@@ -160,10 +160,16 @@ class SObjectCompiler
 
     private function validate($entity, ConnectionInterface $connection)
     {
-        $groups = ['ae_connect_outbound', 'ae_connect_outbound.'.$connection->getName()];
+        $groups = [
+            'ae_connect.outbound',
+            'ae_connect.outbound.'.$connection->getName(),
+            'ae_connect_outbound', // Deprecated
+            'ae_connect_outbound.'.$connection->getName(), // Deprecated
+            ];
 
         if ($connection->isDefault() && 'default' !== $connection->getName()) {
-            $groups[] = 'ae_connect_outbound.default';
+            $groups[] = 'ae_connect.outbound.default';
+            $groups[] = 'ae_connect_outbound.default'; // Deprecated
         }
 
         $messages = $this->validator->validate(

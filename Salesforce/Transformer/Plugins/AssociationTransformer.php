@@ -335,12 +335,15 @@ class AssociationTransformer extends AbstractTransformerPlugin
 
         if (null === $sfid) {
             $groups = [
-                'ae_connect_outbound',
-                'ae_connect_outbound.'.$connection->getName(),
+                'ae_connect.outbound',
+                'ae_connect.outbound.'.$connection->getName(),
+                'ae_connect_outbound', // Deprecating
+                'ae_connect_outbound.'.$connection->getName(), // Deprecating
             ];
 
             if ($connection->isDefault() && 'default' != $connection->getName()) {
-                $groups[] = 'ae_connect_outbound.default';
+                $groups[] = 'ae_connect.outbound.default';
+                $groups[] = 'ae_connect_outbound.default'; // Deprecating
             }
 
             $messages = $this->validator->validate(
