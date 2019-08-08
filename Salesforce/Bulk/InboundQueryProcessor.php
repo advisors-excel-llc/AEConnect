@@ -31,11 +31,15 @@ class InboundQueryProcessor
     /**
      * @param ConnectionInterface $connection
      * @param string $query
+     * @param bool $allowInserts
      *
      * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     * @throws \Doctrine\ORM\ORMException
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function process(ConnectionInterface $connection, string $query)
+    public function process(ConnectionInterface $connection, string $query, $allowInserts = false)
     {
         $matches = [];
 
@@ -100,9 +104,9 @@ class InboundQueryProcessor
             }
 
             if ($total >= $connection->getBulkApiMinCount()) {
-                $this->bulkApiProcessor->process($connection, $objectType, true, $updateSOQL);
+                $this->bulkApiProcessor->process($connection, $objectType, $updateSOQL, true, $allowInserts);
             } else {
-                $this->compositeApiProcessor->process($connection, $objectType, true, $updateSOQL);
+                $this->compositeApiProcessor->process($connection, $objectType, $updateSOQL, true, $allowInserts);
             }
         }
     }

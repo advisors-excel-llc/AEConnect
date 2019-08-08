@@ -185,7 +185,6 @@ class ConfigurationTest extends TestCase
                                     'auth_provider'     => 'test_auth',
                                     'replay_provider'   => 'test_auth',
                                 ],
-                                'use_change_data_capture' => true,
                                 'bulk_api_min_count'      => PHP_INT_MAX,
                                 'connection_logger'       => 'test_logger',
                                 'app_filtering'           => [

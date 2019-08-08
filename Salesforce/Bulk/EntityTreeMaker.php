@@ -55,7 +55,7 @@ class EntityTreeMaker extends AbstractTreeBuilder
                 $depClass    = $classMetadata->getAssociationTargetClass($field);
 
                 // Self-referencing fields cause redundancy errors
-                if ($depClass === $class) {
+                if ($depClass === $class || in_array($depClass, class_parents($class))) {
                     continue;
                 }
 

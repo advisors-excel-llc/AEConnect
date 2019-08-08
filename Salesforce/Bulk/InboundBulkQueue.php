@@ -48,15 +48,28 @@ class InboundBulkQueue
         CompositeApiProcessor $compositeApiProcessor,
         ?LoggerInterface $logger = null
     ) {
-        $this->treeMaker = $treeMaker;
-        $this->bulkApiProcessor = $bulkApiProcessor;
+        $this->treeMaker             = $treeMaker;
+        $this->bulkApiProcessor      = $bulkApiProcessor;
         $this->compositeApiProcessor = $compositeApiProcessor;
 
         $this->setLogger($logger ?: new NullLogger());
     }
 
-    public function process(ConnectionInterface $connection, array $types = [], bool $updateEntities = false)
-    {
+    /**
+     * @param ConnectionInterface $connection
+     * @param array $types
+     * @param bool $updateEntities
+     * @param bool $insertEntities
+     *
+     * @throws GuzzleException
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     */
+    public function process(
+        ConnectionInterface $connection,
+        array $types = [],
+        bool $updateEntities = false,
+        bool $insertEntities = false
+    ) {
         $map = $this->treeMaker->buildFlatMap($connection);
 
         if (!empty($types)) {
@@ -66,7 +79,7 @@ class InboundBulkQueue
         $counts = $connection->getRestClient()->count($map);
 
         foreach ($counts as $count) {
-            $this->startJob($connection, $count, $updateEntities);
+            $this->startJob($connection, $count, $updateEntities, $insertEntities);
         }
     }
 
@@ -74,9 +87,14 @@ class InboundBulkQueue
      * @param ConnectionInterface $connection
      * @param Count $count
      * @param bool $updateEntities
+     * @param bool $insertEntities
      */
-    private function startJob(ConnectionInterface $connection, Count $count, bool $updateEntities)
-    {
+    private function startJob(
+        ConnectionInterface $connection,
+        Count $count,
+        bool $updateEntities,
+        bool $insertEntities = false
+    ) {
         $objectType       = $count->getName();
         $fields           = [];
         $recordTypes      = [];
@@ -130,10 +148,16 @@ class InboundBulkQueue
 
             if ($count->getCount() >= $connection->getBulkApiMinCount()) {
                 $this->logger->debug('Processing Inbound using Bulk API');
-                $this->bulkApiProcessor->process($connection, $objectType, $updateEntities, $query);
+                $this->bulkApiProcessor->process($connection, $objectType, $query, $updateEntities, $insertEntities);
             } else {
                 $this->logger->debug('Processing Inbound using Composite API');
-                $this->compositeApiProcessor->process($connection, $objectType, $updateEntities, $query);
+                $this->compositeApiProcessor->process(
+                    $connection,
+                    $objectType,
+                    $query,
+                    $updateEntities,
+                    $insertEntities
+                );
             }
         } catch (\Exception $e) {
             $this->logger->warning($e->getMessage());

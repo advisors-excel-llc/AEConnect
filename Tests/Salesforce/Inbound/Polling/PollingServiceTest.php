@@ -27,7 +27,7 @@ class PollingServiceTest extends DatabaseTestCase
      */
     private $client;
 
-    protected function setUp()/* The :void return type declaration that should be here would cause a BC issue */
+    protected function setUp(): void
     {
         parent::setUp();
         $this->polling = $this->get(PollingService::class);

@@ -12,7 +12,11 @@ use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
+use AE\ConnectBundle\Tests\Salesforce\SfidGenerator;
 use AE\SalesforceRestSdk\Model\SObject;
+use DMS\PHPUnitExtensions\ArraySubset\Assert;
+use Doctrine\DBAL\Connection;
+use Ramsey\Uuid\Uuid;
 
 class BulkPreprocessorTest extends DatabaseTestCase
 {
@@ -26,19 +30,31 @@ class BulkPreprocessorTest extends DatabaseTestCase
      */
     private $connectionManager;
 
-    protected function setUp()/* The :void return type declaration that should be here would cause a BC issue */
+    protected function setUp(): void
     {
         parent::setUp();
         $this->preprocessor      = $this->get(BulkPreprocessor::class);
         $this->connectionManager = $this->get(ConnectionManagerInterface::class);
     }
 
+    protected function tearDown(): void
+    {
+        /** @var Connection $conn */
+        $conn = $this->doctrine->getConnection();
+        $conn->exec('DELETE FROM account;');
+        parent::tearDown();
+    }
+
+    /**
+     * @throws \Exception
+     */
     public function testPreprocess()
     {
         $account = new Account();
 
         $account->setName('Testo Accounto Numero Uno');
-        $account->setSfid('01A000000g8392K');
+        $account->setSfid(SfidGenerator::generate());
+        $account->setExtId(Uuid::uuid4());
         $account->setConnection('default');
 
         $this->doctrine->getManager()->persist($account);
@@ -47,16 +63,15 @@ class BulkPreprocessorTest extends DatabaseTestCase
         $sObject    = new SObject(
             [
                 'Name'             => 'Some Dumb Name',
-                'S3F__hcid__c'     => $account->getExtId(),
+                'S3F__hcid__c'     => $account->getExtId()->toString(),
                 'Id'               => $account->getId(),
                 '__SOBJECT_TYPE__' => 'Account',
             ]
         );
         $connection = $this->connectionManager->getConnection();
+        $sObject    = $this->preprocessor->preProcess($sObject, $connection, false, true);
 
-        $sObject = $this->preprocessor->preProcess($sObject, $connection);
-
-        $this->assertArraySubset(
+        Assert::assertArraySubset(
             [
                 'S3F__hcid__c'     => $account->getExtId(),
                 'Id'               => $account->getId(),
@@ -65,8 +80,21 @@ class BulkPreprocessorTest extends DatabaseTestCase
             $sObject->getFields()
         );
         $this->assertNull($sObject->Name);
+    }
 
-        $this->doctrine->getManager()->remove($account);
-        $this->doctrine->getManager()->flush();
+    public function testPreprocessNoInsert()
+    {
+        $sObject    = new SObject(
+            [
+                'Name'             => 'Some Dumb Name For Insert',
+                'S3F__hcid__c'     => Uuid::uuid4()->toString(),
+                'Id'               => SfidGenerator::generate(),
+                '__SOBJECT_TYPE__' => 'Account',
+            ]
+        );
+        $connection = $this->connectionManager->getConnection();
+        $sObject    = $this->preprocessor->preProcess($sObject, $connection);
+
+        $this->assertNull($sObject);
     }
 }

@@ -54,6 +54,13 @@ class BulkCommand extends Command
                  'Update existing records in the Salesforce when sending data from local database'
              )
              ->addOption(
+                 'insert-new',
+                 'n',
+                 InputOption::VALUE_NONE,
+                 'Insert new entities into the local database '.
+                 'from Salesforce if they don\'t exist in the local database'
+             )
+             ->addOption(
                  'clear-sfids',
                  'c',
                  InputOption::VALUE_NONE,
@@ -63,61 +70,20 @@ class BulkCommand extends Command
         ;
     }
 
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     *
+     * @return int|null|void
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $updateFlag = 0;
-
-        if ($input->getOption('update-inbound')) {
-            $updateFlag |= BulkDataProcessor::UPDATE_INCOMING;
-        }
-
-        if ($input->getOption('update-outbound')) {
-            $updateFlag |= BulkDataProcessor::UPDATE_OUTGOING;
-        }
-
-        if ($input->getOption('clear-sfids')) {
-            $updateFlag |= BulkDataProcessor::UPDATE_SFIDS;
-        }
-
-        $types = $input->getOption('types');
-
-        $output->writeln(
-            sprintf(
-                '<info>AE Connect will now sync %s to %s.</info>',
-                empty($types) ? 'all types' : implode(', ', $types).' type(s)',
-                null === $input->getFirstArgument() ? ' all connections' : $input->getFirstArgument()
-            )
-        );
-        $output->writeln(
-            'This operation is not easy to reverse. It is recommended you backup your data before continuing.'
-        );
-
-        if ($updateFlag & BulkDataProcessor::UPDATE_INCOMING) {
-            $output->writeln(
-                '<comment>Local entities will be updated with data from Salesforce.</comment>'
-            );
-        } else {
-            $output->writeln(
-                '<comment>Only new entities will be created with data from Salesforce.</comment>'
-            );
-        }
-
-        if ($updateFlag & BulkDataProcessor::UPDATE_OUTGOING) {
-            $output->writeln(
-                '<comment>Salesforce will be updated with data from the local database.</comment>'
-            );
-        } else {
-            $output->writeln(
-                '<comment>Only new records will be created in Salesforce.</comment>'
-            );
-        }
-
-        if ($updateFlag & BulkDataProcessor::UPDATE_SFIDS) {
-            $output->writeln(
-                '<comment>Clear all Salesforce IDs from the database. '
-                .'External Ids will be used to match existing records.</comment>'
-            );
-        }
+        $updateFlag = $this->buildUpdateFlag($input);
+        $types      = $input->getOption('types');
+        $this->outputDetails($input, $output, $types, $updateFlag);
 
         /** @var QuestionHelper $helper */
         $helper           = $this->getHelper('question');
@@ -155,5 +121,78 @@ class BulkCommand extends Command
         );
 
         $output->writeln('Bulk sync is now complete.');
+    }
+
+    /**
+     * @param InputInterface $input
+     *
+     * @return int
+     */
+    protected function buildUpdateFlag(InputInterface $input): int
+    {
+        $updateFlag = 0;
+
+        if ($input->getOption('update-inbound')) {
+            $updateFlag |= BulkDataProcessor::UPDATE_INCOMING;
+        }
+
+        if ($input->getOption('update-outbound')) {
+            $updateFlag |= BulkDataProcessor::UPDATE_OUTGOING;
+        }
+
+        if ($input->getOption('insert-new')) {
+            $updateFlag |= BulkDataProcessor::INSERT_NEW;
+        }
+
+        if ($input->getOption('clear-sfids')) {
+            $updateFlag |= BulkDataProcessor::UPDATE_SFIDS;
+        }
+
+        return $updateFlag;
+    }
+
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @param $types
+     * @param $updateFlag
+     */
+    protected function outputDetails(InputInterface $input, OutputInterface $output, $types, $updateFlag): void
+    {
+        $output->writeln(
+            sprintf(
+                '<info>AE Connect will now sync %s to %s.</info>',
+                empty($types) ? 'all types' : implode(', ', $types).' type(s)',
+                null === $input->getFirstArgument() ? ' all connections' : $input->getFirstArgument()
+            )
+        );
+        $output->writeln(
+            'This operation is not easy to reverse. It is recommended you backup your data before continuing.'
+        );
+
+        if ($updateFlag & BulkDataProcessor::UPDATE_INCOMING) {
+            $output->writeln(
+                '<comment>Local entities will be updated with data from Salesforce.</comment>'
+            );
+        }
+
+        if ($updateFlag & BulkDataProcessor::UPDATE_OUTGOING) {
+            $output->writeln(
+                '<comment>Salesforce will be updated with data from the local database.</comment>'
+            );
+        }
+
+        if ($updateFlag & BulkDataProcessor::INSERT_NEW) {
+            $output->writeln(
+                '<comment>New records will be created in the local database with data from Salesforce.</comment>'
+            );
+        }
+
+        if ($updateFlag & BulkDataProcessor::UPDATE_SFIDS) {
+            $output->writeln(
+                '<comment>Clear all Salesforce IDs from the database. '
+                .'External Ids will be used to match existing records.</comment>'
+            );
+        }
     }
 }
