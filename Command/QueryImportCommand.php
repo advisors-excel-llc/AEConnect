@@ -50,6 +50,12 @@ class QueryImportCommand extends Command
                  'Specify which connections to run the query on',
                  'default'
              )
+             ->addOption(
+                 'insert-new',
+                 'n',
+                 InputOption::VALUE_NONE,
+                 'Insert new records from Salesforce that don\'t exist locally'
+             )
         ;
     }
 
@@ -59,13 +65,16 @@ class QueryImportCommand extends Command
      *
      * @return int|null|void
      * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     * @throws \Doctrine\ORM\ORMException
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $connectionName = $input->getOption('connection');
-        $connection = $this->connectionManager->getConnection($connectionName);
-        $query = $input->getArgument('query');
+        $connection     = $this->connectionManager->getConnection($connectionName);
+        $query          = $input->getArgument('query');
 
         if (null === $connection) {
             throw new \RuntimeException("No Connection '$connectionName' found.");
@@ -77,7 +86,7 @@ class QueryImportCommand extends Command
 
         $output->writeln('<info>Running Query</info>');
         try {
-            $this->processor->process($connection, $query);
+            $this->processor->process($connection, $query, $input->getOption('insert-new'));
         } catch (\RuntimeException $e) {
             $output->writeln('<error>'.$e->getMessage().'</error>');
         }

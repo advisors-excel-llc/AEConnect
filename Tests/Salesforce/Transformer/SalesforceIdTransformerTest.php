@@ -29,7 +29,7 @@ class SalesforceIdTransformerTest extends AbstractTransformerTest
 {
     use DatabaseTestTrait;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->setLoader(static::$container->get('fidry_alice_data_fixtures.loader.doctrine'));

@@ -10,6 +10,7 @@ namespace AE\ConnectBundle\Salesforce\Bulk;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Doctrine\EntityLocater;
+use AE\ConnectBundle\Metadata\Metadata;
 use AE\SalesforceRestSdk\Model\SObject;
 use Ramsey\Uuid\Doctrine\UuidType;
 use Ramsey\Uuid\Uuid;
@@ -27,8 +28,12 @@ class BulkPreprocessor
         $this->entityLocater = $entityLocater;
     }
 
-    public function preProcess(SObject $object, ConnectionInterface $connection)
-    {
+    public function preProcess(
+        SObject $object,
+        ConnectionInterface $connection,
+        $allowUpdates = false,
+        $allowInserts = false
+    ) {
         $metadataRegistry = $connection->getMetadataRegistry();
         $values           = [];
 
@@ -39,27 +44,16 @@ class BulkPreprocessor
                 $entity = null;
             }
 
-            // Found an entity, need pull off the identifying information from it, forget the rest
-            if (null !== $entity) {
-                foreach ($metadata->getPropertyMap() as $prop => $field) {
-                    // Since we're not updating, we still want to update the ID
-                    if ('id' === strtolower($field) || $metadata->isIdentifier($prop)) {
-                        $value = null;
-                        // This seems dumb to me, but it fixes the issue.
-                        // The $field should be exactly what comes from Salesforce because the metadata is populated
-                        // from Salesforce. But for some reason, the __get() on SObject doesn't seem to find it always
-                        // This is an issue in the SDK.
-                        foreach ($object->getFields() as $oField => $v) {
-                            if (strtolower($oField) === strtolower($field)) {
-                                $value = $v;
-                            }
-                        }
-                        if (null !== $value) {
-                            $values[$field] = $value;
-                        }
-                    }
-                }
+            if (null === $entity) {
+                continue;
             }
+
+            // If we're allowing updates and we've found an existing entity, allow the $object to be returned
+            if ($allowUpdates) {
+                return $object;
+            }
+
+            $values = array_merge($values, $this->mapIdentifyingValues($object, $metadata));
         }
 
         // If we have values to change, then we change them
@@ -70,6 +64,37 @@ class BulkPreprocessor
             return new SObject($values);
         }
 
-        return $object;
+        return !$allowInserts ? null : $object;
+    }
+
+    /**
+     * @param SObject $object
+     * @param Metadata $metadata
+     *
+     * @return array
+     */
+    private function mapIdentifyingValues(SObject $object, Metadata $metadata): array
+    {
+        $values = [];
+        foreach ($metadata->getPropertyMap() as $prop => $field) {
+            // Since we're not updating, we still want to update the ID
+            if ('id' === strtolower($field) || $metadata->isIdentifier($prop)) {
+                $value = null;
+                // This seems dumb to me, but it fixes the issue.
+                // The $field should be exactly what comes from Salesforce because the metadata is populated
+                // from Salesforce. But for some reason, the __get() on SObject doesn't seem to find it always
+                // This is an issue in the SDK.
+                foreach ($object->getFields() as $oField => $v) {
+                    if (strtolower($oField) === strtolower($field)) {
+                        $value = $v;
+                    }
+                }
+                if (null !== $value) {
+                    $values[$field] = $value;
+                }
+            }
+        }
+
+        return $values;
     }
 }

@@ -24,7 +24,7 @@ abstract class AbstractTransformerTest extends KernelTestCase
      */
     protected $registry;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->connectionManager = $this->get(ConnectionManagerInterface::class);

@@ -26,6 +26,7 @@ class BulkDataProcessor
     public const UPDATE_OUTGOING = 2;
     public const UPDATE_BOTH     = 3;
     public const UPDATE_SFIDS    = 4;
+    public const INSERT_NEW      = 8;
 
     /**
      * @var ConnectionManagerInterface
@@ -72,6 +73,8 @@ class BulkDataProcessor
      * @param int $updateFlag
      *
      * @throws MappingException
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function process(
         ?string $connectionName,
@@ -94,7 +97,12 @@ class BulkDataProcessor
             if ($updateFlag & self::UPDATE_SFIDS) {
                 $this->sfidReset->clearIds($connection, $types);
             }
-            $this->inboundQueue->process($connection, $types, self::UPDATE_INCOMING & $updateFlag);
+            $this->inboundQueue->process(
+                $connection,
+                $types,
+                self::UPDATE_INCOMING & $updateFlag,
+                self::INSERT_NEW & $updateFlag
+            );
             $this->outboundQueue->process($connection, $types, self::UPDATE_OUTGOING & $updateFlag);
         }
 

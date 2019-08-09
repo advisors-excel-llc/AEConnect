@@ -38,7 +38,7 @@ services:
     AE\ConnectBundle\Salesforce\SalesforceConnector:
         $sObjectCompiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
         $entityCompiler: '@AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler'
-        $producer: '@Enqueue\Client\ProducerInterface'
+        $producer: '@enqueue.client.ae_connect.producer'
         $serializer: '@JMS\Serializer\SerializerInterface'
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $logger: '@Psr\Log\LoggerInterface'
@@ -47,7 +47,8 @@ services:
             $queue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
             $serializer: '@JMS\Serializer\SerializerInterface'
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
-        tags: ['enqueue.client.processor']
+        tags:
+            - { name: 'enqueue.client.processor', transport: 'ae_connect' }
     AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue:
         $cache: '@doctrine_cache.providers.ae_connect_outbound_queue'
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
@@ -132,6 +133,8 @@ services:
         tags: ['console.command']
     AE\ConnectBundle\Command\ConsumeCommand:
         arguments:
+            $consumer: '@enqueue.client.ae_connect.queue_consumer'
+            $driver: '@enqueue.client.ae_connect.driver'
             $processor: '@AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor'
             $queue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
         tags: ['console.command']

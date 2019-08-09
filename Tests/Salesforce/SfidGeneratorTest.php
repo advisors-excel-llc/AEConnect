@@ -30,4 +30,12 @@ class SfidGeneratorTest extends TestCase
         $rand = SfidGenerator::generate();
         $this->assertRegExp('/^[a-zA-Z0-9]{15}[A-Z0-5]{3}$/', $rand);
     }
+
+    public function testUnique()
+    {
+        $sfid1 = SfidGenerator::generate();
+        $sfid2 = SfidGenerator::generate();
+
+        $this->assertNotEquals($sfid1, $sfid2);
+    }
 }

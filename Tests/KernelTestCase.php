@@ -12,12 +12,12 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase as TestCase;
 
 class KernelTestCase extends TestCase
 {
-    protected function setUp()
+    protected function setUp(): void
     {
         static::bootKernel();
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         static::ensureKernelShutdown();
     }
@@ -27,7 +27,7 @@ class KernelTestCase extends TestCase
         return static::$container->get($serviceId);
     }
 
-    protected function getProjectDir()
+    protected function getProjectDir(): string
     {
         return static::$container->getParameter('kernel.project_dir');
     }

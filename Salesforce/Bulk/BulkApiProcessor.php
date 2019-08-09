@@ -45,17 +45,22 @@ class BulkApiProcessor implements LoggerAwareInterface
     /**
      * @param ConnectionInterface $connection
      * @param string $objectType
-     * @param bool $updateEntities
      * @param $query
+     * @param bool $updateEntities
+     * @param bool $insertEntities
      *
+     * @throws MappingException
+     * @throws ORMException
      * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function process(
         ConnectionInterface $connection,
         string $objectType,
+        $query,
         bool $updateEntities,
-        $query
+        bool $insertEntities = false
     ): void {
         $client = $connection->getBulkClient();
         $job    = $client->createJob($objectType, JobInfo::QUERY, JobInfo::TYPE_CSV);
@@ -80,7 +85,9 @@ class BulkApiProcessor implements LoggerAwareInterface
 
         do {
             $batchStatus = $client->getBatchStatus($job, $batch->getId());
-            sleep(10);
+            if (BatchInfo::STATE_COMPLETED !== $batchStatus->getState()) {
+                sleep(10);
+            }
         } while (BatchInfo::STATE_COMPLETED !== $batchStatus->getState());
 
         $this->logger->info(
@@ -97,7 +104,7 @@ class BulkApiProcessor implements LoggerAwareInterface
             $result = $client->getResult($job, $batch->getId(), $resultId);
 
             if (null !== $result) {
-                $this->save($result, $objectType, $connection, $updateEntities);
+                $this->save($result, $objectType, $connection, $updateEntities, $insertEntities);
             }
         }
 
@@ -116,15 +123,18 @@ class BulkApiProcessor implements LoggerAwareInterface
      * @param string $objectType
      * @param ConnectionInterface $connection
      * @param bool $updateEntities
+     * @param bool $insertEntities
      *
      * @throws MappingException
      * @throws ORMException
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      */
     public function save(
         CsvStream $result,
         string $objectType,
         ConnectionInterface $connection,
-        bool $updateEntities
+        bool $updateEntities,
+        bool $insertEntities = false
     ) {
         $fields  = [];
         $count   = 0;
@@ -142,9 +152,10 @@ class BulkApiProcessor implements LoggerAwareInterface
                 $object->{$fields[$i]} = $value;
             }
             $object->__SOBJECT_TYPE__ = $objectType;
+            $object = $this->preProcessor->preProcess($object, $connection, $updateEntities, $insertEntities);
 
-            if (!$updateEntities) {
-                $object = $this->preProcessor->preProcess($object, $connection);
+            if (null === $object) {
+                continue;
             }
 
             $objects[] = $object;
