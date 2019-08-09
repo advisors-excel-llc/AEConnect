@@ -28,7 +28,7 @@ use JMS\Serializer\SerializerInterface;
 class OutboundProcessor implements Processor, TopicSubscriberInterface
 {
 
-    public const TOPIC = 'ae_connect';
+    public const TOPIC = 'ae_connect.outbound';
 
     /**
      * @var OutboundQueue

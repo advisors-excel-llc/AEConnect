@@ -18,7 +18,7 @@ class CompositeSObjectSubscriberTest extends KernelTestCase
     /** @var SerializerInterface */
     private $serializer;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->serializer = $this->get('jms_serializer');
@@ -27,7 +27,7 @@ class CompositeSObjectSubscriberTest extends KernelTestCase
     public function testReferencePlaceholderDeserialization()
     {
         $object = new CompositeSObject('Account', [
-            'testField' => new ReferencePlaceholder('refIdForEntity', 'id')
+            'testField' => new ReferencePlaceholder('refIdForEntity')
         ]);
 
         $data = $this->serializer->serialize($object, 'json');

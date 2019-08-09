@@ -51,8 +51,8 @@ class SalesforceConnectorTest extends DatabaseTestCase
     {
         parent::setUp();
         $this->connector = $this->get(SalesforceConnector::class);
-        $this->context   = $this->get('enqueue.transport.default.context');
-        $this->driver    = $this->get('enqueue.client.default.driver');
+        $this->context   = $this->get('enqueue.transport.ae_connect.context');
+        $this->driver    = $this->get('enqueue.client.ae_connect.driver');
 
         /** @var Connection $conn */
         $conn = $this->doctrine->getConnection();
@@ -181,6 +181,8 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $manager           = $this->doctrine->getManager();
         $queue             = $this->driver->createQueue('default');
         $consumer          = $this->context->createConsumer($queue);
+
+        $this->context->purgeQueue($queue);
 
         /** @var OutboundProcessor $processor */
         $processor = $this->get(OutboundProcessor::class);
