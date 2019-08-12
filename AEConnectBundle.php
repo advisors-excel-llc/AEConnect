@@ -12,6 +12,7 @@ use AE\ConnectBundle\DependencyInjection\Compiler\BayeuxExtensionCompilerPass;
 use AE\ConnectBundle\DependencyInjection\Compiler\ChannelConsumerCompilerPass;
 use AE\ConnectBundle\DependencyInjection\Compiler\ConnectionCompilerPass;
 use AE\ConnectBundle\DependencyInjection\Compiler\ConnectionProxyCompilerPass;
+use AE\ConnectBundle\DependencyInjection\Compiler\EnqueueCompilerPass;
 use AE\ConnectBundle\DependencyInjection\Compiler\PolllingCompilerPass;
 use AE\ConnectBundle\DependencyInjection\Compiler\TransformerPluginCompilerPass;
 use AE\ConnectBundle\Driver\DbalConnectionDriver;
@@ -29,6 +30,7 @@ class AEConnectBundle extends Bundle
         $container->addCompilerPass(new BayeuxExtensionCompilerPass());
         $container->addCompilerPass(new ChannelConsumerCompilerPass());
         $container->addCompilerPass(new TransformerPluginCompilerPass());
+        $container->addCompilerPass(new EnqueueCompilerPass());
     }
 
     public function boot()

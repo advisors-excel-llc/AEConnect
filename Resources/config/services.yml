@@ -48,7 +48,9 @@ services:
             $serializer: '@JMS\Serializer\SerializerInterface'
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         tags:
-            - { name: 'enqueue.client.processor', transport: 'ae_connect' }
+            -
+                name: 'enqueue.transport.processor'
+                transport: 'ae_connect'
     AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue:
         $cache: '@doctrine_cache.providers.ae_connect_outbound_queue'
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
@@ -133,9 +135,8 @@ services:
         tags: ['console.command']
     AE\ConnectBundle\Command\ConsumeCommand:
         arguments:
-            $consumer: '@enqueue.client.ae_connect.queue_consumer'
+            $container: '@service_container'
             $driver: '@enqueue.client.ae_connect.driver'
-            $processor: '@AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor'
             $queue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
         tags: ['console.command']
     AE\ConnectBundle\Command\ListenCommand:

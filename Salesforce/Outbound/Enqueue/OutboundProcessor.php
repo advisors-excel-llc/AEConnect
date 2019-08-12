@@ -13,7 +13,6 @@ use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue;
 use Enqueue\Client\TopicSubscriberInterface;
 use Enqueue\Consumption\Result;
-use Enqueue\Fs\FsMessage;
 use Interop\Queue\Context;
 use Interop\Queue\Message;
 use Interop\Queue\Processor;
@@ -58,7 +57,7 @@ class OutboundProcessor implements Processor, TopicSubscriberInterface
     /**
      * @inheritDoc
      *
-     * @param FsMessage $message
+     * @param Message $message
      */
     public function process(Message $message, Context $context): string
     {
@@ -73,15 +72,15 @@ class OutboundProcessor implements Processor, TopicSubscriberInterface
             if (!$payload) {
                 return Result::REJECT;
             }
+
+            $connection = $this->connectionManager->getConnection($payload->getConnectionName());
+            if ($connection->isActive()) {
+                $this->queue->add($payload);
+
+                return Result::ACK;
+            }
         } catch (RuntimeException $e) {
             return Result::REJECT;
-        }
-
-        $connection = $this->connectionManager->getConnection($payload->getConnectionName());
-        if ($connection->isActive()) {
-            $this->queue->add($payload);
-
-            return Result::ACK;
         }
 
         return Result::REQUEUE;
