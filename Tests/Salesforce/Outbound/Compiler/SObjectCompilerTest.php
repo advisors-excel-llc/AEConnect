@@ -16,11 +16,14 @@ use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Contact;
 use AE\ConnectBundle\Tests\Salesforce\SfidGenerator;
+use DMS\PHPUnitExtensions\ArraySubset\ArraySubsetAsserts;
 use Doctrine\DBAL\Connection;
 use Ramsey\Uuid\Uuid;
 
 class SObjectCompilerTest extends DatabaseTestCase
 {
+    use ArraySubsetAsserts;
+
     /**
      * @var SObjectCompiler
      */
@@ -44,6 +47,7 @@ class SObjectCompilerTest extends DatabaseTestCase
         /** @var Connection $conn */
         $conn = $this->doctrine->getConnection($this->doctrine->getDefaultConnectionName());
         $conn->exec('DELETE FROM account');
+        $conn->exec('DELETE FROM contact');
         parent::tearDown();
     }
 
