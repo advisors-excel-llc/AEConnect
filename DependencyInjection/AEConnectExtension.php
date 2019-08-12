@@ -8,12 +8,12 @@
 
 namespace AE\ConnectBundle\DependencyInjection;
 
-use AE\ConnectBundle\Command\ConsumeCommand;
 use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Connection\Dbal\ConnectionProxy;
 use AE\ConnectBundle\Driver\AnnotationDriver;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
+use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
@@ -147,7 +147,6 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
     private function processConnections(ContainerBuilder $container, array $config)
     {
-        $this->processEnqueue($config['enqueue'], $container);
         $connections = $config['connections'];
         $appName     = $config['app_name'];
 
@@ -219,14 +218,6 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 }
             }
         }
-    }
-
-    private function processEnqueue(string $name, ContainerBuilder $container)
-    {
-        $definition = $container->getDefinition(ConsumeCommand::class);
-        $definition->setArgument('$consumer', new Reference(sprintf('enqueue.client.%s.queue_consumer', $name)));
-        $definition->setArgument('$driver', new Reference(sprintf('enqueue.client.%s.driver', $name)));
-        $container->setDefinition(ConsumeCommand::class, $definition);
     }
 
     private function createAuthProviderService(
