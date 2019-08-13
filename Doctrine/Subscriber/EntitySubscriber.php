@@ -242,15 +242,18 @@ class EntitySubscriber implements EventSubscriber, LoggerAwareInterface
                     $processing[$oid] = $oid;
                     $result = $this->compiler->compile($entity, $connection->getName());
                     $result->setIntent(CompilerResult::DELETE);
-                    $this->connector->sendCompilerResult($result);
+                    if (null !== $result->getSObject()->Id) {
+                        $this->connector->sendCompilerResult($result);
+                    }
                 } catch (\RuntimeException $e) {
                     // If the entity isn't able to be sent to Salesforce for any reason,
                     // a RuntimeException is thrown. We don't want that stopping our fun.
                     $this->logger->error($e->getMessage());
                     $this->logger->debug($e->getTraceAsString());
                     unset($processing[$oid]);
+                } finally {
+                    unset($entities[$oid]);
                 }
-                unset($entities[$oid]);
             }
         }
 
