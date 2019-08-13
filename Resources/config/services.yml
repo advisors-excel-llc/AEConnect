@@ -61,6 +61,8 @@ services:
         arguments:
             $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+        calls:
+            - ['setLogger', ['@Psr\Log\LoggerInterface']]
         tags: ['doctrine.event_subscriber']
     AE\ConnectBundle\Doctrine\Subscriber\UuidSubscriber:
         arguments:

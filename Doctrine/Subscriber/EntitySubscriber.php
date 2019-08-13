@@ -12,10 +12,16 @@ use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use Doctrine\Common\EventSubscriber;
 use Doctrine\ORM\Event\LifecycleEventArgs;
-use Doctrine\ORM\Event\PostFlushEventArgs;
+use Doctrine\ORM\Event\PreFlushEventArgs;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
-class EntitySubscriber implements EventSubscriber
+class EntitySubscriber implements EventSubscriber, LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     /**
      * @var SalesforceConnector
      */
@@ -35,6 +41,7 @@ class EntitySubscriber implements EventSubscriber
     {
         $this->connector         = $connector;
         $this->connectionManager = $connectionManager;
+        $this->logger            = new NullLogger();
     }
 
     public function getSubscribedEvents()
@@ -43,26 +50,29 @@ class EntitySubscriber implements EventSubscriber
             'postPersist',
             'postUpdate',
             'postRemove',
-            'postFlush',
+            'preFlush',
         ];
     }
 
     public function postPersist(LifecycleEventArgs $event)
     {
-        $this->entities[] = $event->getEntity();
+        $entity = $event->getEntity();
+        $this->queueEntity($entity);
     }
 
     public function postUpdate(LifecycleEventArgs $event)
     {
-        $this->entities[] = $event->getEntity();
+        $entity = $event->getEntity();
+        $this->queueEntity($entity);
     }
 
     public function postRemove(LifecycleEventArgs $event)
     {
-        $this->entities[] = $event->getEntity();
+        $entity = $event->getEntity();
+        $this->queueEntity($entity);
     }
 
-    public function postFlush(PostFlushEventArgs $event)
+    public function preFlush(PreFlushEventArgs $event)
     {
         $connections = $this->connectionManager->getConnections();
         foreach ($connections as $connection) {
@@ -72,10 +82,32 @@ class EntitySubscriber implements EventSubscriber
                 } catch (\RuntimeException $e) {
                     // If the entity isn't able to be sent to Salesforce for any reason,
                     // a RuntimeException is thrown. We don't want that stopping our fun.
+                    $this->logger->error($e->getMessage());
+                    $this->logger->debug($e->getTraceAsString());
                 }
             }
         }
 
         $this->entities = [];
+    }
+
+    /**
+     * @param LoggerInterface $logger
+     */
+    public function setLogger(?LoggerInterface $logger): void
+    {
+        $this->logger = $logger ?: new NullLogger();
+    }
+
+    /**
+     * @param $entity
+     */
+    private function queueEntity($entity): void
+    {
+        $oid = \spl_object_hash($entity);
+
+        if (!array_key_exists($oid, $this->entities)) {
+            $this->entities[$oid] = $entity;
+        }
     }
 }
