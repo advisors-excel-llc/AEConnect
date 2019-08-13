@@ -162,13 +162,19 @@ class OutboundQueue implements LoggerAwareInterface
                 $manager->clear($class);
             }
         } catch (\GuzzleHttp\Exception\GuzzleException $e) {
-            $this->logger->critical(
-                'An exception occurred while trying to send queue.'
+            $this->logger->error(
+                'An exception occurred while trying to send queue: {msg}',
+                [
+                    'msg' => $e->getMessage()
+                ]
             );
             $this->logger->debug($e->getTraceAsString());
         } catch (\Exception $e) {
-            $this->logger->critical(
-                'An exception occurred while trying to send queue.'
+            $this->logger->error(
+                'An exception occurred while trying to send queue: {msg}',
+                [
+                    'msg' => $e->getMessage()
+                ]
             );
             $this->logger->debug($e->getTraceAsString());
         }
@@ -285,6 +291,8 @@ class OutboundQueue implements LoggerAwareInterface
         }
 
         $manager = $this->registry->getManagerForClass($metadata->getClassName());
+        // Clear the manager to prevent unwanted associations from getting in
+        $manager->clear();
         $repo    = $manager->getRepository($metadata->getClassName());
         $entity  = $repo->findOneBy($idMap);
 

@@ -57,10 +57,10 @@ class Task
 
     /**
      * @var string
-     * @ORM\Column(length=8, nullable=false, options={"default"="Open"})
+     * @ORM\Column(length=8, nullable=false)
      * @Field("Status")
      */
-    private $status = "Open";
+    private $status;
 
     /**
      * @var string
@@ -167,7 +167,7 @@ class Task
     /**
      * @return string
      */
-    public function getStatus(): string
+    public function getStatus(): ?string
     {
         return $this->status;
     }
@@ -177,7 +177,7 @@ class Task
      *
      * @return Task
      */
-    public function setStatus(string $status): Task
+    public function setStatus(?string $status): Task
     {
         $this->status = $status;
 

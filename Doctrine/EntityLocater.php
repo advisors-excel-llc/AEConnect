@@ -50,6 +50,7 @@ class EntityLocater implements LoggerAwareInterface
      * @param Metadata $metadata
      *
      * @return mixed
+     * @throws \Doctrine\DBAL\DBALException
      * @throws \Doctrine\ORM\Mapping\MappingException
      * @throws \Doctrine\ORM\NonUniqueResultException
      */
@@ -206,7 +207,7 @@ class EntityLocater implements LoggerAwareInterface
                     }
                 } else {
                     $this->logger->warning(
-                        'The follow SFID value was rejected by the EntityCompiler: {val}',
+                        'The follow SFID value was rejected by the EntityLocater: {val}',
                         [
                             'val' => $sfidVal,
                         ]

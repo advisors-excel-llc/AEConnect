@@ -104,11 +104,13 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
 
         $id = null;
         try {
-            $id = $payload->getClassMetadata()->getFieldValue(
-                $payload->getEntity(),
-                $payload->getClassMetadata()->getSingleIdentifierFieldName()
-            )
-            ;
+            if (null !== $payload->getEntity()) {
+                $id = $payload->getClassMetadata()->getFieldValue(
+                    $payload->getEntity(),
+                    $payload->getClassMetadata()->getSingleIdentifierFieldName()
+                )
+                ;
+            }
         } catch (\Exception $e) {
             // Left Blank
         }
@@ -162,6 +164,7 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
                 }
 
                 $sfid = new $targetClass();
+
                 if (!($sfid instanceof SalesforceIdEntityInterface)) {
                     $sfid = null;
                 }
@@ -171,7 +174,7 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
                     $sfid->setSalesforceId($value);
 
                     $manager->persist($sfid);
-                    $manager->flush();
+                    $manager->flush($sfid);
                 } elseif (null !== $sfid && $classMetadata->hasAssociation($connectionField)) {
                     $connectionAssoc     = $classMetadata->getAssociationMapping($connectionField);
                     $connectionClass     = $connectionAssoc['targetEntity'];
@@ -206,49 +209,60 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
                             $sfid->setSalesforceId($value);
 
                             $manager->persist($sfid);
-                            $manager->flush();
+                            $manager->flush($sfid);
                         }
                     }
                 }
             }
 
-            if (null !== $sfid && $association['type'] & ClassMetadataInfo::TO_MANY) {
-                $entity = $payload->getEntity();
-                // If there isn't an entity on the payload, then we can't merge with existing.
-                // In this case, we'll return what has been found
-                if (null === $entity) {
-                    $payload->setValue(new ArrayCollection([$sfid]));
+            $this->assignPayloadValue($sfid, $payload, $association['type'] & ClassMetadataInfo::TO_MANY);
+        } catch (\Exception $e) {
+            $this->logger->debug($e->getMessage());
 
-                    return;
-                }
+            $this->assignPayloadValue(
+                $sfid,
+                $payload,
+                !empty($association) && $association['type'] & ClassMetadataInfo::TO_MANY
+            );
+        }
+    }
 
-                // If there is an entity, process accordingly
-                $val = $payload->getFieldMetadata()->getValueFromEntity($entity);
-                if ($val instanceof Collection) {
-                    // Don't add the sfid twice if it already exists
-                    if ($val->contains($sfid)) {
-                        $payload->setValue(new ArrayCollection($val->toArray()));
+    private function assignPayloadValue($sfid, TransformerPayload $payload, bool $isAssociation): void
+    {
+        if (null === $sfid || !$isAssociation) {
+            $payload->setValue($sfid);
 
-                        return;
-                    }
+            return;
+        }
 
-                    $sfids   = $val->toArray();
-                    $sfids[] = $sfid;
-                    $payload->setValue(new ArrayCollection($sfids));
+        $entity = $payload->getEntity();
+        // If there isn't an entity on the payload, then we can't merge with existing.
+        // In this case, we'll return what has been found
+        if (null === $entity) {
+            $payload->setValue(new ArrayCollection([$sfid]));
 
-                    return;
-                }
+            return;
+        }
 
-                $payload->setValue(new ArrayCollection([$sfid]));
+        // If there is an entity, process accordingly
+        $val = $payload->getFieldMetadata()->getValueFromEntity($entity);
+        if ($val instanceof Collection) {
+            // Don't add the sfid twice if it already exists
+            if ($val->contains($sfid)) {
+                $payload->setValue(new ArrayCollection($val->toArray()));
 
                 return;
             }
 
-            $payload->setValue($sfid);
+            $sfids   = $val->toArray();
+            $sfids[] = $sfid;
+            $payload->setValue(new ArrayCollection($sfids));
 
             return;
-        } catch (\Exception $e) {
-            $this->logger->debug($e->getMessage());
         }
+
+        $payload->setValue(new ArrayCollection([$sfid]));
+
+        return;
     }
 }

@@ -13,7 +13,6 @@ use AE\ConnectBundle\Connection\Dbal\ConnectionProxy;
 use AE\ConnectBundle\Driver\AnnotationDriver;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
 use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
-use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
@@ -98,6 +97,12 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
             if (!array_key_exists('ae_connect_replay', $providers)) {
                 $providerConfig['ae_connect_replay'] = [
+                    'type' => 'file_system',
+                ];
+            }
+
+            if (!array_key_exists('ae_connect_entities', $providers)) {
+                $providerConfig['ae_connect_entities'] = [
                     'type' => 'file_system',
                 ];
             }

@@ -58,7 +58,7 @@ class Contact
 
     /**
      * @var Account
-     * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\Account")
+     * @ORM\ManyToOne(targetEntity="AE\ConnectBundle\Tests\Entity\Account", cascade={"merge"})
      * @Field("AccountId", connections={"*"})
      */
     private $account;

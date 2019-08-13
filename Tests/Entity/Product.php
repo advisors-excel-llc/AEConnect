@@ -169,8 +169,12 @@ class Product
      *
      * @return Product
      */
-    public function setSfids(Collection $sfids): Product
+    public function setSfids($sfids): Product
     {
+        if (is_array($sfids)) {
+            $sfids = new ArrayCollection($sfids);
+        }
+
         $this->sfids = $sfids;
 
         return $this;

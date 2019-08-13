@@ -1,9 +1,11 @@
 AE\ConnectBundle\Tests\Entity\OrgConnection:
     db_test_org1:
-        name: 'db_test_org1'
-        username: '<getenv("SF_ALT_USER")>'
+        id: 1
+        name (unique): 'db_test_org1'
+        username (unique): '<getenv("SF_ALT_USER")>'
         password: '<getenv("SF_ALT_PASS")>'
     db_bad_org:
-        name: 'db_bad_org'
-        username: 'baduser@nowhere.com'
+        id: 2
+        name (unique): 'db_bad_org'
+        username (unique): 'baduser@nowhere.com'
         password: 'nevergonnagiveyouup'
