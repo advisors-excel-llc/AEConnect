@@ -52,7 +52,7 @@ class QueryImportCommand extends Command
              )
              ->addOption(
                  'insert-new',
-                 'n',
+                 'i',
                  InputOption::VALUE_NONE,
                  'Insert new records from Salesforce that don\'t exist locally'
              )

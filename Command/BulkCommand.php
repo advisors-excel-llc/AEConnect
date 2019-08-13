@@ -55,7 +55,7 @@ class BulkCommand extends Command
              )
              ->addOption(
                  'insert-new',
-                 'n',
+                 null,
                  InputOption::VALUE_NONE,
                  'Insert new entities into the local database '.
                  'from Salesforce if they don\'t exist in the local database'
