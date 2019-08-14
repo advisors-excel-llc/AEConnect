@@ -29,7 +29,7 @@ class ConnectionTransformerTest extends AbstractTransformerTest
      */
     private $connectionFinder;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 

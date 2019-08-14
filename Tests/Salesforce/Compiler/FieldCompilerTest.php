@@ -27,7 +27,7 @@ class FieldCompilerTest extends KernelTestCase
      */
     private $connectionManager;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->fieldCompiler = $this->get(FieldCompiler::class);

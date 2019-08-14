@@ -14,7 +14,7 @@ abstract class DatabaseTestCase extends KernelTestCase
 {
     use DatabaseTestTrait;
 
-    protected function setUp()/* The :void return type declaration that should be here would cause a BC issue */
+    protected function setUp(): void
     {
         parent::setUp();
         $this->setLoader(static::$container->get('fidry_alice_data_fixtures.loader.doctrine'));

@@ -15,14 +15,29 @@ use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use AE\ConnectBundle\Tests\Entity\Role;
 use AE\ConnectBundle\Tests\Entity\SalesforceId;
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityRepository;
-use function foo\func;
 
 class InboundBulkQueueTest extends DatabaseTestCase
 {
+    protected function tearDown(): void
+    {
+        /** @var Connection $conn */
+        $conn = $this->doctrine->getConnection();
+        $conn->exec("DELETE FROM account;");
+        parent::tearDown();
+    }
 
+    /**
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \Doctrine\DBAL\DBALException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
     public function testProcess()
     {
+        /** @var Connection $conn */
+        $conn = $this->doctrine->getConnection();
+        $conn->exec("DELETE FROM account;");
         /** @var ConnectionManagerInterface $connectionManager */
         $connectionManager = $this->get(ConnectionManagerInterface::class);
         $connection        = $connectionManager->getConnection();
@@ -30,8 +45,9 @@ class InboundBulkQueueTest extends DatabaseTestCase
         /** @var InboundBulkQueue $inboundQueue */
         $inboundQueue = $this->get(InboundBulkQueue::class);
 
-        $inboundQueue->process($connection, ['Account', 'UserRole'], true);
+        $inboundQueue->process($connection, ['Account', 'UserRole'], true, true);
 
+        /** @var Account[] $accounts */
         $accounts = $this->doctrine->getManager()->getRepository(Account::class)->findAll();
 
         $this->assertNotEmpty($accounts);
@@ -49,8 +65,16 @@ class InboundBulkQueueTest extends DatabaseTestCase
         }
     }
 
+    /**
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \Doctrine\DBAL\DBALException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
     public function testProcessRecordTypeFiltering()
     {
+        /** @var Connection $conn */
+        $conn = $this->doctrine->getConnection();
+        $conn->exec("DELETE FROM account;");
         $this->loadOrgConnections();
 
         /** @var ConnectionManagerInterface $connectionManager */
@@ -60,7 +84,7 @@ class InboundBulkQueueTest extends DatabaseTestCase
         /** @var InboundBulkQueue $inboundQueue */
         $inboundQueue = $this->get(InboundBulkQueue::class);
 
-        $inboundQueue->process($connection, ['Account'], true);
+        $inboundQueue->process($connection, ['Account'], true, true);
 
         /** @var EntityRepository $repo */
         $repo = $this->doctrine->getManager()->getRepository(Account::class);
@@ -86,8 +110,17 @@ class InboundBulkQueueTest extends DatabaseTestCase
         $this->assertCount(1, $filtered);
     }
 
-    public function testNoUpdate()
+    /**
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \Doctrine\DBAL\DBALException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function testNoInsert()
     {
+        /** @var Connection $conn */
+        $conn = $this->doctrine->getConnection();
+        $conn->exec("DELETE FROM account;");
+
         /** @var ConnectionManagerInterface $connectionManager */
         $connectionManager = $this->get(ConnectionManagerInterface::class);
         $connection        = $connectionManager->getConnection();
@@ -98,7 +131,36 @@ class InboundBulkQueueTest extends DatabaseTestCase
         /** @var InboundBulkQueue $inboundQueue */
         $inboundQueue = $this->get(InboundBulkQueue::class);
 
-        $inboundQueue->process($connection, ['Account'], true);
+        $inboundQueue->process($connection, ['Account'], false, false);
+
+        /** @var Account[]|Iterable $accounts */
+        $accounts = $this->doctrine->getManager()->getRepository(Account::class)->findAll();
+
+        $this->assertCount(0, $accounts);
+    }
+
+    /**
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \Doctrine\DBAL\DBALException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function testNoUpdate()
+    {
+        /** @var Connection $conn */
+        $conn = $this->doctrine->getConnection();
+        $conn->exec("DELETE FROM account;");
+
+        /** @var ConnectionManagerInterface $connectionManager */
+        $connectionManager = $this->get(ConnectionManagerInterface::class);
+        $connection        = $connectionManager->getConnection();
+        /** @var SalesforceConnector $connector */
+        $connector = $this->get(SalesforceConnector::class);
+        $connector->disable();
+
+        /** @var InboundBulkQueue $inboundQueue */
+        $inboundQueue = $this->get(InboundBulkQueue::class);
+
+        $inboundQueue->process($connection, ['Account'], true, true);
 
         /** @var Account[] $accounts */
         $accounts = $this->doctrine->getManager()->getRepository(Account::class)->findAll();
@@ -125,7 +187,7 @@ class InboundBulkQueueTest extends DatabaseTestCase
         $this->assertNotNull($bAccount);
         $this->assertNull($bAccount->getSfid());
 
-        $inboundQueue->process($connection, ['Account'], false);
+        $inboundQueue->process($connection, ['Account'], false, false);
 
         $cAccount = $this->doctrine->getManager()->getRepository(Account::class)->findOneBy(
             [
@@ -152,8 +214,18 @@ class InboundBulkQueueTest extends DatabaseTestCase
         $connector->enable();
     }
 
+    /**
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \Doctrine\DBAL\DBALException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
     public function testNoUpdateMulti()
     {
+        /** @var Connection $conn */
+        $conn = $this->doctrine->getConnection();
+        $conn->exec("DELETE FROM account;");
+
         /** @var ConnectionManagerInterface $connectionManager */
         $connectionManager = $this->get(ConnectionManagerInterface::class);
         $connName          = 'db_test_org1';
@@ -165,7 +237,7 @@ class InboundBulkQueueTest extends DatabaseTestCase
         /** @var InboundBulkQueue $inboundQueue */
         $inboundQueue = $this->get(InboundBulkQueue::class);
 
-        $inboundQueue->process($connection, ['Account'], true);
+        $inboundQueue->process($connection, ['Account'], true, true);
 
         /** @var EntityRepository $repository */
         $repository = $this->doctrine->getManager()->getRepository(Account::class);
@@ -212,7 +284,7 @@ class InboundBulkQueueTest extends DatabaseTestCase
             )
         );
 
-        $inboundQueue->process($connection, ['Account'], false);
+        $inboundQueue->process($connection, ['Account'], false, false);
 
         $cAccount = $repository->findOneBy(
             [

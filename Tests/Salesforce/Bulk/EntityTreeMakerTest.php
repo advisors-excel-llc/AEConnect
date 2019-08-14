@@ -12,12 +12,15 @@ use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Bulk\EntityTreeMaker;
 use AE\ConnectBundle\Tests\Entity\Account;
+use AE\ConnectBundle\Tests\Entity\AltProduct;
 use AE\ConnectBundle\Tests\Entity\Contact;
 use AE\ConnectBundle\Tests\Entity\Order;
 use AE\ConnectBundle\Tests\Entity\OrderProduct;
 use AE\ConnectBundle\Tests\Entity\Product;
 use AE\ConnectBundle\Tests\Entity\Role;
 use AE\ConnectBundle\Tests\Entity\Task;
+use AE\ConnectBundle\Tests\Entity\TestMultiMapType1;
+use AE\ConnectBundle\Tests\Entity\TestMultiMapType2;
 use AE\ConnectBundle\Tests\Entity\TestObject;
 use AE\ConnectBundle\Tests\KernelTestCase;
 
@@ -57,13 +60,16 @@ class EntityTreeMakerTest extends KernelTestCase
 
         $map = $treeMaker->buildFlatMap($connection);
 
-        $this->assertEquals(Product::class, $map[0]);
-        $this->assertEquals(Account::class, $map[1]);
-        $this->assertEquals(Contact::class, $map[2]);
-        $this->assertEquals(Order::class, $map[3]);
-        $this->assertEquals(OrderProduct::class, $map[4]);
-        $this->assertEquals(Task::class, $map[5]);
-        $this->assertEquals(Role::class, $map[6]);
-        $this->assertEquals(TestObject::class, $map[7]);
+        $this->assertEquals(TestMultiMapType1::class, $map[0]);
+        $this->assertEquals(TestMultiMapType2::class, $map[1]);
+        $this->assertEquals(Product::class, $map[2]);
+        $this->assertEquals(Account::class, $map[3]);
+        $this->assertEquals(Contact::class, $map[4]);
+        $this->assertEquals(Order::class, $map[5]);
+        $this->assertEquals(OrderProduct::class, $map[6]);
+        $this->assertEquals(Task::class, $map[7]);
+        $this->assertEquals(Role::class, $map[8]);
+        $this->assertEquals(AltProduct::class, $map[9]);
+        $this->assertEquals(TestObject::class, $map[10]);
     }
 }

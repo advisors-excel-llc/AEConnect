@@ -8,7 +8,6 @@
 
 namespace AE\ConnectBundle\DependencyInjection;
 
-use AE\ConnectBundle\Command\ConsumeCommand;
 use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Connection\Dbal\ConnectionProxy;
 use AE\ConnectBundle\Driver\AnnotationDriver;
@@ -24,6 +23,7 @@ use AE\ConnectBundle\Streaming\Client;
 use AE\ConnectBundle\Streaming\Extension\ReplayExtension;
 use AE\ConnectBundle\Streaming\Topic;
 use Psr\Log\LoggerAwareInterface;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -57,6 +57,15 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
      * @inheritDoc
      */
     public function prepend(ContainerBuilder $container)
+    {
+        $this->processDoctrineCache($container);
+        $this->processEnqueueClient($container);
+    }
+
+    /**
+     * @param ContainerBuilder $container
+     */
+    protected function processDoctrineCache(ContainerBuilder $container): void
     {
         foreach ($container->getExtensionConfig('doctrine_cache') as $config) {
             $providers      = array_key_exists('providers', $config) ? $config['providers'] : [];
@@ -92,6 +101,12 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 ];
             }
 
+            if (!array_key_exists('ae_connect_entities', $providers)) {
+                $providerConfig['ae_connect_entities'] = [
+                    'type' => 'file_system',
+                ];
+            }
+
             $container->prependExtensionConfig(
                 'doctrine_cache',
                 [
@@ -99,6 +114,33 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 ]
             );
         }
+    }
+
+    protected function processEnqueueClient(ContainerBuilder $container)
+    {
+        $clientConfig = [];
+
+        foreach ($container->getExtensionConfig('enqueue') as $config) {
+            if (array_key_exists('ae_connect', $config)) {
+                $clientConfig = array_merge($clientConfig, $config['ae_connect']);
+                continue;
+            }
+
+            if (!array_key_exists('default', $config)) {
+                continue;
+            }
+
+            $clientConfig = array_merge($clientConfig, $config['default']);
+        }
+
+        if (empty($clientConfig)) {
+            throw new InvalidConfigurationException('No enqueue configuration defined for "ae_connect"');
+        }
+
+        $clientConfig['client']['prefix']   = 'ae_connect';
+        $clientConfig['client']['app_name'] = 'ae_connect';
+
+        $container->prependExtensionConfig('enqueue', ['ae_connect' => $clientConfig]);
     }
 
     private function createAnnotationDriver(ContainerBuilder $container, array $config)
@@ -110,7 +152,6 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
     private function processConnections(ContainerBuilder $container, array $config)
     {
-        $this->processEnqueue($config['enqueue'], $container);
         $connections = $config['connections'];
         $appName     = $config['app_name'];
 
@@ -182,14 +223,6 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
                 }
             }
         }
-    }
-
-    private function processEnqueue(string $name, ContainerBuilder $container)
-    {
-        $definition = $container->getDefinition(ConsumeCommand::class);
-        $definition->setArgument('$consumer', new Reference(sprintf('enqueue.client.%s.queue_consumer', $name)));
-        $definition->setArgument('$driver', new Reference(sprintf('enqueue.client.%s.driver', $name)));
-        $container->setDefinition(ConsumeCommand::class, $definition);
     }
 
     private function createAuthProviderService(
@@ -574,13 +607,12 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
      * @param bool $appFilteringEnabled ,
      * @param array $permittedObjects
      */
-    private
-    function createConnectionService(
+    private function createConnectionService(
         string $connectionName,
         bool $isDefault,
         ContainerBuilder $container,
         int $bulkQueryMinCount = 100000,
-        ?string $appName,
+        ?string $appName = null,
         bool $appFilteringEnabled = true,
         array $permittedObjects = []
     ): void {

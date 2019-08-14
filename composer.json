@@ -23,14 +23,15 @@
         "symfony/validator": "^4.2"
     },
     "require-dev": {
-        "phpunit/phpunit": "^7.3",
         "symfony/phpunit-bridge": "~3.4.10|^4.1",
         "theofidry/alice-data-fixtures": "^1.0",
         "symfony/monolog-bundle": "^3.3",
         "ext-pdo_sqlite": "*",
         "matthiasnoback/symfony-config-test": "^4.0",
         "enqueue/fs": "^0.9",
-        "doctrine/data-fixtures": "^1.3"
+        "doctrine/data-fixtures": "^1.3",
+        "phpunit/phpunit": "^8",
+        "dms/phpunit-arraysubset-asserts": "^0.1.0"
     },
     "authors": [
         {

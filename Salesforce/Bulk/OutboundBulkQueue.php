@@ -76,8 +76,7 @@ class OutboundBulkQueue
     public function process(
         ConnectionInterface $connection,
         array $types = [],
-        bool $updateExisting
-        = false
+        bool $updateExisting = false
     ) {
         if (!$connection->isActive()) {
             throw new \RuntimeException("Connection '{$connection->getName()} is inactive.");

@@ -100,6 +100,17 @@ class SalesforceConnector implements LoggerAwareInterface
             return false;
         }
 
+        return $this->sendCompilerResult($result);
+    }
+
+    /**
+     * @param CompilerResult $result
+     * @param string $connectionName
+     *
+     * @return bool
+     */
+    public function sendCompilerResult(CompilerResult $result): bool
+    {
         $intent  = $result->getIntent();
         $sObject = $result->getSObject();
 
@@ -111,7 +122,7 @@ class SalesforceConnector implements LoggerAwareInterface
                     'No fields for object {type} to insert or update for {conn}',
                     [
                         'type' => $sObject->getType(),
-                        'conn' => $connectionName,
+                        'conn' => $result->getConnectionName(),
                     ]
                 );
 

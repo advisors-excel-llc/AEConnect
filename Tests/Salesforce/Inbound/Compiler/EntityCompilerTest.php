@@ -24,7 +24,7 @@ class EntityCompilerTest extends DatabaseTestCase
      */
     private $entityCompiler;
 
-    protected function setUp()/* The :void return type declaration that should be here would cause a BC issue */
+    protected function setUp(): void
     {
         parent::setUp();
         $this->entityCompiler = $this->get(EntityCompiler::class);

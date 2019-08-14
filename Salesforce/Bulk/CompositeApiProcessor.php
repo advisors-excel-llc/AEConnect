@@ -35,34 +35,40 @@ class CompositeApiProcessor
     /**
      * @param ConnectionInterface $connection
      * @param string $sObjectType
-     * @param bool $updateEntity
      * @param string $query
+     * @param bool $updateEntity
+     * @param bool $insertEntity
      *
-     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
-     * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws MappingException
      * @throws ORMException
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function process(
         ConnectionInterface $connection,
         string $sObjectType,
+        string $query,
         bool $updateEntity,
-        string $query
+        bool $insertEntity = false
     ) {
         $client = $connection->getRestClient()->getSObjectClient();
         $query  = $client->query($query);
         do {
             $records = $query->getRecords();
             if (!empty($records)) {
-                foreach ($records as &$record) {
+                $objects = [];
+                foreach ($records as $record) {
                     $record->__SOBJECT_TYPE__ = $sObjectType;
-                    if (!$updateEntity) {
-                        $record = $this->preProcessor->preProcess($record, $connection);
+                    $object = $this->preProcessor->preProcess($record, $connection, $updateEntity, $insertEntity);
+                    if (null === $object) {
+                        continue;
                     }
+                    $objects[] = $object;
                 }
                 $this->connector->enable();
                 $this->connector->receive(
-                    $records,
+                    $objects,
                     SalesforceConsumerInterface::UPDATED,
                     $connection->getName(),
                     $updateEntity

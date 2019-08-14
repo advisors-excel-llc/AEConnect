@@ -42,7 +42,7 @@ class RequestBuilderTest extends DatabaseTestCase
      */
     private $connector;
 
-    protected function setUp()/* The :void return type declaration that should be here would cause a BC issue */
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -357,8 +357,10 @@ class RequestBuilderTest extends DatabaseTestCase
         /** @var Account $account */
         foreach ($accounts as $account) {
             $task = new Task();
-            $task->setAccount($account)
-                 ->setSubject('Test Task for '.$account->getName())
+            $task
+                ->setStatus('Open')
+                ->setAccount($account)
+                ->setSubject('Test Task for '.$account->getName())
                 ->setStatus('Open')
             ;
             $manager->persist($task);
