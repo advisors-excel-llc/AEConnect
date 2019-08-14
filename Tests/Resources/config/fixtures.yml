@@ -12,10 +12,20 @@ AE\ConnectBundle\Tests\Entity\Contact:
         firstName: 'Test'
         lastName: 'Contact <current()>->id'
         sfid: '0d1Ag0000000<current()>040'
+AE\ConnectBundle\Tests\Entity\OrgConnection:
+    db_test_org_build:
+        name: 'db_test_org_build'
+        username: 'testbuild@exampple.com'
+        password: '123451235'
+AE\ConnectBundle\Tests\Entity\SalesforceId:
+    salesforce_id:
+        connection: '@db_test_org_build'
+        salesforce_id: 'Ed1Ag0000000001140'
 AE\ConnectBundle\Tests\Entity\Product:
     product:
         name: 'Test Product 1'
-        sfid: 'Ed1Ag0000000001140'
+        sfids:
+            - '@salesforce_id'
         active: true
 #AE\ConnectBundle\Tests\Entity\Order:
 #    order{1..10}:

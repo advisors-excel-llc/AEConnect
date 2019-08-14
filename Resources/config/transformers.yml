@@ -36,6 +36,9 @@ services:
         $connectionFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder'
         $logger: '@?Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\SfidTransformer:
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
-        $reader: '@Doctrine\Common\Annotations\Reader'
-        $sfidFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder'
+        arguments:
+            $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+            $reader: '@Doctrine\Common\Annotations\Reader'
+            $sfidFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder'
+        calls:
+            - ['setLogger', ['@Psr\Log\LoggerInterface']]

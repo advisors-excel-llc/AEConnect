@@ -9,10 +9,12 @@
 namespace AE\ConnectBundle\Tests\Doctrine;
 
 use AE\ConnectBundle\Doctrine\EntityLocater;
+use AE\ConnectBundle\Driver\DbalConnectionDriver;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
+use AE\ConnectBundle\Tests\Entity\OrgConnection;
 use AE\ConnectBundle\Tests\Entity\Product;
 use AE\ConnectBundle\Tests\Entity\SalesforceId;
 use AE\ConnectBundle\Tests\Entity\Task;
@@ -20,6 +22,7 @@ use AE\ConnectBundle\Tests\Salesforce\SfidGenerator;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\DBAL\Driver\Connection;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Id\IdentityGenerator;
 use Ramsey\Uuid\Uuid;
 
@@ -40,7 +43,12 @@ class EntityLocaterTest extends DatabaseTestCase
      */
     private $connectionFinder;
 
-    protected function setUp()/* The :void return type declaration that should be here would cause a BC issue */
+    /**
+     * @var OrgConnection
+     */
+    private $org;
+
+    protected function setUp(): void
     {
         parent::setUp();
         $this->entityLocater     = $this->get(EntityLocater::class);
@@ -53,6 +61,25 @@ class EntityLocaterTest extends DatabaseTestCase
         $conn->exec("DELETE FROM account");
         $conn->exec("DELETE FROM product");
         $conn->exec("DELETE FROM task");
+        $conn->exec("DELETE FROM account_org_connection");
+        $conn->exec("DELETE FROM account_salesforce_id");
+        $conn->exec("DELETE FROM org_connection");
+
+        /** @var EntityManager $manager */
+        $manager   = $this->doctrine->getManager();
+        $this->org = $org = new OrgConnection();
+        $org->setName('db_test_org1')
+            ->setActive(true)
+            ->setUsername('test_user1@example.com')
+            ->setPassword(1234)
+        ;
+
+        $manager->persist($org);
+        $manager->flush();
+
+        /** @var DbalConnectionDriver $dbalDriver */
+        $dbalDriver = $this->get(DbalConnectionDriver::class);
+        $dbalDriver->loadConnections();
     }
 
     public function testDefault()
@@ -61,12 +88,12 @@ class EntityLocaterTest extends DatabaseTestCase
         $metadata   = $connection->getMetadataRegistry()->findMetadataByClass(Account::class);
         $manager    = $this->doctrine->getManager();
         $extId      = Uuid::uuid4();
-
-        $account = new Account();
+        $sfid       = SfidGenerator::generate();
+        $account    = new Account();
         $account->setName('Test Account For Finding');
         $account->setExtId($extId);
         $account->setConnection($connection->getName());
-        $account->setSfid('000111000111000');
+        $account->setSfid($sfid);
 
         $manager->persist($account);
         $manager->flush();
@@ -74,7 +101,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $foundBySfid = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id' => '000111000111000',
+                    'Id' => $sfid,
                 ]
             ),
             $metadata
@@ -96,7 +123,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $foundByBoth = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id'           => '000111000111000',
+                    'Id'           => $sfid,
                     'S3F__HCID__c' => $extId->toString(),
                 ]
             ),
@@ -111,7 +138,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $foundWithMissingSfid = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id'           => '000111000111000',
+                    'Id'           => $sfid,
                     'S3F__HCID__c' => $extId->toString(),
                 ]
             ),
@@ -120,7 +147,7 @@ class EntityLocaterTest extends DatabaseTestCase
 
         $this->assertNotNull($foundWithMissingSfid);
 
-        $account->setSfid('000111000111000');
+        $account->setSfid($sfid);
         $account->setExtId(Uuid::uuid4());
 
         $manager->flush();
@@ -128,7 +155,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $foundWithMissingExtId = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id'           => '000111000111000',
+                    'Id'           => $sfid,
                     'S3F__HCID__c' => $extId->toString(),
                 ]
             ),
@@ -239,11 +266,13 @@ class EntityLocaterTest extends DatabaseTestCase
 
     public function testDB()
     {
+        $org        = $this->org;
+        $manager    = $this->doctrine->getManager();
         $connection = $this->connectionManager->getConnection('db_test_org1');
         $metadata   = $connection->getMetadataRegistry()->findMetadataByClass(Account::class);
-        $org        = $this->connectionFinder->find($connection->getName(), $metadata);
-        $manager    = $this->doctrine->getManager();
-        $extId      = Uuid::uuid4();
+
+        $extId = Uuid::uuid4();
+        $id    = SfidGenerator::generate(true, $metadata);
 
         $account = new Account();
         $account->setName('Test Account For Finding');
@@ -252,7 +281,7 @@ class EntityLocaterTest extends DatabaseTestCase
 
         $sfid = new SalesforceId();
         $sfid->setConnection($org);
-        $sfid->setSalesforceId('000111000111000');
+        $sfid->setSalesforceId($id);
         $manager->persist($sfid);
 
         $account->setSfids(new ArrayCollection([$sfid]));
@@ -263,7 +292,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $foundBySfid = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id' => '000111000111000',
+                    'Id' => $id,
                 ]
             ),
             $metadata
@@ -285,7 +314,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $foundByBoth = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id'               => '000111000111000',
+                    'Id'               => $id,
                     'AE_Connect_Id__c' => $extId->toString(),
                 ]
             ),
@@ -293,19 +322,30 @@ class EntityLocaterTest extends DatabaseTestCase
         );
 
         $this->assertNotNull($foundByBoth);
+    }
 
-        foreach ($account->getSfids() as $sfid) {
-            $manager->remove($sfid);
-            $manager->flush();
-        }
-        $account->setSfids(new ArrayCollection());
-        $manager->merge($account);
+    public function testDBNoSfid()
+    {
+        $org        = $this->org;
+        $manager    = $this->getManager();
+        $connection = $this->connectionManager->getConnection('db_test_org1');
+        $metadata   = $connection->getMetadataRegistry()->findMetadataByClass(Account::class);
+
+        $extId = Uuid::uuid4();
+        $id    = SfidGenerator::generate();
+
+        $account = new Account();
+        $account->setName('Test Account For Finding');
+        $account->setExtId($extId);
+        $account->setConnections(new ArrayCollection([$org]));
+
+        $manager->persist($account);
         $manager->flush();
 
         $foundWithMissingSfid = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id'               => '000111000111000',
+                    'Id'               => $id,
                     'AE_Connect_Id__c' => $extId->toString(),
                 ]
             ),
@@ -313,22 +353,39 @@ class EntityLocaterTest extends DatabaseTestCase
         );
 
         $this->assertNotNull($foundWithMissingSfid);
+    }
 
+    public function testDBNoExtId()
+    {
+        $org        = $this->org;
+        $manager    = $this->getManager();
+        $connection = $this->connectionManager->getConnection('db_test_org1');
+        $metadata   = $connection->getMetadataRegistry()->findMetadataByClass(Account::class);
+
+        $extId  = Uuid::uuid4();
+        $newExt = Uuid::uuid4();
+
+        $account = new Account();
+        $account->setName('Test Account For Finding');
+        $account->setConnections(new ArrayCollection([$org]));
+        $account->setExtId($extId);
+
+        $manager->persist($account);
+
+        $id   = SfidGenerator::generate(true, $metadata);
         $sfid = new SalesforceId();
         $sfid->setConnection($org);
-        $sfid->setSalesforceId('000111000111001');
+        $sfid->setSalesforceId($id);
         $manager->persist($sfid);
 
-        $account->getSfids()->add($sfid);
-        $newExt = Uuid::uuid4();
-        $account->setExtId($newExt);
+        $account->setSfids(new ArrayCollection([$sfid]));
 
         $manager->flush();
 
         $foundWithMissingExtId = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id'               => '000111000111001',
+                    'Id'               => $id,
                     'AE_Connect_Id__c' => $newExt->toString(),
                 ]
             ),
@@ -340,7 +397,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $foundWithBadSFID = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id'               => '000111000111002',
+                    'Id'               => SfidGenerator::generate(true, $metadata),
                     'AE_Connect_Id__c' => $newExt->toString(),
                 ]
             ),
@@ -352,11 +409,13 @@ class EntityLocaterTest extends DatabaseTestCase
 
     public function testDBNoConn()
     {
+        $org        = $this->org;
         $connection = $this->connectionManager->getConnection('db_test_org1');
         $metadata   = $connection->getMetadataRegistry()->findMetadataByClass(Product::class);
-        $org        = $this->connectionFinder->find($connection->getName(), $metadata);
-        $manager    = $this->doctrine->getManager();
-        $extId      = Uuid::uuid4();
+        /** @var EntityManager $manager */
+        $manager = $this->getManager();
+        $extId   = Uuid::uuid4();
+        $id      = SfidGenerator::generate();
 
         $product = new Product();
         $product->setName('Test Product For Finding');
@@ -365,7 +424,7 @@ class EntityLocaterTest extends DatabaseTestCase
 
         $sfid = new SalesforceId();
         $sfid->setConnection($org);
-        $sfid->setSalesforceId('021111000111000');
+        $sfid->setSalesforceId($id);
         $manager->persist($sfid);
 
         $product->setSfids(new ArrayCollection([$sfid]));
@@ -376,7 +435,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $foundBySfid = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id' => '021111000111000',
+                    'Id' => $id,
                 ]
             ),
             $metadata
@@ -398,7 +457,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $foundByBoth = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id'               => '021111000111000',
+                    'Id'               => $id,
                     'AE_Connect_Id__c' => $extId->toString(),
                 ]
             ),
@@ -406,19 +465,30 @@ class EntityLocaterTest extends DatabaseTestCase
         );
 
         $this->assertNotNull($foundByBoth);
+    }
 
-        foreach ($product->getSfids() as $sfid) {
-            $manager->remove($sfid);
-            $manager->flush();
-        }
+    public function testDBNoConnFoundWithMissing()
+    {
+        $org        = $this->org;
+        $connection = $this->connectionManager->getConnection('db_test_org1');
+        $metadata   = $connection->getMetadataRegistry()->findMetadataByClass(Product::class);
+        /** @var EntityManager $manager */
+        $manager = $this->getManager();
+        $extId   = Uuid::uuid4();
+        $id      = SfidGenerator::generate();
+
+        $product = new Product();
+        $product->setName('Test Product For Finding');
+        $product->setExtId($extId);
+        $product->setActive(true);
         $product->setSfids(new ArrayCollection());
-        $manager->merge($product);
+        $manager->persist($product);
         $manager->flush();
 
         $foundWithMissingSfid = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id'               => '021111000111000',
+                    'Id'               => $id,
                     'AE_Connect_Id__c' => $extId->toString(),
                 ]
             ),
@@ -427,9 +497,10 @@ class EntityLocaterTest extends DatabaseTestCase
 
         $this->assertNotNull($foundWithMissingSfid);
 
+        $id   = SfidGenerator::generate();
         $sfid = new SalesforceId();
         $sfid->setConnection($org);
-        $sfid->setSalesforceId('021111000111001');
+        $sfid->setSalesforceId($id);
         $manager->persist($sfid);
 
         $product->getSfids()->add($sfid);
@@ -441,7 +512,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $foundWithMissingExtId = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id'               => '021111000111001',
+                    'Id'               => $id,
                     'AE_Connect_Id__c' => $newExt->toString(),
                 ]
             ),
@@ -453,7 +524,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $foundWithBadSFID = $this->entityLocater->locate(
             new SObject(
                 [
-                    'Id'               => '021111000111002',
+                    'Id'               => SfidGenerator::generate(),
                     'AE_Connect_Id__c' => $newExt->toString(),
                 ]
             ),
@@ -463,7 +534,7 @@ class EntityLocaterTest extends DatabaseTestCase
         $this->assertNotNull($foundWithBadSFID);
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
         /** @var Connection $conn */
@@ -472,5 +543,8 @@ class EntityLocaterTest extends DatabaseTestCase
         $conn->exec("DELETE FROM account");
         $conn->exec("DELETE FROM product");
         $conn->exec("DELETE FROM task");
+        $conn->exec("DELETE FROM account_salesforce_id");
+        $conn->exec("DELETE FROM account_org_connection");
+        $conn->exec("DELETE FROM org_connection");
     }
 }

@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Tests\Salesforce;
 
+use AE\ConnectBundle\Driver\DbalConnectionDriver;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Inbound\SalesforceConsumerInterface;
@@ -61,6 +62,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         $conn->exec('DELETE FROM product;');
         $conn->exec('DELETE FROM order_product;');
         $conn->exec('DELETE FROM order_table;');
+        $conn->exec('DELETE FROM alt_salesforce_id;');
     }
 
     public function testOutgoing()
@@ -103,6 +105,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         }
 
         $this->get(OutboundQueue::class)->send();
+        sleep(10);
 
         $accounts = $manager->getRepository(Account::class)->findBy(['sfid' => null, 'connection' => 'default']);
         $this->assertEmpty($accounts);
@@ -234,7 +237,7 @@ class SalesforceConnectorTest extends DatabaseTestCase
         }
 
         // Reload connections with metadata from cache
-        $this->loadOrgConnections();
+        $this->get(DbalConnectionDriver::class)->loadConnections();
 
         $connection = $connectionManager->getConnection('db_bad_org');
         $this->assertFalse($connection->isActive());

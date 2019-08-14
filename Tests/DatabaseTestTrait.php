@@ -10,6 +10,7 @@ namespace AE\ConnectBundle\Tests;
 
 use AE\ConnectBundle\Driver\DbalConnectionDriver;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use Fidry\AliceDataFixtures\LoaderInterface;
 use Symfony\Bridge\Doctrine\RegistryInterface;
@@ -169,5 +170,27 @@ trait DatabaseTestTrait
         /** @var DbalConnectionDriver $dbalDriver */
         $dbalDriver = $this->get(DbalConnectionDriver::class);
         $dbalDriver->loadConnections();
+    }
+
+    /**
+     * @param null $name
+     *
+     * @return EntityManagerInterface|null
+     * @throws \Doctrine\ORM\ORMException
+     */
+    protected function getManager($name = null): ?EntityManagerInterface
+    {
+        /** @var EntityManagerInterface $manager */
+        $manager = $this->doctrine->getManager($name);
+
+        if ($manager->isOpen()) {
+            return $manager;
+        }
+
+        return EntityManager::create(
+            $manager->getConnection(),
+            $manager->getConfiguration(),
+            $manager->getEventManager()
+        );
     }
 }
