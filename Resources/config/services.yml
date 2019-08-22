@@ -147,6 +147,7 @@ services:
     AE\ConnectBundle\Command\BulkCommand:
         arguments:
             $processor: '@AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor'
+            $dispatcher: '@Symfony\Component\EventDispatcher\EventDispatcherInterface'
         tags: ['console.command']
     AE\ConnectBundle\Command\ConsumeCommand:
         arguments:
@@ -183,6 +184,7 @@ services:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
             $processor: '@AE\ConnectBundle\Salesforce\Bulk\InboundQueryProcessor'
+            $dispatcher: '@Symfony\Component\EventDispatcher\EventDispatcherInterface'
         tags: ['console.command']
     AE\ConnectBundle\Driver\DbalConnectionDriver:
         arguments:
