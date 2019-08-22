@@ -30,12 +30,16 @@ class Configuration implements ConfigurationInterface
                     ->defaultValue([])
                     ->scalarPrototype()->end()
                 ->end()
+                ->scalarNode('db_batch_size')->defaultValue(50)->cannotBeEmpty()->end()
                 ->scalarNode('app_name')->defaultNull()->end()
                 ->scalarNode('default_connection')
                     ->defaultValue('default')
                 ->end()
                 ->scalarNode('enqueue')
                     ->defaultValue('default')
+                    ->setDeprecated(
+                        'This setting is not used. Configure the `ae_connect` setting within the `enqueue` config.'
+                    )
                 ->end()
              ->end()
              ->append($this->buildConnectionTree())

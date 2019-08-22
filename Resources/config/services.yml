@@ -105,11 +105,13 @@ services:
         arguments:
             $preprocessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor'
             $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+            $batchSize: '%ae_connect.db_batch_size%'
         calls:
             - ['setLogger', ['@Psr\Log\LoggerInterface']]
     AE\ConnectBundle\Salesforce\Bulk\CompositeApiProcessor:
         $preprocessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor'
         $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+        $batchSize: '%ae_connect.db_batch_size%'
     AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue:
         $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker'
         $bulkApiProcessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkApiProcessor'

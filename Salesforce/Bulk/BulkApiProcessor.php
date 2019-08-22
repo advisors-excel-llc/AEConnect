@@ -35,11 +35,17 @@ class BulkApiProcessor implements LoggerAwareInterface
      */
     private $connector;
 
-    public function __construct(BulkPreprocessor $preprocessor, SalesforceConnector $connector)
+    /**
+     * @var int
+     */
+    private $batchSize = 50;
+
+    public function __construct(BulkPreprocessor $preprocessor, SalesforceConnector $connector, int $batchSize = 50)
     {
         $this->preProcessor = $preprocessor;
         $this->connector    = $connector;
         $this->logger       = new NullLogger();
+        $this->batchSize    = $batchSize;
     }
 
     /**
@@ -136,20 +142,13 @@ class BulkApiProcessor implements LoggerAwareInterface
         bool $updateEntities,
         bool $insertEntities = false
     ) {
-        $fields  = [];
         $count   = 0;
         $objects = [];
 
-        while (!$result->eof()) {
-            $row = $result->read();
-            if (empty($fields)) {
-                $fields = $row;
-                continue;
-            }
-
+        foreach ($result->getContents(true) as $row) {
             $object = new CompositeSObject($objectType);
-            foreach ($row as $i => $value) {
-                $object->{$fields[$i]} = $value;
+            foreach ($row as $field => $value) {
+                $object->{$field} = $value;
             }
             $object->__SOBJECT_TYPE__ = $objectType;
             $object = $this->preProcessor->preProcess($object, $connection, $updateEntities, $insertEntities);
@@ -161,7 +160,7 @@ class BulkApiProcessor implements LoggerAwareInterface
             $objects[] = $object;
 
             // Gotta break this up a little to prevent 10000000s of records from being saved at once
-            if (count($objects) === 200) {
+            if (count($objects) === $this->batchSize) {
                 $this->logger->debug(
                     'Saving {count} {type} records for connection "{conn}"',
                     [

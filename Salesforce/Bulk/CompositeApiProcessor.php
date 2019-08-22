@@ -26,10 +26,16 @@ class CompositeApiProcessor
      */
     private $connector;
 
-    public function __construct(BulkPreprocessor $preprocessor, SalesforceConnector $connector)
+    /**
+     * @var $batchSize
+     */
+    private $batchSize = 50;
+
+    public function __construct(BulkPreprocessor $preprocessor, SalesforceConnector $connector, int $batchSize = 50)
     {
         $this->preProcessor = $preprocessor;
         $this->connector    = $connector;
+        $this->batchSize    = $batchSize;
     }
 
     /**
@@ -65,16 +71,38 @@ class CompositeApiProcessor
                         continue;
                     }
                     $objects[] = $object;
+
+                    if (count($objects) === $this->batchSize) {
+                        $this->receiveObjects($connection, $updateEntity, $objects);
+                        $objects = [];
+                    }
                 }
-                $this->connector->enable();
-                $this->connector->receive(
-                    $objects,
-                    SalesforceConsumerInterface::UPDATED,
-                    $connection->getName(),
-                    $updateEntity
-                );
-                $this->connector->disable();
+
+                if (!empty($objects)) {
+                    $this->receiveObjects($connection, $updateEntity, $objects);
+                }
             }
         } while (!($query = $client->query($query))->isDone());
+    }
+
+    /**
+     * @param ConnectionInterface $connection
+     * @param bool $updateEntity
+     * @param array $objects
+     *
+     * @throws MappingException
+     * @throws ORMException
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
+     */
+    private function receiveObjects(ConnectionInterface $connection, bool $updateEntity, array $objects): void
+    {
+        $this->connector->enable();
+        $this->connector->receive(
+            $objects,
+            SalesforceConsumerInterface::UPDATED,
+            $connection->getName(),
+            $updateEntity
+        );
+        $this->connector->disable();
     }
 }
