@@ -22,10 +22,19 @@ class InboundQueryProcessor
      */
     private $compositeApiProcessor;
 
-    public function __construct(BulkApiProcessor $bulkApiProcessor, CompositeApiProcessor $compositeApiProcessor)
-    {
+    /**
+     * @var BulkProgress
+     */
+    private $progress;
+
+    public function __construct(
+        BulkApiProcessor $bulkApiProcessor,
+        CompositeApiProcessor $compositeApiProcessor,
+        BulkProgress $progress
+    ) {
         $this->bulkApiProcessor      = $bulkApiProcessor;
         $this->compositeApiProcessor = $compositeApiProcessor;
+        $this->progress              = $progress;
     }
 
     /**
@@ -102,6 +111,8 @@ class InboundQueryProcessor
             if ($total == 0 || $offset >= $total) {
                 throw new \RuntimeException("No results returned for the given query");
             }
+
+            $this->progress->setTotals([$objectType => $total]);
 
             if ($total >= $connection->getBulkApiMinCount()) {
                 $this->bulkApiProcessor->process($connection, $objectType, $updateSOQL, true, $allowInserts);

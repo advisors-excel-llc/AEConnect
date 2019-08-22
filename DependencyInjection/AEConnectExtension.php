@@ -582,8 +582,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
      * @param ContainerBuilder $container
      * @param bool $isDefault
      */
-    private
-    function createMetadataRegistryService(
+    private function createMetadataRegistryService(
         array $config,
         string $connectionName,
         ContainerBuilder $container,
