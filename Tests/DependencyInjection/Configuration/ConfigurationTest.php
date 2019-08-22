@@ -31,6 +31,7 @@ class ConfigurationTest extends TestCase
                 'paths'              => [],
                 'default_connection' => 'default',
                 'enqueue'            => 'default',
+                'db_batch_size'      => 50,
                 'connections'        => [],
                 'app_name'           => null,
             ]
@@ -80,6 +81,7 @@ class ConfigurationTest extends TestCase
                 'paths'              => ['%kernel.project_dir%/src/App/Entity'],
                 'default_connection' => 'default',
                 'enqueue'            => 'default',
+                'db_batch_size'      => 50,
                 'app_name'           => null,
                 'connections'        => [
                     'default' => [
@@ -139,10 +141,10 @@ class ConfigurationTest extends TestCase
         $this->assertProcessedConfigurationEquals(
             [
                 'ae_connect' => [
-                    'paths'       => ['%kernel.project_dir%/src/App/Entity'],
-                    'enqueue'     => 'some_config',
-                    'app_name'    => 'testing_app',
-                    'connections' => [
+                    'paths'         => ['%kernel.project_dir%/src/App/Entity'],
+                    'app_name'      => 'testing_app',
+                    'db_batch_size' => 100,
+                    'connections'   => [
                         'default'     => [
                             'login'  => [
                                 'key'      => 'client_key',
@@ -179,15 +181,15 @@ class ConfigurationTest extends TestCase
                                 ],
                             ],
                             'config'  => [
-                                'replay_start_id'         => -1,
-                                'cache'                   => [
+                                'replay_start_id'    => -1,
+                                'cache'              => [
                                     'metadata_provider' => 'test_metadata',
                                     'auth_provider'     => 'test_auth',
                                     'replay_provider'   => 'test_auth',
                                 ],
-                                'bulk_api_min_count'      => PHP_INT_MAX,
-                                'connection_logger'       => 'test_logger',
-                                'app_filtering'           => [
+                                'bulk_api_min_count' => PHP_INT_MAX,
+                                'connection_logger'  => 'test_logger',
+                                'app_filtering'      => [
                                     'permitted_objects' => [
                                         'Case',
                                     ],
@@ -200,7 +202,8 @@ class ConfigurationTest extends TestCase
             [
                 'paths'              => ['%kernel.project_dir%/src/App/Entity'],
                 'default_connection' => 'default',
-                'enqueue'            => 'some_config',
+                'enqueue'            => 'default',
+                'db_batch_size'      => 100,
                 'app_name'           => 'testing_app',
                 'connections'        => [
                     'default'     => [

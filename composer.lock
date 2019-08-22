@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "545221c419499d63f37c53480b3de6a4",
+    "content-hash": "dd76000d0d87bb7c3c48c4d136a64f1b",
     "packages": [
         {
             "name": "ae/salesforce-rest-sdk",
-            "version": "v1.3.5",
+            "version": "v1.3.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/advisors-excel-llc/salesforce-rest-sdk.git",
-                "reference": "e7d79a6d90a7f77c78ee09137be96b6d2ec158e6"
+                "reference": "c438c684fc239a950bf63a442789daa109437a15"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/advisors-excel-llc/salesforce-rest-sdk/zipball/e7d79a6d90a7f77c78ee09137be96b6d2ec158e6",
-                "reference": "e7d79a6d90a7f77c78ee09137be96b6d2ec158e6",
+                "url": "https://api.github.com/repos/advisors-excel-llc/salesforce-rest-sdk/zipball/c438c684fc239a950bf63a442789daa109437a15",
+                "reference": "c438c684fc239a950bf63a442789daa109437a15",
                 "shasum": ""
             },
             "require": {
@@ -59,10 +59,10 @@
             ],
             "description": "An SDK for the Salesforce Rest API",
             "support": {
-                "source": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/tree/v1.3.5",
+                "source": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/tree/v1.3.6",
                 "issues": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/issues"
             },
-            "time": "2019-07-02T17:49:04+00:00"
+            "time": "2019-08-15T18:57:05+00:00"
         },
         {
             "name": "doctrine/annotations",

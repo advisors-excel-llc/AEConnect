@@ -105,15 +105,23 @@ services:
         arguments:
             $preprocessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor'
             $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+            $progress: '@AE\ConnectBundle\Salesforce\Bulk\BulkProgress'
+            $batchSize: '%ae_connect.db_batch_size%'
         calls:
             - ['setLogger', ['@Psr\Log\LoggerInterface']]
     AE\ConnectBundle\Salesforce\Bulk\CompositeApiProcessor:
-        $preprocessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor'
-        $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+        arguments:
+            $preprocessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor'
+            $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+            $progress: '@AE\ConnectBundle\Salesforce\Bulk\BulkProgress'
+            $batchSize: '%ae_connect.db_batch_size%'
+        calls:
+            - ['setLogger', ['@Psr\Log\LoggerInterface']]
     AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue:
         $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker'
         $bulkApiProcessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkApiProcessor'
         $compositeApiProcessor: '@AE\ConnectBundle\Salesforce\Bulk\CompositeApiProcessor'
+        $progress: '@AE\ConnectBundle\Salesforce\Bulk\BulkProgress'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue:
         $compiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
@@ -121,6 +129,8 @@ services:
         $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\EntityTreeMaker'
         $outboundQueue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
         $reader: '@Doctrine\Common\Annotations\Reader'
+        $progress: '@AE\ConnectBundle\Salesforce\Bulk\BulkProgress'
+        $batchSize: '%ae_connect.db_batch_size%'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Bulk\SfidReset:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
@@ -133,6 +143,7 @@ services:
     AE\ConnectBundle\Salesforce\Bulk\InboundQueryProcessor:
         $bulkApiProcessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkApiProcessor'
         $compositeApiProcessor: '@AE\ConnectBundle\Salesforce\Bulk\CompositeApiProcessor'
+        $progress: '@AE\ConnectBundle\Salesforce\Bulk\BulkProgress'
     AE\ConnectBundle\Command\BulkCommand:
         arguments:
             $processor: '@AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor'
@@ -180,3 +191,5 @@ services:
             $pollingService: '@AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService'
             $logger: '@?Psr\Log\LoggerInterface'
         public: true
+    AE\ConnectBundle\Salesforce\Bulk\BulkProgress:
+        $dispatcher: '@Symfony\Component\EventDispatcher\EventDispatcherInterface'

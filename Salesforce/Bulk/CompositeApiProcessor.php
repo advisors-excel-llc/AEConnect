@@ -9,12 +9,11 @@
 namespace AE\ConnectBundle\Salesforce\Bulk;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
-use AE\ConnectBundle\Salesforce\Inbound\SalesforceConsumerInterface;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use Doctrine\ORM\Mapping\MappingException;
 use Doctrine\ORM\ORMException;
 
-class CompositeApiProcessor
+class CompositeApiProcessor extends AbstractApiProcessor
 {
     /**
      * @var BulkPreprocessor
@@ -22,14 +21,21 @@ class CompositeApiProcessor
     private $preProcessor;
 
     /**
-     * @var SalesforceConnector
+     * CompositeApiProcessor constructor.
+     *
+     * @param BulkPreprocessor $preprocessor
+     * @param SalesforceConnector $connector
+     * @param BulkProgress $progress
+     * @param int $batchSize
      */
-    private $connector;
-
-    public function __construct(BulkPreprocessor $preprocessor, SalesforceConnector $connector)
-    {
+    public function __construct(
+        BulkPreprocessor $preprocessor,
+        SalesforceConnector $connector,
+        BulkProgress $progress,
+        int $batchSize = 50
+    ) {
+        parent::__construct($connector, $progress, $batchSize);
         $this->preProcessor = $preprocessor;
-        $this->connector    = $connector;
     }
 
     /**
@@ -65,15 +71,16 @@ class CompositeApiProcessor
                         continue;
                     }
                     $objects[] = $object;
+
+                    if (count($objects) === $this->batchSize) {
+                        $this->receiveObjects($sObjectType, $connection, $updateEntity, $objects);
+                        $objects = [];
+                    }
                 }
-                $this->connector->enable();
-                $this->connector->receive(
-                    $objects,
-                    SalesforceConsumerInterface::UPDATED,
-                    $connection->getName(),
-                    $updateEntity
-                );
-                $this->connector->disable();
+
+                if (!empty($objects)) {
+                    $this->receiveObjects($sObjectType, $connection, $updateEntity, $objects);
+                }
             }
         } while (!($query = $client->query($query))->isDone());
     }

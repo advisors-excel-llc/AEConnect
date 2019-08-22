@@ -49,6 +49,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
         $config = $this->processConfiguration(new Configuration(), $configs);
 
+        $this->processBatchSize($container, $config);
         $this->createAnnotationDriver($container, $config);
         $this->processConnections($container, $config);
     }
@@ -143,14 +144,19 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
         $container->prependExtensionConfig('enqueue', ['ae_connect' => $clientConfig]);
     }
 
-    private function createAnnotationDriver(ContainerBuilder $container, array $config)
+    private function createAnnotationDriver(ContainerBuilder $container, array $config): void
     {
         $definition = new Definition(AnnotationDriver::class, [new Reference("annotation_reader"), $config['paths']]);
 
         $container->setDefinition("ae_connect.annotation_driver", $definition);
     }
 
-    private function processConnections(ContainerBuilder $container, array $config)
+    private function processBatchSize(ContainerBuilder $container, array $config): void
+    {
+        $container->setParameter('ae_connect.db_batch_size', $config['db_batch_size']);
+    }
+
+    private function processConnections(ContainerBuilder $container, array $config): void
     {
         $connections = $config['connections'];
         $appName     = $config['app_name'];
@@ -576,8 +582,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
      * @param ContainerBuilder $container
      * @param bool $isDefault
      */
-    private
-    function createMetadataRegistryService(
+    private function createMetadataRegistryService(
         array $config,
         string $connectionName,
         ContainerBuilder $container,
