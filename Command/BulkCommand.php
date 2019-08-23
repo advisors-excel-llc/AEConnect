@@ -221,7 +221,9 @@ class BulkCommand extends Command
         $operation = 'Importing';
         $progress  = new ProgressBar($output);
 
-        $this->listeners[Events::SET_TOTALS] = function (ProgressEvent $event) use ($progress) {
+        $this->listeners[Events::SET_TOTALS] = function (ProgressEvent $event) use ($progress, $output, $operation) {
+            $total = $event->getOverallTotal();
+            $output->writeln("<info>$operation $total records</info>");
             $progress->start($event->getOverallTotal());
         };
 
