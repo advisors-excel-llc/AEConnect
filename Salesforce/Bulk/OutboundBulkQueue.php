@@ -224,11 +224,13 @@ class OutboundBulkQueue
     ): QueryBuilder {
         $class    = $classMetadata->getName();
         $metadata = $connection->getMetadataRegistry()->findMetadataByClass($class);
+        $idField  = $classMetadata->getSingleIdentifierFieldName();
         $qb       = new QueryBuilder($manager);
         $qb->from($class, 'e')
            ->select('e')
            ->setFirstResult($offset)
            ->setMaxResults($this->batchSize)
+           ->orderBy($idField)
         ;
 
         if (!$updateExisting && null !== ($idProp = $metadata->getIdFieldProperty())) {
