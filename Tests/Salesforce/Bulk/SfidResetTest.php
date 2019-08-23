@@ -74,7 +74,6 @@ class SfidResetTest extends DatabaseTestCase
 
         /** @var Account $account */
         $account = $manager->merge($account);
-        $manager->flush();
         $accountSfid = $account->getSfid();
         $prevAccSfids = $account->getSfids();
 
@@ -94,7 +93,6 @@ class SfidResetTest extends DatabaseTestCase
 
         /** @var Product $product */
         $product = $manager->merge($product);
-        $manager->flush();
         $this->entities[] = $product;
         $prevProdSfids = $product->getSfids()->toArray();
 
@@ -122,7 +120,6 @@ class SfidResetTest extends DatabaseTestCase
 
         /** @var AltProduct $altProduct */
         $altProduct = $manager->merge($altProduct);
-        $manager->flush();
 
         $prevAltSfids = $altProduct->getSfids();
 
@@ -208,7 +205,7 @@ class SfidResetTest extends DatabaseTestCase
         $this->assertNull($updatedOrder->getSfid());
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         $connection = $this->doctrine->getConnection();
         $connection->exec('DELETE FROM "order_table"');

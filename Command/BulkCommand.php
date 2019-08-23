@@ -219,17 +219,23 @@ class BulkCommand extends Command
     protected function wireupProgressListeners(OutputInterface $output): void
     {
         $operation = 'Importing';
-        $progress  = new ProgressBar($output, 100);
+        $progress  = new ProgressBar($output);
+
+        $this->listeners[Events::SET_TOTALS] = function (ProgressEvent $event) use ($progress) {
+            $progress->start($event->getOverallTotal());
+        };
 
         $this->listeners[Events::UPDATE_PROGRESS] = function (UpdateProgressEvent $event) use ($progress, $operation) {
             $type      = $event->getKey();
             $processed = $event->getProgressFor($type);
             $total     = $event->getTotal($type);
             $progress->setMessage("$operation $type records ($processed / $total)");
-            $progress->setProgress($event->getProgressPercent());
+            $progress->setProgress($event->getOverallProgress());
         };
 
-        $this->listeners[Events::COMPLETE] = function (ProgressEvent $event) use (&$operation) {
+        $this->listeners[Events::COMPLETE] = function (ProgressEvent $event) use (&$operation, $progress) {
+            $progress->finish();
+
             if ($operation === 'Importing') {
                 $operation = 'Exporting';
             }

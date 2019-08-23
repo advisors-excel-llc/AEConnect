@@ -16,6 +16,8 @@ class SfidGenerator
     private const EIGHTEEN_DIGIT_VALUES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
     private const PERMITTED_CHARS       = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
+    private static $generated = [];
+
     public static function generate($eighteenDigit = true, ?Metadata $metadata = null)
     {
         $id = self::generateId($metadata);
@@ -23,6 +25,12 @@ class SfidGenerator
         if ($eighteenDigit) {
             $id .= self::generateExtension($id);
         }
+
+        if (false !== array_search($id, self::$generated)) {
+            $id = self::generate($eighteenDigit, $metadata);
+        }
+
+        self::$generated[] = $id;
 
         return $id;
     }

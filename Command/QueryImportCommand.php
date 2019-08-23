@@ -10,8 +10,10 @@ namespace AE\ConnectBundle\Command;
 
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Bulk\Events\Events;
+use AE\ConnectBundle\Salesforce\Bulk\Events\ProgressEvent;
 use AE\ConnectBundle\Salesforce\Bulk\Events\UpdateProgressEvent;
 use AE\ConnectBundle\Salesforce\Bulk\InboundQueryProcessor;
+use function foo\func;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
@@ -95,16 +97,28 @@ class QueryImportCommand extends Command
             throw new \RuntimeException("Connection '$connectionName' is not active. Check its login credentials.");
         }
 
-        $progress = new ProgressBar($output, 100);
-        $listener = function (UpdateProgressEvent $event) use ($progress) {
+        $progress = new ProgressBar($output);
+
+        $startListener = function (ProgressEvent $event) use ($progress) {
+            $progress->start($event->getOverallTotal());
+        };
+
+        $updateListener = function (UpdateProgressEvent $event) use ($progress) {
             $type      = $event->getKey();
             $total     = $event->getTotal($type);
             $processed = $event->getProgressFor($type);
 
             $progress->setMessage("Importing $type records ($processed / $total)");
-            $progress->setProgress($event->getProgressPercent());
+            $progress->setProgress($event->getOverallProgress());
         };
-        $this->dispatcher->addListener(Events::UPDATE_PROGRESS, $listener);
+
+        $completeListener = function (ProgressEvent $event) use ($progress) {
+            $progress->finish();
+        };
+
+        $this->dispatcher->addListener(Events::SET_TOTALS, $startListener);
+        $this->dispatcher->addListener(Events::UPDATE_PROGRESS, $updateListener);
+        $this->dispatcher->addListener(Events::COMPLETE, $completeListener);
 
         $output->writeln('<info>Running Query</info>');
         try {
@@ -114,6 +128,8 @@ class QueryImportCommand extends Command
         }
         $output->writeln('<info>Query Complete</info>');
 
-        $this->dispatcher->removeListener(Events::UPDATE_PROGRESS, $listener);
+        $this->dispatcher->removeListener(Events::SET_TOTALS, $startListener);
+        $this->dispatcher->removeListener(Events::UPDATE_PROGRESS, $updateListener);
+        $this->dispatcher->removeListener(Events::COMPLETE, $completeListener);
     }
 }
