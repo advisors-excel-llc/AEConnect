@@ -80,10 +80,11 @@ class SfidReset
             $targetManager = $this->registry->getManagerForClass($association['targetEntity']);
         }
 
-        $repo   = $manager->getRepository($class);
-        $offset = 0;
+        $idField = $classMetadata->getSingleIdentifierFieldName();
+        $repo    = $manager->getRepository($class);
+        $offset  = 0;
 
-        while (count(($entities = $repo->findBy([], null, 20, $offset))) > 0) {
+        while (count(($entities = $repo->findBy([], [$idField => 'ASC'], 20, $offset))) > 0) {
             foreach ($entities as $entity) {
                 $this->clearSfidOnEntity($connection, $fieldMetadata, $association, $entity, $manager, $targetManager);
             }
