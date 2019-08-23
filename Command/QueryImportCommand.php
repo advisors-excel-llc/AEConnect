@@ -13,7 +13,6 @@ use AE\ConnectBundle\Salesforce\Bulk\Events\Events;
 use AE\ConnectBundle\Salesforce\Bulk\Events\ProgressEvent;
 use AE\ConnectBundle\Salesforce\Bulk\Events\UpdateProgressEvent;
 use AE\ConnectBundle\Salesforce\Bulk\InboundQueryProcessor;
-use function foo\func;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
