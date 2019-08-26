@@ -9,37 +9,30 @@
 namespace AE\ConnectBundle\Salesforce\Bulk;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
-use AE\ConnectBundle\Salesforce\Inbound\SalesforceConsumerInterface;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use AE\SalesforceRestSdk\Bulk\BatchInfo;
+use AE\SalesforceRestSdk\Bulk\Client;
 use AE\SalesforceRestSdk\Bulk\JobInfo;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
 use AE\SalesforceRestSdk\Psr7\CsvStream;
 use Doctrine\ORM\Mapping\MappingException;
 use Doctrine\ORM\ORMException;
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
-use Psr\Log\NullLogger;
 
-class BulkApiProcessor implements LoggerAwareInterface
+class BulkApiProcessor extends AbstractApiProcessor
 {
-    use LoggerAwareTrait;
-
     /**
      * @var BulkPreprocessor
      */
     private $preProcessor;
 
-    /**
-     * @var SalesforceConnector
-     */
-    private $connector;
-
-    public function __construct(BulkPreprocessor $preprocessor, SalesforceConnector $connector)
-    {
+    public function __construct(
+        BulkPreprocessor $preprocessor,
+        SalesforceConnector $connector,
+        BulkProgress $progress,
+        int $batchSize = 50
+    ) {
+        parent::__construct($connector, $progress, $batchSize);
         $this->preProcessor = $preprocessor;
-        $this->connector    = $connector;
-        $this->logger       = new NullLogger();
     }
 
     /**
@@ -58,7 +51,7 @@ class BulkApiProcessor implements LoggerAwareInterface
     public function process(
         ConnectionInterface $connection,
         string $objectType,
-        $query,
+        string $query,
         bool $updateEntities,
         bool $insertEntities = false
     ): void {
@@ -83,22 +76,7 @@ class BulkApiProcessor implements LoggerAwareInterface
             ]
         );
 
-        do {
-            $batchStatus = $client->getBatchStatus($job, $batch->getId());
-            if (BatchInfo::STATE_COMPLETED !== $batchStatus->getState()) {
-                sleep(10);
-            }
-        } while (BatchInfo::STATE_COMPLETED !== $batchStatus->getState());
-
-        $this->logger->info(
-            'Batch (ID# {batch}) for Job (ID# {job}) is complete',
-            [
-                'job'   => $job->getId(),
-                'batch' => $batch->getId(),
-            ]
-        );
-
-        $batchResults = $client->getBatchResults($job, $batch->getId());
+        $batchResults = $this->getBatchResults($client, $job, $batch);
 
         foreach ($batchResults as $resultId) {
             $result = $client->getResult($job, $batch->getId(), $resultId);
@@ -136,72 +114,73 @@ class BulkApiProcessor implements LoggerAwareInterface
         bool $updateEntities,
         bool $insertEntities = false
     ) {
-        $fields  = [];
-        $count   = 0;
+        $count = 0;
         $objects = [];
 
-        while (!$result->eof()) {
-            $row = $result->read();
-            if (empty($fields)) {
-                $fields = $row;
-                continue;
-            }
-
+        foreach ($result->getContents(true) as $row) {
             $object = new CompositeSObject($objectType);
-            foreach ($row as $i => $value) {
-                $object->{$fields[$i]} = $value;
+            foreach ($row as $field => $value) {
+                $object->{$field} = $value;
             }
             $object->__SOBJECT_TYPE__ = $objectType;
-            $object = $this->preProcessor->preProcess($object, $connection, $updateEntities, $insertEntities);
+            $object                   = $this->preProcessor->preProcess(
+                $object,
+                $connection,
+                $updateEntities,
+                $insertEntities
+            );
 
             if (null === $object) {
+                $progress = $this->progress->getProgress($objectType) + 1;
+                $this->progress->updateProgress($objectType, $progress);
                 continue;
             }
 
             $objects[] = $object;
 
             // Gotta break this up a little to prevent 10000000s of records from being saved at once
-            if (count($objects) === 200) {
-                $this->logger->debug(
-                    'Saving {count} {type} records for connection "{conn}"',
-                    [
-                        'count' => count($objects),
-                        'type'  => $objectType,
-                        'conn'  => $connection->getName(),
-                    ]
-                );
-                $this->connector->enable();
-                $this->connector->receive(
-                    $objects,
-                    SalesforceConsumerInterface::UPDATED,
-                    $connection->getName(),
-                    $updateEntities
-                );
-                $this->connector->disable();
+            if (count($objects) === $this->batchSize) {
+                $this->receiveObjects($objectType, $connection, $updateEntities, $objects);
                 $objects = [];
             }
             ++$count;
         }
 
         if (!empty($objects)) {
-            $this->logger->debug(
-                'Saving {count} {type} records for connection "{conn}"',
-                [
-                    'count' => count($objects),
-                    'type'  => $objectType,
-                    'conn'  => $connection->getName(),
-                ]
-            );
-            $this->connector->enable();
-            $this->connector->receive(
-                $objects,
-                SalesforceConsumerInterface::UPDATED,
-                $connection->getName(),
-                $updateEntities
-            );
-            $this->connector->disable();
+            $this->receiveObjects($objectType, $connection, $updateEntities, $objects);
         }
 
         $this->logger->debug('Processed {count} {type} objects.', ['count' => $count, 'type' => $objectType]);
     }
+
+    /**
+     * @param Client $client
+     * @param JobInfo $job
+     * @param BatchInfo $batch
+     *
+     * @return array
+     * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    protected function getBatchResults(Client $client, JobInfo $job, BatchInfo $batch)
+    {
+        do {
+            $batchStatus = $client->getBatchStatus($job, $batch->getId());
+            if (BatchInfo::STATE_COMPLETED !== $batchStatus->getState()) {
+                sleep(10);
+            }
+        } while (BatchInfo::STATE_COMPLETED !== $batchStatus->getState());
+
+        $this->logger->info(
+            'Batch (ID# {batch}) for Job (ID# {job}) is complete',
+            [
+                'job'   => $job->getId(),
+                'batch' => $batch->getId(),
+            ]
+        );
+
+        $batchResults = $client->getBatchResults($job, $batch->getId());
+
+        return $batchResults;
+}
 }

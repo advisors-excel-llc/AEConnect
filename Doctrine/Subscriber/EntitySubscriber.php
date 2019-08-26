@@ -17,8 +17,8 @@ use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\EventSubscriber;
 use Doctrine\ORM\Event\OnClearEventArgs;
 use Doctrine\ORM\Event\LifecycleEventArgs;
-use Doctrine\ORM\Event\OnFlushEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
+use Doctrine\ORM\Event\PreFlushEventArgs;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -67,7 +67,7 @@ class EntitySubscriber implements EventSubscriber, LoggerAwareInterface
             'postPersist',
             'postUpdate',
             'postRemove',
-            'onFlush',
+            'preFlush',
             'postFlush',
             'onClear',
         ];
@@ -91,7 +91,7 @@ class EntitySubscriber implements EventSubscriber, LoggerAwareInterface
         $this->removeEntity($entity);
     }
 
-    public function onFlush(OnFlushEventArgs $event)
+    public function preFlush(PreFlushEventArgs $event)
     {
         $this->flushUpserts();
         $this->flushRemovals();
@@ -118,7 +118,7 @@ class EntitySubscriber implements EventSubscriber, LoggerAwareInterface
     /**
      * @param $entity
      */
-    private function upsertEntity($entity): void
+    protected function upsertEntity($entity): void
     {
         if ($entity instanceof SalesforceIdEntityInterface) {
             return;
@@ -141,7 +141,7 @@ class EntitySubscriber implements EventSubscriber, LoggerAwareInterface
     /**
      * @param $entity
      */
-    private function removeEntity($entity): void
+    protected function removeEntity($entity): void
     {
         if ($entity instanceof SalesforceIdEntityInterface) {
             return;
@@ -161,7 +161,7 @@ class EntitySubscriber implements EventSubscriber, LoggerAwareInterface
         $this->cache->save('removals', $entities);
     }
 
-    private function flushUpserts(): void
+    protected function flushUpserts(): void
     {
         if (!$this->cache->contains('upserts')) {
             return;
@@ -209,7 +209,7 @@ class EntitySubscriber implements EventSubscriber, LoggerAwareInterface
         $this->cache->save('processing', $processing);
     }
 
-    private function flushRemovals(): void
+    protected function flushRemovals(): void
     {
         if (!$this->cache->contains('removals')) {
             return;

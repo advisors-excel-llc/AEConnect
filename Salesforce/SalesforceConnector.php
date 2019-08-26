@@ -256,9 +256,10 @@ class SalesforceConnector implements LoggerAwareInterface
                 } catch (\Throwable $t) {
                     // If an error occurs, log it and carry on
                     $this->logger->warning($t->getMessage());
+                } finally {
+                    // Clear memory to prevent buildup
+                    $manager->clear($class);
                 }
-                // Clear memory to prevent buildup
-                $manager->clear($class);
             }
 
             $this->logger->info('{intent} entity of type {type}', ['intent' => $intent, 'type' => $class]);
@@ -288,6 +289,9 @@ class SalesforceConnector implements LoggerAwareInterface
                         foreach ($entityMap[$class] as $intent => $ens) {
                             $this->saveEntitiesToDB($intent, $ens, false);
                         }
+                    }
+                } finally {
+                    if (array_key_exists($class, $entityMap)) {
                         // Clear entity map to save memory
                         unset($entityMap[$class]);
                     }

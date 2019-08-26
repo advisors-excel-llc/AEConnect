@@ -35,20 +35,28 @@ class InboundBulkQueue
     private $compositeApiProcessor;
 
     /**
+     * @var BulkProgress
+     */
+    private $progress;
+
+    /**
      * InboundBulkQueue constructor.
      *
      * @param SObjectTreeMaker $treeMaker
      * @param BulkApiProcessor $bulkApiProcessor
      * @param CompositeApiProcessor $compositeApiProcessor
+     * @param BulkProgress $progress
      * @param null|LoggerInterface $logger
      */
     public function __construct(
         SObjectTreeMaker $treeMaker,
         BulkApiProcessor $bulkApiProcessor,
         CompositeApiProcessor $compositeApiProcessor,
+        BulkProgress $progress,
         ?LoggerInterface $logger = null
     ) {
         $this->treeMaker             = $treeMaker;
+        $this->progress              = $progress;
         $this->bulkApiProcessor      = $bulkApiProcessor;
         $this->compositeApiProcessor = $compositeApiProcessor;
 
@@ -77,6 +85,15 @@ class InboundBulkQueue
         }
 
         $counts = $connection->getRestClient()->count($map);
+
+        $totals = [];
+
+        foreach ($counts as $count) {
+            $totals[$count->getName()] = $count->getCount();
+        }
+
+        $this->progress->setProgress([]);
+        $this->progress->setTotals($totals);
 
         foreach ($counts as $count) {
             $this->startJob($connection, $count, $updateEntities, $insertEntities);

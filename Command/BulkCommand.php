@@ -9,7 +9,12 @@
 namespace AE\ConnectBundle\Command;
 
 use AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor;
+use AE\ConnectBundle\Salesforce\Bulk\Events\Events;
+use AE\ConnectBundle\Salesforce\Bulk\Events\ProgressEvent;
+use AE\ConnectBundle\Salesforce\Bulk\Events\UpdateProgressEvent;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -24,10 +29,18 @@ class BulkCommand extends Command
      */
     private $bulkDataProcessor;
 
-    public function __construct(BulkDataProcessor $processor)
+    /**
+     * @var EventDispatcherInterface
+     */
+    private $dispatcher;
+
+    private $listeners = [];
+
+    public function __construct(BulkDataProcessor $processor, EventDispatcherInterface $dispatcher)
     {
         parent::__construct(null);
         $this->bulkDataProcessor = $processor;
+        $this->dispatcher        = $dispatcher;
     }
 
     protected function configure()
@@ -114,11 +127,15 @@ class BulkCommand extends Command
             )
         );
 
+        $this->wireupProgressListeners($output);
+
         $this->bulkDataProcessor->process(
             $input->getArgument('connection'),
             $types,
             $updateFlag
         );
+
+        $this->unwireProgressListeners();
 
         $output->writeln('Bulk sync is now complete.');
     }
@@ -193,6 +210,48 @@ class BulkCommand extends Command
                 '<comment>Clear all Salesforce IDs from the database. '
                 .'External Ids will be used to match existing records.</comment>'
             );
+        }
+    }
+
+    /**
+     * @param OutputInterface $output
+     */
+    protected function wireupProgressListeners(OutputInterface $output): void
+    {
+        $operation = 'Importing';
+        $progress  = new ProgressBar($output);
+
+        $this->listeners[Events::SET_TOTALS] = function (ProgressEvent $event) use ($progress, $output, $operation) {
+            $total = $event->getOverallTotal();
+            $output->writeln("<info>$operation $total records</info>");
+            $progress->start($event->getOverallTotal());
+        };
+
+        $this->listeners[Events::UPDATE_PROGRESS] = function (UpdateProgressEvent $event) use ($progress, $operation) {
+            $type      = $event->getKey();
+            $processed = $event->getProgressFor($type);
+            $total     = $event->getTotal($type);
+            $progress->setMessage("$operation $type records ($processed / $total)");
+            $progress->setProgress($event->getOverallProgress());
+        };
+
+        $this->listeners[Events::COMPLETE] = function (ProgressEvent $event) use (&$operation, $progress) {
+            $progress->finish();
+
+            if ($operation === 'Importing') {
+                $operation = 'Exporting';
+            }
+        };
+
+        foreach ($this->listeners as $event => $listener) {
+            $this->dispatcher->addListener($event, $listener);
+        }
+    }
+
+    protected function unwireProgressListeners(): void
+    {
+        foreach ($this->listeners as $event => $listener) {
+            $this->dispatcher->removeListener($event, $listener);
         }
     }
 }
