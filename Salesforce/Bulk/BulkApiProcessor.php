@@ -131,6 +131,8 @@ class BulkApiProcessor extends AbstractApiProcessor
             );
 
             if (null === $object) {
+                $progress = $this->progress->getProgress($objectType) + 1;
+                $this->progress->updateProgress($objectType, $progress);
                 continue;
             }
 
