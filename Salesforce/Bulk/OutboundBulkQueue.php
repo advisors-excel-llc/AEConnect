@@ -230,7 +230,7 @@ class OutboundBulkQueue
            ->select('e')
            ->setFirstResult($offset)
            ->setMaxResults($this->batchSize)
-           ->orderBy($idField)
+           ->orderBy("e.$idField")
         ;
 
         if (!$updateExisting && null !== ($idProp = $metadata->getIdFieldProperty())) {

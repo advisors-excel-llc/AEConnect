@@ -92,41 +92,15 @@ class EntityCompiler
             $manager = $this->registry->getManagerForClass($class);
             /** @var ClassMetadata $classMetadata */
             $classMetadata = $manager->getClassMetadata($class);
-            $entity        = null;
-
-            try {
-                $entity = $this->entityLocater->locate($object, $metadata);
-            } catch (\Exception $e) {
-                $this->logger->info(
-                    'No existing entity found for {type} with Salesforce Id of {id}.',
-                    [
-                        'type' => $object->__SOBJECT_TYPE__,
-                        'id'   => $object->Id,
-                    ]
-                );
-                $this->logger->debug($e->getMessage());
-            }
-
-            $connectionProp = $metadata->getConnectionNameField();
-
-            // If the entity doesn't exist, create a new one
-            if (null === $entity) {
-                $entity = new $class();
-
-                // If the entity supports a connection name, set it
-                if (null !== $connectionProp) {
-                    $value = $this->fieldCompiler->compileInbound(
-                        $connection->getName(),
-                        $object,
-                        $metadata->getConnectionNameField(),
-                        $entity
-                    );
-                    $connectionProp->setValueForEntity($entity, $value);
-                }
-            }
+            $entity        = $this->convertToEntity(
+                $object,
+                $metadata
+            );
 
             // Check if the entity is meant for this connection, if the connection value for the entity is null,
             // don't check, allow the entity to be created, given that validation passes
+            $connectionProp = $metadata->getConnectionNameField();
+
             if (null !== $connectionProp
                 && null !== $connectionProp->getValueFromEntity($entity)
                 && !$this->hasConnection(
@@ -149,18 +123,7 @@ class EntityCompiler
                 continue;
             }
 
-            // Apply the field values from the SObject to the Entity
-            foreach ($object->getFields() as $field => $value) {
-                if (null === ($fieldMetadata = $metadata->getMetadataForField($field))) {
-                    continue;
-                }
-
-                $newValue = $this->fieldCompiler->compileInbound($value, $object, $fieldMetadata, $entity);
-
-                if (null !== $newValue) {
-                    $fieldMetadata->setValueForEntity($entity, $newValue);
-                }
-            }
+            $this->mapFieldsToEntity($object, $entity, $metadata);
 
             try {
                 $recordType = $metadata->getRecordType();
@@ -195,7 +158,6 @@ class EntityCompiler
                 $manager->detach($entity);
 
                 $this->logger->notice($e->getMessage());
-                $this->logger->debug($e->getTraceAsString());
             }
         }
 
@@ -224,6 +186,7 @@ class EntityCompiler
             null,
             $groups
         );
+
         if (count($messages) > 0) {
             $err = '';
             foreach ($messages as $message) {
@@ -269,5 +232,71 @@ class EntityCompiler
         }
 
         return false;
+    }
+
+    /**
+     * @param SObject $object
+     * @param Metadata $metadata
+     *
+     * @return object
+     */
+    private function convertToEntity(SObject $object, Metadata $metadata)
+    {
+        $class  = $metadata->getClassName();
+        $entity = null;
+
+        try {
+            $entity = $this->entityLocater->locate($object, $metadata);
+        } catch (\Exception $e) {
+            $this->logger->info(
+                'No existing entity found for {type} with Salesforce Id of {id}.',
+                [
+                    'type' => $object->__SOBJECT_TYPE__,
+                    'id'   => $object->Id,
+                ]
+            );
+            $this->logger->debug($e->getMessage());
+        }
+
+        $connectionProp = $metadata->getConnectionNameField();
+
+        // If the entity doesn't exist, create a new one
+        if (null === $entity) {
+            $entity = new $class();
+
+            // If the entity supports a connection name, set it
+            if (null !== $connectionProp) {
+                $value = $this->fieldCompiler->compileInbound(
+                    $metadata->getConnectionName(),
+                    $object,
+                    $metadata->getConnectionNameField(),
+                    $entity
+                );
+                $connectionProp->setValueForEntity($entity, $value);
+            }
+        }
+
+        return $entity;
+    }
+
+    /**
+     * @param SObject $object
+     * @param $entity
+     * @param Metadata $metadata
+     */
+    private function mapFieldsToEntity(SObject $object, $entity, Metadata $metadata): void
+    {
+        // Apply the field values from the SObject to the Entity
+        foreach ($object->getFields() as $field => $value) {
+            if (null === ($fieldMetadata = $metadata->getMetadataForField($field))) {
+                continue;
+            }
+
+            $newValue = $this->fieldCompiler->compileInbound($value, $object, $fieldMetadata, $entity);
+
+            if (null !== $newValue) {
+                $fieldMetadata->setValueForEntity($entity, $newValue);
+            }
+        }
     }
 }
