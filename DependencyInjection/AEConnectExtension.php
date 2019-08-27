@@ -46,6 +46,7 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
         $loader = new YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('transformers.yml');
         $loader->load('services.yml');
+        $loader->load('doctrine.yml');
 
         $config = $this->processConfiguration(new Configuration(), $configs);
 
@@ -98,12 +99,6 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
 
             if (!array_key_exists('ae_connect_replay', $providers)) {
                 $providerConfig['ae_connect_replay'] = [
-                    'type' => 'file_system',
-                ];
-            }
-
-            if (!array_key_exists('ae_connect_entities', $providers)) {
-                $providerConfig['ae_connect_entities'] = [
                     'type' => 'file_system',
                 ];
             }

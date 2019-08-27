@@ -1,0 +1,13 @@
+services:
+    AE\ConnectBundle\Doctrine\Subscriber\AbstractEntitySubscriber:
+        abstract: true
+        arguments:
+            $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
+            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+            $compiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
+        calls:
+            - ['setLogger', ['@Psr\Log\LoggerInterface']]
+    AE\ConnectBundle\Doctrine\Subscriber\EntitySubscriber:
+        parent: 'AE\ConnectBundle\Doctrine\Subscriber\AbstractEntitySubscriber'
+        class: 'AE\ConnectBundle\Doctrine\Subscriber\EntitySubscriber'
+        tags: ['doctrine.event_subscriber']
