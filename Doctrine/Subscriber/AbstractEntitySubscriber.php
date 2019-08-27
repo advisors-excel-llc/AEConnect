@@ -17,6 +17,7 @@ use Doctrine\ORM\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\OnClearEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\ORM\Event\PreFlushEventArgs;
+use Doctrine\ORM\Events;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -73,37 +74,42 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
     public function getSubscribedEvents()
     {
         return [
-            'postPersist',
-            'postUpdate',
-            'postRemove',
-            'preFlush',
-            'postFlush',
-            'onClear',
+            Events::prePersist,
+            Events::preUpdate,
+            Events::preRemove,
+            Events::postRemove,
+            Events::preFlush,
+            Events::postFlush,
+            Events::onClear,
         ];
     }
 
-    public function postPersist(LifecycleEventArgs $event)
+    public function prePersist(LifecycleEventArgs $event)
     {
         $entity = $event->getEntity();
         $this->upsertEntity($entity);
     }
 
-    public function postUpdate(LifecycleEventArgs $event)
+    public function preUpdate(LifecycleEventArgs $event)
     {
         $entity = $event->getEntity();
         $this->upsertEntity($entity);
     }
 
-    public function postRemove(LifecycleEventArgs $event)
+    public function preRemove(LifecycleEventArgs $event)
     {
         $entity = $event->getEntity();
         $this->removeEntity($entity);
     }
 
+    public function postRemove(LifecycleEventArgs $event)
+    {
+        $this->flushRemovals();
+    }
+
     public function preFlush(PreFlushEventArgs $event)
     {
         $this->flushUpserts();
-        $this->flushRemovals();
     }
 
     public function postFlush(PostFlushEventArgs $event)
@@ -180,8 +186,7 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
         $connections = $this->connectionManager->getConnections();
 
         foreach ($connections as $connection) {
-            foreach ($entities as $entity) {
-                $oid = \spl_object_id($entity);
+            foreach ($entities as $oid => $entity) {
                 try {
                     if (null === $connection->getMetadataRegistry()->findMetadataForEntity($entity)) {
                         continue;
@@ -220,8 +225,7 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
         $connections = $this->connectionManager->getConnections();
 
         foreach ($connections as $connection) {
-            foreach ($entities as $entity) {
-                $oid = \spl_object_id($entity);
+            foreach ($entities as $oid => $entity) {
                 try {
                     if (null === $connection->getMetadataRegistry()->findMetadataForEntity($entity)) {
                         continue;

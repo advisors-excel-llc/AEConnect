@@ -65,7 +65,7 @@ class EntitySubscriberTestListener
     /**
      * @throws \ReflectionException
      */
-    public function postPersist()
+    public function prePersist()
     {
         $this->upserts = $this->exposeGetter('getUpserts')->__invoke();
     }
@@ -73,7 +73,7 @@ class EntitySubscriberTestListener
     /**
      * @throws \ReflectionException
      */
-    public function postRemove()
+    public function preRemove()
     {
         $this->removals = $this->exposeGetter('getRemovals')->__invoke();
     }
@@ -81,7 +81,15 @@ class EntitySubscriberTestListener
     /**
      * @throws \ReflectionException
      */
-    public function postFlush()
+    public function postPersist()
+    {
+        $this->processing = $this->exposeGetter('getProcessing')->__invoke();
+    }
+
+    /**
+     * @throws \ReflectionException
+     */
+    public function postRemove()
     {
         $this->processing = $this->exposeGetter('getProcessing')->__invoke();
     }
