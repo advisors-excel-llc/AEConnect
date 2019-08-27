@@ -57,15 +57,6 @@ services:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $fieldCompiler: '@AE\ConnectBundle\Salesforce\Compiler\FieldCompiler'
         $logger: '@Psr\Log\LoggerInterface'
-    AE\ConnectBundle\Doctrine\Subscriber\EntitySubscriber:
-        arguments:
-            $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
-            $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
-            $compiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
-            $cache: '@doctrine_cache.providers.ae_connect_entities'
-        calls:
-            - ['setLogger', ['@Psr\Log\LoggerInterface']]
-        tags: ['doctrine.event_subscriber']
     AE\ConnectBundle\Doctrine\Subscriber\UuidSubscriber:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
