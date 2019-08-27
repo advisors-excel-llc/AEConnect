@@ -12,6 +12,7 @@ use AE\ConnectBundle\Doctrine\Subscriber\EntitySubscriber;
 use AE\ConnectBundle\Tests\DatabaseTestCase;
 use AE\ConnectBundle\Tests\Entity\Account;
 use Doctrine\Common\EventManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Events;
 use Ramsey\Uuid\Uuid;
 
@@ -21,12 +22,17 @@ class EntitySubscriberTest extends DatabaseTestCase
     {
         /** @var EntitySubscriber $entitySubscriber */
         $entitySubscriber = $this->get(EntitySubscriber::class);
-        $listener = new EntitySubscriberTestListener($entitySubscriber);
+        $listener         = new EntitySubscriberTestListener($entitySubscriber);
 
         /** @var EventManager $eventManager */
         $eventManager = $this->get("doctrine.dbal.default_connection.event_manager");
+        /** @var EntityManagerInterface $manager */
+        $manager      = $this->doctrine->getManager();
 
-        $manager = $this->doctrine->getManager();
+        $eventManager->addEventListener(
+            Events::prePersist,
+            $listener
+        );
 
         $eventManager->addEventListener(
             Events::postPersist,
@@ -34,12 +40,12 @@ class EntitySubscriberTest extends DatabaseTestCase
         );
 
         $eventManager->addEventListener(
-            Events::postRemove,
+            Events::preRemove,
             $listener
         );
 
         $eventManager->addEventListener(
-            Events::postFlush,
+            Events::postRemove,
             $listener
         );
 
@@ -63,9 +69,6 @@ class EntitySubscriberTest extends DatabaseTestCase
             array_values($listener->getRemovals())
         );
 
-        $this->assertEquals(
-            [],
-            array_values($listener->getProcessing())
-        );
+        $this->assertNotEmpty($listener->getProcessing());
     }
 }
