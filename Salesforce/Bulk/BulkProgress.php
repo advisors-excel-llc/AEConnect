@@ -135,6 +135,11 @@ class BulkProgress
         return 0;
     }
 
+    public function getTotals(): array
+    {
+        return $this->totals;
+    }
+
     /**
      * @param string $key
      * @param int $progress
@@ -152,15 +157,25 @@ class BulkProgress
         }
 
         if ($progress > $this->totals[$key]) {
-            $this->totals[$key] = $progress;
-            $this->calculateOverallTotal();
+            return $this->updateTotal($key, $progress);
         }
 
         $this->dispatchUpdateProgressEvent($key);
 
-        if ($this->totalProgress / $this->overallTotal === 1) {
+        if ($this->overallTotal === 0 || $this->totalProgress / $this->overallTotal === 1) {
             $this->dispatchEvent(Events::COMPLETE);
         }
+
+        return $this;
+    }
+
+    public function updateTotal(string $key, int $total): self
+    {
+        $this->totals[$key] = $total;
+        $this->calculateOverallTotal();
+        $this->dispatchEvent(Events::SET_TOTALS);
+
+        $this->updateProgress($key, $this->getProgress($key));
 
         return $this;
     }

@@ -59,14 +59,33 @@ class CompositeApiProcessor extends AbstractApiProcessor
         bool $insertEntity = false
     ) {
         $client = $connection->getRestClient()->getSObjectClient();
-        $query  = $client->query($query);
-        do {
+        $done   = false;
+        while (!$done) {
+            $query = $client->query($query);
+
+            // Sometimes the count query returns a different value than the actual query, the query is more accurate
+            if ($this->progress->getTotal($sObjectType) !== $query->getTotalSize()) {
+                $this->progress->setTotals(
+                    array_merge(
+                        $this->progress->getTotals(),
+                        [
+                            $sObjectType => $query->getTotalSize(),
+                        ]
+                    )
+                );
+            }
+
             $records = $query->getRecords();
             if (!empty($records)) {
                 $objects = [];
                 foreach ($records as $record) {
                     $record->__SOBJECT_TYPE__ = $sObjectType;
-                    $object = $this->preProcessor->preProcess($record, $connection, $updateEntity, $insertEntity);
+                    $object                   = $this->preProcessor->preProcess(
+                        $record,
+                        $connection,
+                        $updateEntity,
+                        $insertEntity
+                    );
                     if (null === $object) {
                         continue;
                     }
@@ -81,7 +100,9 @@ class CompositeApiProcessor extends AbstractApiProcessor
                 if (!empty($objects)) {
                     $this->receiveObjects($sObjectType, $connection, $updateEntity, $objects);
                 }
+
             }
-        } while (!($query = $client->query($query))->isDone());
+            $done = $query->isDone();
+        }
     }
 }
