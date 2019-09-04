@@ -60,7 +60,7 @@ class CompositeApiProcessor extends AbstractApiProcessor
     ) {
         $client = $connection->getRestClient()->getSObjectClient();
         $done   = false;
-        while ($done) {
+        while (!$done) {
             $query = $client->query($query);
 
             // Sometimes the count query returns a different value than the actual query, the query is more accurate
