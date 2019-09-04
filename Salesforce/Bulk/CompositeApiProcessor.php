@@ -59,8 +59,9 @@ class CompositeApiProcessor extends AbstractApiProcessor
         bool $insertEntity = false
     ) {
         $client = $connection->getRestClient()->getSObjectClient();
-        $query  = $client->query($query);
-        do {
+        $done = false;
+        while (!$done) {
+            $query  = $client->query($query);
             $records = $query->getRecords();
             if (!empty($records)) {
                 $objects = [];
@@ -82,6 +83,7 @@ class CompositeApiProcessor extends AbstractApiProcessor
                     $this->receiveObjects($sObjectType, $connection, $updateEntity, $objects);
                 }
             }
-        } while (!($query = $client->query($query))->isDone());
+            $done = $query->isDone();
+        }
     }
 }
