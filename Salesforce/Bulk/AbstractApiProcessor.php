@@ -86,6 +86,9 @@ abstract class AbstractApiProcessor implements LoggerAwareInterface
         $objects
     ): void {
         $count = count($objects);
+        $progress = $this->progress->getProgress($objectType) + $count;
+        $this->progress->updateProgress($objectType, $progress);
+
         $this->logger->debug(
             'Saving {count} {type} records for connection "{conn}"',
             [
@@ -94,6 +97,7 @@ abstract class AbstractApiProcessor implements LoggerAwareInterface
                 'conn'  => $connection->getName(),
             ]
         );
+
         $this->connector->enable();
         $this->connector->receive(
             $objects,
@@ -102,9 +106,6 @@ abstract class AbstractApiProcessor implements LoggerAwareInterface
             $updateEntities
         );
         $this->connector->disable();
-
-        $progress = $this->progress->getProgress($objectType) + $count;
-        $this->progress->updateProgress($objectType, $progress);
     }
 
     abstract public function process(
