@@ -87,6 +87,14 @@ class OutboundBulkQueue
         AnnotationRegistry::loadAnnotationClass(Connection::class);
     }
 
+    /**
+     * @param ConnectionInterface $connection
+     * @param array $types
+     * @param bool $updateExisting
+     *
+     * @throws MappingException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
     public function process(
         ConnectionInterface $connection,
         array $types = [],
@@ -114,13 +122,18 @@ class OutboundBulkQueue
             }
         }
 
-        $this->getTotals($map);
+        $this->getTotals($map, $connection, $updateExisting);
 
         foreach ($map as $class) {
             $this->startJob($connection, $class, $updateExisting);
         }
     }
 
+    /**
+     * @param ConnectionInterface $connection
+     * @param string $class
+     * @param bool $updateExisting
+     */
     private function startJob(ConnectionInterface $connection, string $class, bool $updateExisting)
     {
         $metadata = $connection->getMetadataRegistry()->findMetadataByClass($class);
@@ -183,21 +196,37 @@ class OutboundBulkQueue
         $this->logger->debug('Synced {count} objects of {type} type', ['count' => $offset, 'type' => $class]);
     }
 
-    private function getTotals(array $map): void
+    /**
+     * @param array $map
+     * @param ConnectionInterface $connection
+     * @param bool $updateExisting
+     *
+     * @throws MappingException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    private function getTotals(array $map, ConnectionInterface $connection, bool $updateExisting = false): void
     {
         $totals = [];
 
         foreach ($map as $class) {
             /** @var EntityManagerInterface $manager */
-            $manager        = $this->registry->getManagerForClass($class);
-            $metadata       = $manager->getClassMetadata($class);
-            $id             = $metadata->getSingleIdentifierFieldName();
-            $count          = $manager->createQueryBuilder()
-                                      ->select("Count(e.$id)")
-                                      ->from($class, 'e')
-                                      ->getQuery()
-                                      ->getSingleScalarResult()
+            $manager       = $this->registry->getManagerForClass($class);
+            $classMetadata = $manager->getClassMetadata($class);
+            $metadata      = $connection->getMetadataRegistry()->findMetadataByClass($class);
+            $id            = $classMetadata->getSingleIdentifierFieldName();
+            $qb            = $manager->createQueryBuilder()
+                                     ->select("Count(e.$id)")
+                                     ->from($class, 'e')
             ;
+
+            if (!$updateExisting && null !== ($idProp = $metadata->getIdFieldProperty())) {
+                $this->appendQueryBuilderExtension($classMetadata, $connection, $idProp, $qb);
+            }
+
+            $count = $qb->getQuery()
+                        ->getSingleScalarResult()
+            ;
+
             $totals[$class] = (int)$count;
         }
 
@@ -234,90 +263,7 @@ class OutboundBulkQueue
         ;
 
         if (!$updateExisting && null !== ($idProp = $metadata->getIdFieldProperty())) {
-            if ($classMetadata->hasField($idProp)) {
-                $qb->andWhere($qb->expr()->isNull('e.'.$idProp));
-            } elseif ($classMetadata->hasAssociation($idProp)) {
-                $association = $classMetadata->getAssociationMapping($idProp);
-                if ($association['type'] & ClassMetadataInfo::TO_ONE) {
-                    $qb->andWhere($qb->expr()->isNull('e.'.$idProp));
-                } else {
-                    $targetClass   = $association['targetEntity'];
-                    $targetManager = $this->registry->getManagerForClass($targetClass);
-                    /** @var ClassMetadata $targetMetadata */
-                    $targetMetadata = $targetManager->getClassMetadata($targetClass);
-
-                    // Find Connection Field
-                    $connectionField = 'connection';
-                    /** @var \ReflectionProperty $property */
-                    foreach ($targetMetadata->getReflectionProperties() as $property) {
-                        foreach ($this->reader->getPropertyAnnotations($property) as $annotation) {
-                            if ($annotation instanceof Connection) {
-                                $connectionField = $property->getName();
-                                break;
-                            }
-                        }
-                    }
-
-                    $conn = null;
-
-                    if ($targetMetadata->hasField($connectionField)) {
-                        $conn = $connection->getName();
-                    } elseif ($targetMetadata->hasAssociation($connectionField)) {
-                        $connAssoc   = $targetMetadata->getAssociationMapping($connectionField);
-                        $connClass   = $connAssoc['targetEntity'];
-                        $connManager = $this->registry->getManagerForClass($connClass);
-                        /** @var ClassMetadata $connMetadata */
-                        $connMetadata = $connManager->getClassMetadata($connClass);
-                        $connIdField  = $connMetadata->getSingleIdentifierFieldName();
-                        $conn         = null;
-
-                        if ($connAssoc['type'] & ClassMetadataInfo::TO_ONE) {
-                            $repo = $connManager->getRepository($connClass);
-
-                            if ($connMetadata->hasField('name')) {
-                                $conn = $repo->findOneBy(
-                                    [
-                                        'name' => $connection->getName(),
-                                    ]
-                                );
-                            } else {
-                                foreach ($repo->findAll() as $item) {
-                                    if ($item instanceof ConnectionEntityInterface
-                                        && $item->getName() === $connection->getName()
-                                    ) {
-                                        $conn = $item;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        if (null === $conn) {
-                            throw new \RuntimeException(
-                                sprintf(
-                                    "No %s with %s of %s found.",
-                                    $connClass,
-                                    $connectionField,
-                                    $connection->getName()
-                                )
-                            );
-                        }
-
-                        $conn = $connMetadata->getFieldValue($conn, $connIdField);
-                    }
-
-                    if (null !== $conn) {
-                        $qb->leftJoin("e.$idProp", "s")
-                           ->andWhere(
-                               $qb->expr()->orX()
-                                  ->add($qb->expr()->neq("s.$connectionField", ":conn"))
-                                  ->add($qb->expr()->isNull("s.$connectionField"))
-                           )
-                           ->setParameter("conn", $conn)
-                        ;
-                    }
-                }
-            }
+            $this->appendQueryBuilderExtension($classMetadata, $connection, $idProp, $qb);
         }
 
         return $qb;
@@ -345,5 +291,105 @@ class OutboundBulkQueue
             $class,
             $this->progress->getProgress($class) + $offset
         );
+    }
+
+    /**
+     * @param ClassMetadata $classMetadata
+     * @param ConnectionInterface $connection
+     * @param $idProp
+     * @param QueryBuilder $qb
+     *
+     * @throws MappingException
+     */
+    private function appendQueryBuilderExtension(
+        ClassMetadata $classMetadata,
+        ConnectionInterface $connection,
+        $idProp,
+        QueryBuilder $qb
+    ): void {
+        if ($classMetadata->hasField($idProp)) {
+            $qb->andWhere($qb->expr()->isNull('e.'.$idProp));
+        } elseif ($classMetadata->hasAssociation($idProp)) {
+            $association = $classMetadata->getAssociationMapping($idProp);
+            if ($association['type'] & ClassMetadataInfo::TO_ONE) {
+                $qb->andWhere($qb->expr()->isNull('e.'.$idProp));
+            } else {
+                $targetClass   = $association['targetEntity'];
+                $targetManager = $this->registry->getManagerForClass($targetClass);
+                /** @var ClassMetadata $targetMetadata */
+                $targetMetadata = $targetManager->getClassMetadata($targetClass);
+
+                // Find Connection Field
+                $connectionField = 'connection';
+                /** @var \ReflectionProperty $property */
+                foreach ($targetMetadata->getReflectionProperties() as $property) {
+                    foreach ($this->reader->getPropertyAnnotations($property) as $annotation) {
+                        if ($annotation instanceof Connection) {
+                            $connectionField = $property->getName();
+                            break;
+                        }
+                    }
+                }
+
+                $conn = null;
+
+                if ($targetMetadata->hasField($connectionField)) {
+                    $conn = $connection->getName();
+                } elseif ($targetMetadata->hasAssociation($connectionField)) {
+                    $connAssoc   = $targetMetadata->getAssociationMapping($connectionField);
+                    $connClass   = $connAssoc['targetEntity'];
+                    $connManager = $this->registry->getManagerForClass($connClass);
+                    /** @var ClassMetadata $connMetadata */
+                    $connMetadata = $connManager->getClassMetadata($connClass);
+                    $connIdField  = $connMetadata->getSingleIdentifierFieldName();
+                    $conn         = null;
+
+                    if ($connAssoc['type'] & ClassMetadataInfo::TO_ONE) {
+                        $repo = $connManager->getRepository($connClass);
+
+                        if ($connMetadata->hasField('name')) {
+                            $conn = $repo->findOneBy(
+                                [
+                                    'name' => $connection->getName(),
+                                ]
+                            );
+                        } else {
+                            foreach ($repo->findAll() as $item) {
+                                if ($item instanceof ConnectionEntityInterface
+                                    && $item->getName() === $connection->getName()
+                                ) {
+                                    $conn = $item;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (null === $conn) {
+                        throw new \RuntimeException(
+                            sprintf(
+                                "No %s with %s of %s found.",
+                                $connClass,
+                                $connectionField,
+                                $connection->getName()
+                            )
+                        );
+                    }
+
+                    $conn = $connMetadata->getFieldValue($conn, $connIdField);
+                }
+
+                if (null !== $conn) {
+                    $qb->leftJoin("e.$idProp", "s")
+                       ->andWhere(
+                           $qb->expr()->orX()
+                              ->add($qb->expr()->neq("s.$connectionField", ":conn"))
+                              ->add($qb->expr()->isNull("s.$connectionField"))
+                       )
+                       ->setParameter("conn", $conn)
+                    ;
+                }
+            }
+        }
     }
 }
