@@ -9,8 +9,12 @@
 namespace AE\ConnectBundle\Tests\Salesforce\Bulk;
 
 use AE\ConnectBundle\Salesforce\Bulk\BulkProgress;
+use AE\ConnectBundle\Salesforce\Bulk\Events\CompleteEvent;
+use AE\ConnectBundle\Salesforce\Bulk\Events\CompleteSectionEvent;
 use AE\ConnectBundle\Salesforce\Bulk\Events\Events;
-use AE\ConnectBundle\Salesforce\Bulk\Events\ProgressEvent;
+use AE\ConnectBundle\Salesforce\Bulk\Events\SetProgressEvent;
+use AE\ConnectBundle\Salesforce\Bulk\Events\SetTotalsEvent;
+use AE\ConnectBundle\Salesforce\Bulk\Events\UpdateProgressEvent;
 use AE\ConnectBundle\Tests\KernelTestCase;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -87,21 +91,26 @@ class BulkProgressTest extends KernelTestCase
         $total     = 0;
         $percent   = 0;
         $complete  = false;
+        $partials  = [];
         $listeners = [];
 
-        $listeners[Events::SET_TOTALS] = function (ProgressEvent $event) use (&$total) {
+        $listeners[Events::SET_TOTALS] = function (SetTotalsEvent $event) use (&$total) {
             $total = $event->getOverallTotal();
         };
 
-        $listeners[Events::SET_PROGRESS] = function (ProgressEvent $event) use (&$progress) {
+        $listeners[Events::SET_PROGRESS] = function (SetProgressEvent $event) use (&$progress) {
             $progress = $event->getOverallProgress();
         };
 
-        $listeners[Events::UPDATE_PROGRESS] = function (ProgressEvent $event) use (&$percent) {
+        $listeners[Events::UPDATE_PROGRESS] = function (UpdateProgressEvent $event) use (&$percent) {
             $percent = $event->getProgressPercent();
         };
 
-        $listeners[Events::COMPLETE] = function (ProgressEvent $event) use (&$complete) {
+        $listeners[Events::SECTION_COMPLETE] = function (CompleteSectionEvent $event) use (&$partials) {
+            $partials[] = $event->getKey();
+        };
+
+        $listeners[Events::COMPLETE] = function (CompleteEvent $event) use (&$complete) {
             $complete = true;
         };
 
@@ -130,6 +139,8 @@ class BulkProgressTest extends KernelTestCase
 
         $this->assertEquals(100, $percent);
         $this->assertTrue($complete);
+
+        $this->assertEquals(['item1', 'item2'], $partials);
 
         foreach ($listeners as $event => $listener) {
             $this->dispatcher->removeListener($event, $listener);
