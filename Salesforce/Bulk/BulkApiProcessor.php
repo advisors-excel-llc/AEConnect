@@ -87,6 +87,7 @@ class BulkApiProcessor extends AbstractApiProcessor
         }
 
         $client->closeJob($job);
+        $this->progress->setComplete($objectType);
 
         $this->logger->info(
             'Job (ID# {job}) is now closed',
