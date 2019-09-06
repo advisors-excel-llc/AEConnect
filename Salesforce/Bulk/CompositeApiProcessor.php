@@ -104,5 +104,7 @@ class CompositeApiProcessor extends AbstractApiProcessor
             }
             $done = $query->isDone();
         }
+
+        $this->progress->setComplete($sObjectType);
     }
 }
