@@ -66,19 +66,22 @@ information.
 ### ae_connect:bulk
 
 ```bash
-# This command will sync all new entities for all object types for all connections
+# This command will sync send new entities in Salesforce for any entity that doesn't have a SFID for all connections
 $ bin/console ae_connect:bulk
 
-# This command will sync all new entities for all object types for only the default connection
+# This command will sync send new entities for all object types for only the default connection
 $ bin/console ae_connect:bulk default
 
-# This command will sync all entities down but only new entities up for all connections
+# This command will sync all entities down but only update existing; entities that don't have a SFID are Inserted in Salesforce
 $ bin/console ae_connect:bulk -i
 
-# This command will sync all entities up but only new entities down for all connections
+# This command will sync all entities down and create new locally; entities that don't have a SFID are Inserted in Salesforce
+$ bin/console ae_connect:bulk -i --insert-new
+
+# This command will sync all entities up to Salesforce
 $ bin/console ae_connect:bulk -o
 
-# This command will sync only new entities associated with accounts for all connections
+# This command will sync only new entities to SF associated with accounts for all connections
 $ bin/console ae_connect:bulk -t Account
 
 # Use -c to clear all existing Salesforce IDs from the database. They will be re-synced to existing entities using
@@ -88,7 +91,7 @@ $ bin/console ae_connect:bulk -c
 # Let's put it all together!
 # This command will sync all entities associated the Account and Contact types both up and down for the default connection
 # clearing all pre-existing Salesforce IDs
-$ bin/console ae_connect:bulk default -t Account -t Contact -i -o -c
+$ bin/console ae_connect:bulk default -t Account -t Contact -i --insert-new -o -c
 
 ```
 
@@ -116,6 +119,12 @@ the wildcard with all fields defined in the metadata for the connection.
 
 ```bash
 $ bin/console ae_connect:bulk:import:query "SELECT * FROM Account WHERE CreatedDate >= TODAY" -c default
+```
+
+If you want to insert new records locally, use the `--insert-new` flag, otherwise only existing records are updated
+
+```bash
+$ bin/console ae_connect:bulk:import:query --insert-new "SELECT Name, AccountNumber FROM Account WHERE CreatedDate >= TODAY"
 ```
 
 [Read More](../bulk/README.md#Query Data from Salesforce)
