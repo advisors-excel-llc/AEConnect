@@ -92,6 +92,10 @@ class InboundQueryProcessor
                 }
             }
 
+            //Ensure the fields we are getting are unique, especially if we received many meta datas due to a discriminator
+            //We will get errors through salesforce without doing this.
+            $fields = array_unique($fields);
+
             if (empty($fields)) {
                 throw new \RuntimeException("No fields provided in the query were mapped to any local entities.");
             }
