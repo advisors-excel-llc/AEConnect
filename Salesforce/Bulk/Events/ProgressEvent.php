@@ -8,7 +8,7 @@
 
 namespace AE\ConnectBundle\Salesforce\Bulk\Events;
 
-use Symfony\Component\EventDispatcher\Event;
+use Symfony\Contracts\EventDispatcher\Event;
 
 /**
  * Class ProgressEvent
@@ -51,10 +51,17 @@ class ProgressEvent extends Event
         int $overallProgress = 0,
         int $overallTotal = 0
     ) {
-        $this->progress = $progress;
-        $this->totals = $totals;
+        $this->progress        = $progress;
+        $this->totals          = $totals;
         $this->overallProgress = $overallProgress;
-        $this->overallTotal = $overallTotal;
+        $this->overallTotal    = $overallTotal;
+    }
+
+    public static function create(): ProgressEvent
+    {
+        $args = func_get_args();
+
+        return new static(...$args);
     }
 
     /**

@@ -8,9 +8,13 @@
 
 namespace AE\ConnectBundle\Salesforce\Bulk;
 
-use AE\ConnectBundle\Salesforce\Bulk\Events\Events;
+use AE\ConnectBundle\Salesforce\Bulk\Events\CompleteEvent;
+use AE\ConnectBundle\Salesforce\Bulk\Events\CompleteSectionEvent;
 use AE\ConnectBundle\Salesforce\Bulk\Events\ProgressEvent;
+use AE\ConnectBundle\Salesforce\Bulk\Events\SetProgressEvent;
+use AE\ConnectBundle\Salesforce\Bulk\Events\SetTotalsEvent;
 use AE\ConnectBundle\Salesforce\Bulk\Events\UpdateProgressEvent;
+use AE\ConnectBundle\Salesforce\Bulk\Events\UpdateTotalEvent;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
@@ -56,31 +60,17 @@ class BulkProgress
     }
 
     /**
-     *
-     */
-    protected function calculateTotalProgress(): void
-    {
-        $this->totalProgress = array_sum($this->progress);
-    }
-
-    /**
-     *
-     */
-    protected function calculateOverallTotal(): void
-    {
-        $this->overallTotal = array_sum($this->totals);
-    }
-
-    /**
      * @param array $progress
      *
      * @return BulkProgress
      */
     public function setProgress(array $progress): self
     {
-        $this->progress = $progress;
-        $this->calculateTotalProgress();
-        $this->dispatchEvent(Events::SET_PROGRESS);
+        foreach ($progress as $key => $amount) {
+            $this->updateProgress($key, $amount);
+        }
+
+        $this->dispatchEvent(SetProgressEvent::class);
 
         return $this;
     }
@@ -110,9 +100,11 @@ class BulkProgress
      */
     public function setTotals(array $totals): self
     {
-        $this->totals = $totals;
-        $this->calculateOverallTotal();
-        $this->dispatchEvent(Events::SET_TOTALS);
+        foreach ($totals as $key => $amount) {
+            $this->updateTotal($key, $amount);
+        }
+
+        $this->dispatchEvent(SetTotalsEvent::class);
 
         return $this;
     }
@@ -135,6 +127,9 @@ class BulkProgress
         return 0;
     }
 
+    /**
+     * @return array
+     */
     public function getTotals(): array
     {
         return $this->totals;
@@ -148,12 +143,13 @@ class BulkProgress
      */
     public function updateProgress(string $key, int $progress): self
     {
+        $oldProgress          = array_key_exists($key, $this->progress) ? $this->progress[$key] : 0;
         $this->progress[$key] = $progress;
-        $this->calculateTotalProgress();
+        $this->totalProgress  += $progress - $oldProgress;
 
         if (!array_key_exists($key, $this->totals)) {
             $this->totals[$key] = $progress;
-            $this->calculateOverallTotal();
+            $this->overallTotal += $progress;
         }
 
         if ($progress > $this->totals[$key]) {
@@ -162,32 +158,89 @@ class BulkProgress
 
         $this->dispatchUpdateProgressEvent($key);
 
+        if ($this->progress[$key] === $this->totals[$key]) {
+            $this->dispatchCompleteSectionProgressEvent($key);
+        }
+
         if ($this->overallTotal === 0 || $this->totalProgress / $this->overallTotal === 1) {
-            $this->dispatchEvent(Events::COMPLETE);
+            $this->setComplete();
         }
 
         return $this;
     }
 
+    /**
+     * @param string $key
+     * @param int $total
+     *
+     * @return BulkProgress
+     */
     public function updateTotal(string $key, int $total): self
     {
+        $oldTotal           = array_key_exists($key, $this->totals) ? $this->totals[$key] : 0;
         $this->totals[$key] = $total;
-        $this->calculateOverallTotal();
-        $this->dispatchEvent(Events::SET_TOTALS);
+        $this->overallTotal += $total - $oldTotal;
+        $this->dispatchUpdateTotalEvent($key);
 
-        $this->updateProgress($key, $this->getProgress($key));
+        return $this->updateProgress($key, $this->getProgress($key));
+    }
+
+    /**
+     * @param null|string $key
+     *
+     * @return BulkProgress
+     */
+    public function setComplete(?string $key = null): self
+    {
+        if (null === $key) {
+            $keys = array_merge(array_keys($this->progress), array_keys($this->totals));
+
+            foreach ($keys as $subKey) {
+                $this->setComplete($subKey);
+            }
+
+            $this->dispatchEvent(CompleteEvent::class);
+        } else {
+            $progress = array_key_exists($key, $this->progress) ? $this->progress[$key] : 0;
+            $total    = array_key_exists($key, $this->totals) ? $this->totals[$key] : 0;
+
+            if ($progress < $total) {
+                $this->updateProgress($key, $total);
+                $this->dispatchCompleteSectionProgressEvent($key);
+            }
+        }
 
         return $this;
     }
 
     /**
-     * @param string $eventName
+     * @param string $class
      */
-    protected function dispatchEvent(string $eventName): void
+    protected function dispatchEvent(string $class): void
+    {
+        if ($class === ProgressEvent::class
+            || (false !== ($parents = class_parents($class))
+                && in_array(ProgressEvent::class, $parents))
+        ) {
+            $this->dispatcher->dispatch(
+                $class::create(
+                    $this->progress,
+                    $this->totals,
+                    $this->totalProgress,
+                    $this->overallTotal
+                )
+            );
+        }
+    }
+
+    /**
+     * @param string $key
+     */
+    protected function dispatchUpdateProgressEvent(string $key): void
     {
         $this->dispatcher->dispatch(
-            $eventName,
-            new ProgressEvent(
+            new UpdateProgressEvent(
+                $key,
                 $this->progress,
                 $this->totals,
                 $this->totalProgress,
@@ -199,11 +252,26 @@ class BulkProgress
     /**
      * @param string $key
      */
-    protected function dispatchUpdateProgressEvent(string $key): void
+    protected function dispatchUpdateTotalEvent(string $key): void
     {
         $this->dispatcher->dispatch(
-            Events::UPDATE_PROGRESS,
-            new UpdateProgressEvent(
+            new UpdateTotalEvent(
+                $key,
+                $this->progress,
+                $this->totals,
+                $this->totalProgress,
+                $this->overallTotal
+            )
+        );
+    }
+
+    /**
+     * @param string $key
+     */
+    protected function dispatchCompleteSectionProgressEvent(string $key): void
+    {
+        $this->dispatcher->dispatch(
+            new CompleteSectionEvent(
                 $key,
                 $this->progress,
                 $this->totals,

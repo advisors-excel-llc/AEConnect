@@ -193,6 +193,8 @@ class OutboundBulkQueue
 
         $this->sendEntities($connection, $class, $results, $offset);
 
+        $this->progress->setComplete($class);
+
         $this->logger->debug('Synced {count} objects of {type} type', ['count' => $offset, 'type' => $class]);
     }
 

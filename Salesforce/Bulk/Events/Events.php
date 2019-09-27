@@ -10,8 +10,10 @@ namespace AE\ConnectBundle\Salesforce\Bulk\Events;
 
 class Events
 {
-    const SET_PROGRESS    = 'ae_connect.progress.set_progress';
-    const SET_TOTALS      = 'ae_connect.progress.set_totals';
-    const UPDATE_PROGRESS = 'ae_connect.progress.update_progress';
-    const COMPLETE        = 'ae_connect.progress.complete';
+    const SET_PROGRESS     = SetProgressEvent::class;
+    const SET_TOTALS       = SetTotalsEvent::class;
+    const UPDATE_TOTAL     = UpdateTotalEvent::class;
+    const UPDATE_PROGRESS  = UpdateProgressEvent::class;
+    const SECTION_COMPLETE = CompleteSectionEvent::class;
+    const COMPLETE         = CompleteEvent::class;
 }
