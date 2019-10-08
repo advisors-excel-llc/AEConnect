@@ -33,6 +33,12 @@ class Metadata
     private $sObjectType;
 
     /**
+     * @var string
+     * @Serializer\Type("string")
+     */
+    private $classAnnotation;
+
+    /**
      * @var ArrayCollection|FieldMetadata[]
      * @Serializer\Type("ArrayCollection<AE\ConnectBundle\Metadata\FieldMetadata>")
      * @Serializer\AccessType("public_method")
@@ -115,6 +121,22 @@ class Metadata
         $this->sObjectType = $sObjectType;
 
         return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getClassAnnotation(): string
+    {
+        return $this->classAnnotation;
+    }
+
+    /**
+     * @param string $classAnnotation
+     */
+    public function setClassAnnotation(string $classAnnotation): void
+    {
+        $this->classAnnotation = $classAnnotation;
     }
 
     /**

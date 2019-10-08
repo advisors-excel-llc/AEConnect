@@ -125,6 +125,7 @@ services:
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Bulk\SfidReset:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker'
     AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $inboundBulkQueue: '@AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue'

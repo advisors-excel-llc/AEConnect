@@ -93,17 +93,20 @@ class AnnotationDriver
     public function loadMetadataForClass($className, Metadata $metadata, bool $isDefault = false)
     {
         $class             = new \ReflectionClass($className);
-        $sourceAnnotations = $this->getClassAnnotations($class, [SObjectType::class, RecordType::class]);
+        $sourceAnnotations = $this->getClassAnnotations($class, [SObjectType::class, RecordType::class, SalesforceId::class]);
         /** @var SObjectType|RecordType $sourceAnnotation */
         foreach ($sourceAnnotations as $sourceAnnotation) {
             if ($this->hasConnectionName($sourceAnnotation, $metadata->getConnectionName(), $isDefault)) {
                 if ($sourceAnnotation instanceof RecordType) {
                     $metadata->addFieldMetadata(new RecordTypeMetadata($metadata, $sourceAnnotation->getName()));
                     continue;
+                } elseif ($sourceAnnotation instanceof SObjectType) {
+                    $metadata->setSObjectType($sourceAnnotation->getName());
                 }
 
                 $metadata->setClassName($className);
-                $metadata->setSObjectType($sourceAnnotation->getName());
+                $metadata->setClassAnnotation(get_class($sourceAnnotation));
+
                 $properties = $this->getAnnotatedProperties(
                     $class,
                     $metadata->getConnectionName(),
