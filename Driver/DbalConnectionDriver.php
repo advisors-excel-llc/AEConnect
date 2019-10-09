@@ -140,7 +140,7 @@ class DbalConnectionDriver
                     // Build a MetadataRegistry for the new connection based on the proxy registry
                     $metadataRegistry = new MetadataRegistry($metadataCache);
 
-                    foreach ($proxyRegistry->getMetadata() as $proxyMetadata) {
+                    foreach ($proxyRegistry->getAllMetadata() as $proxyMetadata) {
                         $metadata = null;
                         $cacheId  = "{$entity->getName()}__{$proxyMetadata->getClassName()}";
                         // Check to see if there's a cached version of the metadata
@@ -150,6 +150,7 @@ class DbalConnectionDriver
                             $metadata = new Metadata($entity->getName());
                             $metadata->setClassName($proxyMetadata->getClassName());
                             $metadata->setSObjectType($proxyMetadata->getSObjectType());
+                            $metadata->setClassAnnotation($proxyMetadata->getClassAnnotation());
 
                             foreach ($proxyMetadata->getFieldMetadata() as $proxyFieldMeta) {
                                 if ($proxyFieldMeta instanceof RecordTypeMetadata) {

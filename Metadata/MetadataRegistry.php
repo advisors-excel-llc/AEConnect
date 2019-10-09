@@ -52,6 +52,14 @@ class MetadataRegistry
     }
 
     /**
+     * @return ArrayCollection|MetaData[]
+     */
+    public function getAllMetadata(): ArrayCollection
+    {
+        return $this->metadata;
+    }
+
+    /**
      * @return ArrayCollection|Metadata[]
      */
     public function getMetadata(): ArrayCollection

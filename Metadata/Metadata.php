@@ -30,7 +30,7 @@ class Metadata
      * @var string
      * @Serializer\Type("string")
      */
-    private $sObjectType;
+    private $sObjectType = '';
 
     /**
      * @var string
