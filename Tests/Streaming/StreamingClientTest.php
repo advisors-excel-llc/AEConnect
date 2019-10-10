@@ -27,7 +27,7 @@ class StreamingClientTest extends DatabaseTestCase
     /** @var \AE\SalesforceRestSdk\Rest\SObject\Client */
     private $sObjectClient;
 
-    protected function setUp()/* The :void return type declaration that should be here would cause a BC issue */
+    protected function setUp(): void
     {
         parent::setUp();
 

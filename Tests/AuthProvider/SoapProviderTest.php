@@ -26,7 +26,7 @@ class SoapProviderTest extends KernelTestCase
      */
     private $authProvider;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->cache        = $this->get("ae_connect.connection.default.cache.auth_provider");
