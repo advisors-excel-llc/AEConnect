@@ -98,28 +98,6 @@ class BulkCommand extends Command
         $types      = $input->getOption('types');
         $this->outputDetails($input, $output, $types, $updateFlag);
 
-        /** @var QuestionHelper $helper */
-        $helper           = $this->getHelper('question');
-        $consumerQuestion = new ConfirmationQuestion(
-            'Have you stopped all ae_connect:consume and ae_connect:listen processes? (y/n) '
-        );
-
-        if (!$helper->ask($input, $output, $consumerQuestion)) {
-            $output->writeln(
-                '<error>Please stop all ae_connect:consume and ae_connect:listen processes before continuing.</error>'
-            );
-
-            return;
-        }
-
-        $confirmQuestion = new ConfirmationQuestion(
-            'Is your data backed up and are the settings correct to continue? (y/n) '
-        );
-
-        if (!$helper->ask($input, $output, $confirmQuestion)) {
-            return;
-        }
-
         $output->writeln(
             sprintf(
                 '<info>Starting bulk sync for %s</info>',

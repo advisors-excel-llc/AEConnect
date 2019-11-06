@@ -126,7 +126,7 @@ class Metadata
     /**
      * @return string
      */
-    public function getClassAnnotation(): string
+    public function getClassAnnotation(): ?string
     {
         return $this->classAnnotation;
     }

@@ -203,7 +203,8 @@ class SfidReset implements LoggerAwareInterface
 
         $this->logger->info("#SfidReset -> #clearSfidAsOneToAssociation | #query  Clearing SFIDs with DQL : $DQL");
 
-        $em->createQuery($DQL);
+        $query = $em->createQuery($DQL);
+        $query->execute();
     }
 
     /**
