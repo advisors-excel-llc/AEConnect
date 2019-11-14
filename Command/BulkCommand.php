@@ -12,6 +12,9 @@ use AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor;
 use AE\ConnectBundle\Salesforce\Bulk\Events\Events;
 use AE\ConnectBundle\Salesforce\Bulk\Events\ProgressEvent;
 use AE\ConnectBundle\Salesforce\Bulk\Events\UpdateProgressEvent;
+use AE\ConnectBundle\Salesforce\Synchronize\Configuration;
+use AE\ConnectBundle\Salesforce\Synchronize\EventModel\Actions;
+use AE\ConnectBundle\Salesforce\Synchronize\Sync;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
@@ -25,9 +28,9 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 class BulkCommand extends Command
 {
     /**
-     * @var BulkDataProcessor
+     * @var Sync
      */
-    private $bulkDataProcessor;
+    private $processor;
 
     /**
      * @var EventDispatcherInterface
@@ -36,10 +39,10 @@ class BulkCommand extends Command
 
     private $listeners = [];
 
-    public function __construct(BulkDataProcessor $processor, EventDispatcherInterface $dispatcher)
+    public function __construct(Sync $processor, EventDispatcherInterface $dispatcher)
     {
         parent::__construct(null);
-        $this->bulkDataProcessor = $processor;
+        $this->processor = $processor;
         $this->dispatcher        = $dispatcher;
     }
 
@@ -107,11 +110,28 @@ class BulkCommand extends Command
 
         $this->wireupProgressListeners($output);
 
-        $this->bulkDataProcessor->process(
+        $pull = new Actions();
+        $pull->sfidSync = true;
+        $pull->validate = true;
+        $pull->create = true;
+        $pull->update = true;
+
+        $push = new Actions();
+        $pull->sfidSync = true;
+        $pull->validate = true;
+        $pull->create = true;
+        $pull->update = true;
+
+        $config = new Configuration(
             $input->getArgument('connection'),
             $types,
-            $updateFlag
+            [],
+            true,
+            $pull,
+            $push
         );
+
+        $this->processor->sync($config);
 
         $this->unwireProgressListeners();
 

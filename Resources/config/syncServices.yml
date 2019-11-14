@@ -1,0 +1,46 @@
+services:
+    AE\ConnectBundle\Salesforce\Synchronize\Sync:
+        autowire: true
+        autoconfigure: true
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\BuildFlatMapOfTargets:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.gather_target_sobjects, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\FindConnection:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.initial, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\GenerateQueries:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.generate_queries, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\GetQueryCounts:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.count_results_from_queries, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\ClearSFIDs:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.clear_sfid, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\PullRecords:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.pull_records, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\LocateEntities:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.locate_entities, method: process }

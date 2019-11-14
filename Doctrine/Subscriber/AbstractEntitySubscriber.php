@@ -75,10 +75,11 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
     {
         return [
             Events::prePersist,
+            Events::postPersist,
             Events::preUpdate,
+            Events::postUpdate,
             Events::preRemove,
             Events::postRemove,
-            Events::preFlush,
             Events::postFlush,
             Events::onClear,
         ];
@@ -90,10 +91,20 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
         $this->upsertEntity($entity);
     }
 
+    public function postPersist(LifecycleEventArgs $event)
+    {
+        $this->flushUpserts();
+    }
+
     public function preUpdate(LifecycleEventArgs $event)
     {
         $entity = $event->getEntity();
         $this->upsertEntity($entity);
+    }
+
+    public function postUpdate(LifecycleEventArgs $event)
+    {
+        $this->flushUpserts();
     }
 
     public function preRemove(LifecycleEventArgs $event)
@@ -105,11 +116,6 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
     public function postRemove(LifecycleEventArgs $event)
     {
         $this->flushRemovals();
-    }
-
-    public function preFlush(PreFlushEventArgs $event)
-    {
-        $this->flushUpserts();
     }
 
     public function postFlush(PostFlushEventArgs $event)

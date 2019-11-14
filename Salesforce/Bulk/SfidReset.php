@@ -86,7 +86,7 @@ class SfidReset implements LoggerAwareInterface
      *
      * @throws \Doctrine\ORM\Mapping\MappingException
      */
-    private function doClear(ConnectionInterface $connection, string $class, FieldMetadata $fieldMetadata): void
+    public function doClear(ConnectionInterface $connection, string $class, FieldMetadata $fieldMetadata): void
     {
         $manager = $this->registry->getManagerForClass($class);
         /** @var ClassMetadata $classMetadata */

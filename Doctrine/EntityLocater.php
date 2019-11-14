@@ -2,11 +2,15 @@
 
 namespace AE\ConnectBundle\Doctrine;
 
+use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Compiler\FieldCompiler;
+use AE\ConnectBundle\Salesforce\Synchronize\EventModel\LocationQuery;
+use AE\ConnectBundle\Salesforce\Synchronize\EventModel\Target;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Type;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Psr\Log\LoggerAwareInterface;
@@ -43,6 +47,104 @@ class EntityLocater implements LoggerAwareInterface
         $this->registry      = $registry;
         $this->logger        = new NullLogger();
         $this->fieldCompiler = $fieldCompiler;
+    }
+
+    public function locateEntities(Target $target, ConnectionInterface $connection)
+    {
+        if (!count($target->getLocators()) && !$target->isQBImpossible()) {
+            $this->constructLocatorsForGivenTarget($target, $connection);
+        }
+        if ($target->isQBImpossible()) {
+            //If we failed to build a QB from meta data, we will use the slow motion constructor instead.
+            foreach($target->records as $record) {
+                foreach ($connection->getMetadataRegistry()->findMetadataBySObjectType($target->name) as $metadata) {
+                    $record->entity =  $this->locate($record->sObject, $metadata);
+                }
+            }
+        } else {
+            // We are ready
+            $target->executeLocators();
+        }
+    }
+
+    /**
+     * Locator Contruction.  We are going to examine the AEConnect meta data and create the instructions for creating a query
+     * to retrieve a set of results from the database in a
+     * @param Target $target
+     * @param ConnectionInterface $connection
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     */
+    private function constructLocatorsForGivenTarget(Target $target, ConnectionInterface $connection)
+    {
+        foreach ($connection->getMetadataRegistry()->findMetadataBySObjectType($target->name) as $metadata) {
+            // Lets build some DQL to do a query!
+            /** @var EntityManager $manager */
+            $manager = $this->registry->getManagerForClass($metadata->getClassName());
+            $qb = $manager->getRepository($metadata->getClassName())->createQueryBuilder('e');
+            $entityMetaData = $manager->getClassMetadata($metadata->getClassName());
+
+            $locator = new LocationQuery();
+            $locator->setQb($qb);
+
+            // Start with connection field.  If such a field exists we are going to require the connection field to
+            // equal the connection name.
+            if ($connField = $metadata->getConnectionNameField()) {
+                // We are assuming here that connection field is a normal column and not an association.
+                // If it is an association we are going to fix that later LOL pwned
+                if ($entityMetaData->hasAssociation($connField)) {
+                    $target->setQBImpossible(true, 'Since your connection field is an association, we are going to use slow motion entity locator instead of DQL to retrieve records.
+                    This runs approximately 100x slower than DQL method.');
+                    break;
+                }
+                if ($entityMetaData->hasField($connField)) {
+                    $locator->addConnection($connField, $connection->getName());
+                }
+            }
+
+            // Now for the ever reliable identifying fields.  We will need the identifying field to be in the records we got back.
+            $identifiers   = $metadata->getIdentifyingFields();
+            foreach ($identifiers as $prop => $field) {
+                // We'll first ensure that our salesforce results will include this identifier by checking the query for the
+                // inclusion of just this field
+                if (!strpos($target->query, $field)) {
+                    //Don't use the field if we didn't query the field...
+                    continue;
+                }
+                // We'll once again assume here that all identifying fields are columns on a table instead of associations.
+                // TODO : Write logic to make a fast lane for instances where identifying fields are associations.
+                if ($entityMetaData->hasAssociation($prop)) {
+                    $target->setQBImpossible(true, "Since one of your active identifying fields is an association ($prop), we are going to use slow motion entity locator instead of QB to retrieve records.
+                    This runs approximately 100x slower than QB method.  You could potentially choose to remove this field from your query and run again if your SFIDs were not cleared.");
+                    break;
+                }
+                if ($entityMetaData->hasField($prop)) {
+                    $locator->addExternalId($prop, $field);
+                }
+            }
+
+            //And lastly SFID.  This run we unfortunately have to support associations as well as fields, so get ready to see this
+            if (strpos($target->query, 'Id')) {
+                $sfidProperty = $metadata->getIdFieldProperty();
+                if ($entityMetaData->hasAssociation($sfidProperty)) {
+                    $association = $entityMetaData->getAssociationMapping($sfidProperty);
+                    $targetAeConnectMetadata = $connection->getMetadataRegistry()->findMetadataByClass($association['targetEntity']);
+                    if ($targetAeConnectMetadata) {
+                        $locator->addSfidAssociation(
+                            $association['targetEntity'],
+                            $targetAeConnectMetadata->getIdFieldProperty(),
+                            $sfidProperty
+                        );
+                    }
+                } elseif ($entityMetaData->hasField($sfidProperty)) {
+                    $locator->addSfidField($sfidProperty);
+                }
+            }
+            if (!$locator->isOK()) {
+                $target->setQBImpossible(true, 'Query did not contain an identifying field so we can not find them.');
+            } else {
+                $target->addLocator($locator);
+            }
+        }
     }
 
     /**
