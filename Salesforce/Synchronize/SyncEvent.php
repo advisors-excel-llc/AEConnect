@@ -54,7 +54,10 @@ class SyncEvent extends Event
      */
     public function getCurrentTarget(): ?Target
     {
-        return current($this->targetMeta);
+        if (($current = current($this->targetMeta)) !== false) {
+            return $current;
+        }
+        return null;
     }
 
     /**
@@ -75,7 +78,7 @@ class SyncEvent extends Event
 
     public function hasRecordsToProcess(): bool
     {
-        return !empty(current($this->targetMeta)->records);
+        return current($this->targetMeta) && !empty(current($this->targetMeta)->records);
     }
 
     public function hasUnprocessedQueries(): bool

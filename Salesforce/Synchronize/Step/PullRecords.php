@@ -11,7 +11,7 @@ class PullRecords extends Step
     function execute(EventDispatcherInterface $dispatcher): void
     {
         $target = $this->syncEvent->getCurrentTarget();
-        if (!$target->queryComplete) {
+        if ($target && !$target->queryComplete) {
             $event = new SyncTargetEvent($target, $this->syncEvent->getConnection());
             $dispatcher->dispatch($event, self::NAME);
             // once the dispatched action returns no results, we know that this particular target's query is complete
