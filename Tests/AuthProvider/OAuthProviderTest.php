@@ -26,7 +26,7 @@ class OAuthProviderTest extends KernelTestCase
      */
     private $authProvider;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->cache        = $this->get("ae_connect.connection.default.cache.auth_provider");
@@ -54,7 +54,7 @@ class OAuthProviderTest extends KernelTestCase
         /** @var Client $httpClient */
         $httpClient = $client->getValue($this->authProvider);
 
-        $this->authProvider->authorize();
+        $header = $this->authProvider->authorize();
 
         $authProvider = new OAuthProvider(
             $this->cache,

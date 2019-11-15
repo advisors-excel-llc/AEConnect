@@ -125,6 +125,7 @@ services:
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Bulk\SfidReset:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker'
     AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $inboundBulkQueue: '@AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue'
@@ -137,7 +138,7 @@ services:
         $progress: '@AE\ConnectBundle\Salesforce\Bulk\BulkProgress'
     AE\ConnectBundle\Command\BulkCommand:
         arguments:
-            $processor: '@AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor'
+            $processor: '@AE\ConnectBundle\Salesforce\Synchronize\Sync'
             $dispatcher: '@Symfony\Component\EventDispatcher\EventDispatcherInterface'
         tags: ['console.command']
     AE\ConnectBundle\Command\ConsumeCommand:

@@ -8,6 +8,8 @@
 
 namespace AE\ConnectBundle\Metadata;
 
+use AE\ConnectBundle\Annotations\SalesforceId;
+use AE\ConnectBundle\Annotations\SObjectType;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -42,9 +44,29 @@ class MetadataRegistry
     /**
      * @return ArrayCollection|Metadata[]
      */
-    public function getMetadata(): ArrayCollection
+    public function getSfidMetadata(): ArrayCollection
+    {
+        return $this->metadata->filter(function($metadatum) {
+            return $metadatum->getClassAnnotation() == SalesforceId::class;
+        });
+    }
+
+    /**
+     * @return ArrayCollection|MetaData[]
+     */
+    public function getAllMetadata(): ArrayCollection
     {
         return $this->metadata;
+    }
+
+    /**
+     * @return ArrayCollection|Metadata[]
+     */
+    public function getMetadata(): ArrayCollection
+    {
+        return $this->metadata->filter(function($metadatum) {
+            return $metadatum->getClassAnnotation() == SObjectType::class;
+        });
     }
 
     /**
@@ -110,7 +132,11 @@ class MetadataRegistry
     public function findMetadataBySObject(SObject $object): array
     {
         if (null === $object->__SOBJECT_TYPE__) {
-            return [];
+            $type = $object->getType();
+            if ($type === null) {
+                return [];
+            }
+            $object->__SOBJECT_TYPE__ = $type;
         }
 
         $metadata = $this->findMetadataBySObjectType($object->__SOBJECT_TYPE__);

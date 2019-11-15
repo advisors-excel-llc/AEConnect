@@ -25,7 +25,7 @@ class DbalConnectionDriverTest extends DatabaseTestCase
      */
     private $connectionManager;
 
-    protected function setUp()/* The :void return type declaration that should be here would cause a BC issue */
+    protected function setUp(): void
     {
         parent::setUp();
         $this->dbalDriver = $this->get(DbalConnectionDriver::class);
