@@ -83,6 +83,6 @@ class SyncEvent extends Event
 
     public function hasUnprocessedQueries(): bool
     {
-        return array_reduce($this->targetMeta, function($carry, Target $target) { return $carry || $target->queryComplete; }, false);
+        return array_reduce($this->targetMeta, function($carry, Target $target) { return $carry || !$target->queryComplete; }, false);
     }
 }
