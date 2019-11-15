@@ -52,7 +52,7 @@ class SyncEvent extends Event
     /**
      * @return Target
      */
-    public function getCurrentTarget(): Target
+    public function getCurrentTarget(): ?Target
     {
         return current($this->targetMeta);
     }
@@ -60,7 +60,7 @@ class SyncEvent extends Event
     /**
      * @return Target
      */
-    public function nextTarget(): Target
+    public function nextTarget(): ?Target
     {
         return next($this->targetMeta);
     }

@@ -24,10 +24,9 @@ class GenerateQueries implements SyncHandler
         $connection = $event->getConnection();
         $metadataRegistry = $connection->getMetadataRegistry();
 
-        $fields = [];
-        $recordTypes = [];
-
         foreach ($event->getConfig()->getSObjectTargets() as $type) {
+            $recordTypes = [];
+            $fields = [];
             foreach ($metadataRegistry->findMetadataBySObjectType($type) as $metadata) {
                 if (!$metadata->getDescribe()->isQueryable()) {
                     $this->logger->debug('#AECONNECT #generateQueries -> #process {obj} is not queryable', ['obj' => $type]);

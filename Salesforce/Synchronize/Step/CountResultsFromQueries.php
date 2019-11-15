@@ -18,6 +18,10 @@ class CountResultsFromQueries extends Step
         if ($this->syncEvent->getConfig()->needsSFIDsCleared()) {
             return new ClearSFIDs();
         }
+        $pull = $this->syncEvent->getConfig()->getPullConfiguration();
+        if ($pull->needsDataHydrated()) {
+            return new PullRecords();
+        }
         return new EndStep();
     }
 }

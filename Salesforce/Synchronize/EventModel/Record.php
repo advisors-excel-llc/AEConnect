@@ -3,6 +3,7 @@
 namespace AE\ConnectBundle\Salesforce\Synchronize\EventModel;
 
 use AE\SalesforceRestSdk\Model\SObject;
+use Ramsey\Uuid\Uuid;
 
 class Record
 {
@@ -41,7 +42,11 @@ class Record
         //Try this fast getters first
         foreach($entities as $entity) {
             foreach ($locator->getIdGetters() as $getter) {
-                if ($entity->{$getter['entity']}() === $this->sObject->{$getter['sObject']}()) {
+                $entityVal = $entity->{$getter['entity']}();
+                $entityVal = method_exists($entityVal, '__toString') ? $entityVal->__toString() : $entityVal;
+                $sObjectValue = $this->sObject->{$getter['sObject']}();
+
+                if ($entityVal === $sObjectValue) {
                     $this->entity = $entity;
                     return;
                 }

@@ -49,7 +49,7 @@ class BulkCommand extends Command
     protected function configure()
     {
         $this->setName('ae_connect:bulk')
-             ->addArgument('connection', InputArgument::OPTIONAL, 'The connection you want to bulk sync to and from')
+             ->addArgument('connection', InputArgument::REQUIRED, 'The connection you want to bulk sync to and from')
              ->addOption(
                  'types',
                  't',
@@ -57,12 +57,26 @@ class BulkCommand extends Command
                  'If provided, only these SObject Types will be synced.',
                  []
              )
+            ->addOption(
+                'queries',
+                null,
+                InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
+                'If provided, only these queries will be ran to produce results for syncing',
+                []
+            )
              ->addOption(
                  'update-inbound',
                  'i',
                  InputOption::VALUE_NONE,
                  'Update existing records in the local database when saving inbound records from Salesforce'
              )
+            ->addOption(
+                'create-inbound',
+                null,
+                InputOption::VALUE_NONE,
+                'Insert new entities into the local database '.
+                'from Salesforce if they don\'t exist in the local database'
+            )
              ->addOption(
                  'update-outbound',
                  'o',
@@ -70,14 +84,7 @@ class BulkCommand extends Command
                  'Update existing records in the Salesforce when sending data from local database'
              )
              ->addOption(
-                 'insert-new',
-                 null,
-                 InputOption::VALUE_NONE,
-                 'Insert new entities into the local database '.
-                 'from Salesforce if they don\'t exist in the local database'
-             )
-             ->addOption(
-                 'clear-sfids',
+                 'sync-sfids',
                  'c',
                  InputOption::VALUE_NONE,
                  'Clear the preexisting Salesforce Ids in the local database. Helpful if connecting to a new '.
@@ -97,9 +104,7 @@ class BulkCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $updateFlag = $this->buildUpdateFlag($input);
         $types      = $input->getOption('types');
-        $this->outputDetails($input, $output, $types, $updateFlag);
 
         $output->writeln(
             sprintf(
@@ -108,28 +113,30 @@ class BulkCommand extends Command
             )
         );
 
-        $this->wireupProgressListeners($output);
-
         $pull = new Actions();
-        $pull->sfidSync = true;
+        $pull->sfidSync = $input->getOption('sync-sfids');
         $pull->validate = true;
-        $pull->create = true;
-        $pull->update = true;
+        $pull->create = $input->getOption('create-inbound');
+        $pull->update = $input->getOption('update-inbound');
 
         $push = new Actions();
-        $pull->sfidSync = true;
+        $pull->sfidSync = $input->getOption('sync-sfids');
         $pull->validate = true;
-        $pull->create = true;
-        $pull->update = true;
+        $pull->create = $input->getOption('update-outbound');
+        $pull->update = $input->getOption('update-outbound');
 
         $config = new Configuration(
             $input->getArgument('connection'),
-            $types,
-            [],
-            true,
+            $input->getOption('types'),
+            $input->getOption('queries'),
+            $input->getOption('sync-sfids'),
             $pull,
             $push
         );
+
+        $this->outputDetails($input, $output, $config);
+
+        $this->wireupProgressListeners($output);
 
         $this->processor->sync($config);
 
@@ -140,70 +147,54 @@ class BulkCommand extends Command
 
     /**
      * @param InputInterface $input
-     *
-     * @return int
-     */
-    protected function buildUpdateFlag(InputInterface $input): int
-    {
-        $updateFlag = 0;
-
-        if ($input->getOption('update-inbound')) {
-            $updateFlag |= BulkDataProcessor::UPDATE_INCOMING;
-        }
-
-        if ($input->getOption('update-outbound')) {
-            $updateFlag |= BulkDataProcessor::UPDATE_OUTGOING;
-        }
-
-        if ($input->getOption('insert-new')) {
-            $updateFlag |= BulkDataProcessor::INSERT_NEW;
-        }
-
-        if ($input->getOption('clear-sfids')) {
-            $updateFlag |= BulkDataProcessor::UPDATE_SFIDS;
-        }
-
-        return $updateFlag;
-    }
-
-    /**
-     * @param InputInterface $input
      * @param OutputInterface $output
      * @param $types
      * @param $updateFlag
      */
-    protected function outputDetails(InputInterface $input, OutputInterface $output, $types, $updateFlag): void
+    protected function outputDetails(InputInterface $input, OutputInterface $output, Configuration $config): void
     {
-        $output->writeln(
-            sprintf(
-                '<info>AE Connect will now sync %s to %s.</info>',
-                empty($types) ? 'all types' : implode(', ', $types).' type(s)',
-                null === $input->getFirstArgument() ? ' all connections' : $input->getFirstArgument()
-            )
-        );
+        if (!empty($config->getQueries())) {
+            $queries = $config->getQueries();
+            $output->writeln(
+                sprintf(
+                    '<info>AE Connect will now sync data using these queries : %s to %s.</info>',
+                    implode(', ', $queries),
+                     $input->getFirstArgument()
+                )
+            );
+        } else {
+            $types = $config->getSObjectTargets();
+            $output->writeln(
+                sprintf(
+                    '<info>AE Connect will now sync %s to %s.</info>',
+                    empty($types) ? 'all types' : implode(', ', $types).' type(s)',
+                    null === $input->getFirstArgument() ? ' all connections' : $input->getFirstArgument()
+                )
+            );
+        }
         $output->writeln(
             'This operation is not easy to reverse. It is recommended you backup your data before continuing.'
         );
 
-        if ($updateFlag & BulkDataProcessor::UPDATE_INCOMING) {
+        if ($config->getPullConfiguration()->update) {
             $output->writeln(
                 '<comment>Local entities will be updated with data from Salesforce.</comment>'
             );
         }
 
-        if ($updateFlag & BulkDataProcessor::UPDATE_OUTGOING) {
+        if ($config->getPushConfigurations()->update) {
             $output->writeln(
                 '<comment>Salesforce will be updated with data from the local database.</comment>'
             );
         }
 
-        if ($updateFlag & BulkDataProcessor::INSERT_NEW) {
+        if ($config->getPullConfiguration()->create) {
             $output->writeln(
                 '<comment>New records will be created in the local database with data from Salesforce.</comment>'
             );
         }
 
-        if ($updateFlag & BulkDataProcessor::UPDATE_SFIDS) {
+        if ($config->needsSFIDsCleared()) {
             $output->writeln(
                 '<comment>Clear all Salesforce IDs from the database. '
                 .'External Ids will be used to match existing records.</comment>'
