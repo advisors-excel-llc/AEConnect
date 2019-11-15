@@ -5,9 +5,10 @@ namespace AE\ConnectBundle\Salesforce\Synchronize\Step;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
-class LocateEntities extends Step
+class UpdateEntityWithSObject extends Step
 {
-    const NAME = 'aeconnect.locate_entities';
+    const NAME = 'aeconnect.update_entity_with_sobject';
+
     function execute(EventDispatcherInterface $dispatcher): void
     {
         $target = $this->syncEvent->getCurrentTarget();
@@ -17,11 +18,7 @@ class LocateEntities extends Step
 
     function nextStep(): Step
     {
-        if ($this->syncEvent->getConfig()->getPullConfiguration()->sfidSync && $this->syncEvent->getCurrentTarget()->canUpdate()) {
-            return new SyncSFIDs();
-        } else if ($this->syncEvent->getConfig()->getPullConfiguration()->update && $this->syncEvent->getCurrentTarget()->canUpdate()) {
-            return new UpdateEntityWithSObject();
-        } else if ($this->syncEvent->getConfig()->getPullConfiguration()->create && $this->syncEvent->getCurrentTarget()->canCreateInDatabase()) {
+        if ($this->syncEvent->getConfig()->getPullConfiguration()->create && $this->syncEvent->getCurrentTarget()->canCreateInDatabase()) {
             return new CreateEntityWithSObject();
         }
         return new Flush();

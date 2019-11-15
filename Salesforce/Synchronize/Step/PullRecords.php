@@ -35,6 +35,5 @@ class PullRecords extends Step
             //All done!
             return new EndStep();
         }
-        return new EndStep();
     }
 }

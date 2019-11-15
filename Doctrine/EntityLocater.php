@@ -80,11 +80,10 @@ class EntityLocater implements LoggerAwareInterface
             // Lets build some DQL to do a query!
             /** @var EntityManager $manager */
             $manager = $this->registry->getManagerForClass($metadata->getClassName());
-            $qb = $manager->getRepository($metadata->getClassName())->createQueryBuilder('e');
             $entityMetaData = $manager->getClassMetadata($metadata->getClassName());
 
             $locator = new LocationQuery();
-            $locator->setQb($qb);
+            $locator->setRepository($manager->getRepository($metadata->getClassName()));
 
             // Start with connection field.  If such a field exists we are going to require the connection field to
             // equal the connection name.

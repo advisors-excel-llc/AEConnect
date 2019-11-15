@@ -10,6 +10,10 @@ class Record
     public $sObject;
     /** @var object|null  */
     public $entity;
+    /** @var bool */
+    public $needPersist = false;
+    /** @var string  */
+    public $error = '';
 
     public function __construct(?SObject $sObject = null, ?object $entity = null)
     {
@@ -70,10 +74,5 @@ class Record
                 }
             }
         }
-    }
-
-    public function matchSObjectToEntity(array $sObjects): void
-    {
-
     }
 }

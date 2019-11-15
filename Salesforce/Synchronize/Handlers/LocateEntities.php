@@ -19,7 +19,6 @@ class LocateEntities implements SyncTargetHandler
 
     public function process(SyncTargetEvent $event): void
     {
-        $connection = $event->getConnection();
-        $entities = $this->locater->locateEntities($event->getTarget(), $event->getConnection());
+        $this->locater->locateEntities($event->getTarget(), $event->getConnection());
     }
 }

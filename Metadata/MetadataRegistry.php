@@ -132,7 +132,11 @@ class MetadataRegistry
     public function findMetadataBySObject(SObject $object): array
     {
         if (null === $object->__SOBJECT_TYPE__) {
-            return [];
+            $type = $object->getType();
+            if ($type === null) {
+                return [];
+            }
+            $object->__SOBJECT_TYPE__ = $type;
         }
 
         $metadata = $this->findMetadataBySObjectType($object->__SOBJECT_TYPE__);

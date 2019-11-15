@@ -44,3 +44,27 @@ services:
         autoconfigure: true
         tags:
             - { name: kernel.event_listener, event: aeconnect.locate_entities, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\SyncSFIDs:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.sync_sfids, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\UpdateEntityWithSObject:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.update_entity_with_sobject, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\CreateEntityWithSObject:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.create_entity_with_sobject, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\Flush:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.flush, method: process }
