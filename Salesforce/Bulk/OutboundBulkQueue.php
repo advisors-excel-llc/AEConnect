@@ -15,6 +15,7 @@ use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
 use AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
@@ -91,7 +92,8 @@ class OutboundBulkQueue
     /**
      * @param ConnectionInterface $connection
      * @param array $types
-     * @param bool $updateExisting
+     * @param bool $update
+     * @param bool $create
      *
      * @throws MappingException
      * @throws \Doctrine\ORM\NonUniqueResultException
@@ -134,9 +136,10 @@ class OutboundBulkQueue
     /**
      * @param ConnectionInterface $connection
      * @param string $class
-     * @param bool $updateExisting
+     * @param bool $update
+     * @param bool $create
      */
-    private function startJob(ConnectionInterface $connection, string $class, bool $updateExisting)
+    private function startJob(ConnectionInterface $connection, string $class, bool $update, bool $create)
     {
         $metadata = $connection->getMetadataRegistry()->findMetadataByClass($class);
 
@@ -155,7 +158,7 @@ class OutboundBulkQueue
         $offset        = 0;
 
         try {
-            $qb = $this->createQueryBuilder($manager, $classMetadata, $connection, $offset, $updateExisting);
+            $qb = $this->createQueryBuilder($manager, $classMetadata, $connection, $offset, $update, $create);
         } catch (MappingException $e) {
             $this->logger->critical($e->getMessage());
             $this->logger->debug($e->getTraceAsString());
@@ -226,11 +229,11 @@ class OutboundBulkQueue
 
             $orX = $qb->expr()->orX();
 
-            if ($create && null !== ($idProp = $metadata->getIdFieldProperty())) {
+            if (!$update && $create && null !== ($idProp = $metadata->getIdFieldProperty())) {
                 $this->appendQBAllowCreate($classMetadata, $connection, $idProp, $qb, $orX);
             }
 
-            if ($update && null !== ($idProp = $metadata->getIdFieldProperty())) {
+            if ($update && !$create && null !== ($idProp = $metadata->getIdFieldProperty())) {
                 $this->appendQBAllowUpdate($classMetadata, $connection, $idProp, $qb, $orX);
             }
 
@@ -287,7 +290,9 @@ class OutboundBulkQueue
             $this->appendQBAllowUpdate($classMetadata, $connection, $idProp, $qb, $orX);
         }
 
-        $qb->andWhere($orX);
+        if ($orX->count()) {
+            $qb->andWhere($orX);
+        }
 
         return $qb;
     }
@@ -332,6 +337,7 @@ class OutboundBulkQueue
                 $orX->add($qb->expr()->isNull('e.'.$idProp));
             } else {
                 $targetClass   = $association['targetEntity'];
+                /** @var EntityManager $targetManager */
                 $targetManager = $this->registry->getManagerForClass($targetClass);
                 /** @var ClassMetadata $targetMetadata */
                 $targetMetadata = $targetManager->getClassMetadata($targetClass);
@@ -352,12 +358,13 @@ class OutboundBulkQueue
                     throw new \RuntimeException('No connection field was configured on the SFID entity.');
                 }
 
-                $qb->leftJoin("e.$idProp", "s");
+                // This is a really exotic query that needs to be ran to get back a 1:1 relationship between results and entities.
+                $subQuery = $targetManager->getRepository($classMetadata->getName())->createQueryBuilder('sub_e');
+                $subQuery->leftJoin("sub_e.$idProp", "s")
+                ->where("s.$connectionField = :conn1")
+                ->andWhere("e.id = sub_e.id");
 
-                $orX->add($qb->expr()->orX()
-                   ->add($qb->expr()->neq("s.$connectionField", ":conn1"))
-                   ->add($qb->expr()->isNull("s.$connectionField")));
-
+                $orX->add($qb->expr()->not($qb->expr()->exists($subQuery)));
                 $qb->setParameter('conn1', $connection->getName());
             }
         }
@@ -399,10 +406,7 @@ class OutboundBulkQueue
                     throw new \RuntimeException('No connection field was configured on the SFID entity.');
                 }
 
-                //Make sure we don't add this left join twice.
-                if (!$orX->count()) {
-                    $qb->leftJoin("e.$idProp", "s");
-                }
+                $qb->leftJoin("e.$idProp", "s");
 
                 $orX->add($qb->expr()->eq("s.$connectionField", ":conn2"));
 

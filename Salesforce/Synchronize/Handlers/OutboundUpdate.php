@@ -18,7 +18,7 @@ class OutboundUpdate implements SyncHandler
     {
         $this->queue->process(
             $event->getConnection(),
-            $event->getTargets(),
+            $event->getConfig()->getSObjectTargets(),
             $event->getConfig()->getPushConfiguration()->update,
             $event->getConfig()->getPushConfiguration()->create
         );
