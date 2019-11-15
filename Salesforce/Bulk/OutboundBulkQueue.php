@@ -19,6 +19,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\MappingException;
+use Doctrine\ORM\Query\Expr\Orx;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Psr\Log\LoggerAwareTrait;
@@ -98,7 +99,8 @@ class OutboundBulkQueue
     public function process(
         ConnectionInterface $connection,
         array $types = [],
-        bool $updateExisting = false
+        bool $update = false,
+        bool $create = false
     ) {
         if (!$connection->isActive()) {
             throw new \RuntimeException("Connection '{$connection->getName()} is inactive.");
@@ -122,10 +124,10 @@ class OutboundBulkQueue
             }
         }
 
-        $this->getTotals($map, $connection, $updateExisting);
+        $this->getTotals($map, $connection, $update, $create);
 
         foreach ($map as $class) {
-            $this->startJob($connection, $class, $updateExisting);
+            $this->startJob($connection, $class, $update, $create);
         }
     }
 
@@ -201,12 +203,13 @@ class OutboundBulkQueue
     /**
      * @param array $map
      * @param ConnectionInterface $connection
-     * @param bool $updateExisting
+     * @param bool $update
+     * @param bool $create
      *
      * @throws MappingException
      * @throws \Doctrine\ORM\NonUniqueResultException
      */
-    private function getTotals(array $map, ConnectionInterface $connection, bool $updateExisting = false): void
+    private function getTotals(array $map, ConnectionInterface $connection, bool $update, $create): void
     {
         $totals = [];
 
@@ -221,9 +224,17 @@ class OutboundBulkQueue
                                      ->from($class, 'e')
             ;
 
-            if (!$updateExisting && null !== ($idProp = $metadata->getIdFieldProperty())) {
-                $this->appendQueryBuilderExtension($classMetadata, $connection, $idProp, $qb);
+            $orX = $qb->expr()->orX();
+
+            if ($create && null !== ($idProp = $metadata->getIdFieldProperty())) {
+                $this->appendQBAllowCreate($classMetadata, $connection, $idProp, $qb, $orX);
             }
+
+            if ($update && null !== ($idProp = $metadata->getIdFieldProperty())) {
+                $this->appendQBAllowUpdate($classMetadata, $connection, $idProp, $qb, $orX);
+            }
+
+            $qb->andWhere($orX);
 
             $count = $qb->getQuery()
                         ->getSingleScalarResult()
@@ -241,7 +252,8 @@ class OutboundBulkQueue
      * @param ClassMetadata $classMetadata
      * @param ConnectionInterface $connection
      * @param int $offset
-     * @param bool $updateExisting
+     * @param bool $update
+     * @param bool $create
      *
      * @return QueryBuilder
      * @throws MappingException
@@ -251,7 +263,8 @@ class OutboundBulkQueue
         ClassMetadata $classMetadata,
         ConnectionInterface $connection,
         int $offset = 0,
-        bool $updateExisting = false
+        bool $update = false,
+        bool $create = false
     ): QueryBuilder {
         $class    = $classMetadata->getName();
         $metadata = $connection->getMetadataRegistry()->findMetadataByClass($class);
@@ -264,9 +277,17 @@ class OutboundBulkQueue
            ->orderBy("e.$idField")
         ;
 
-        if (!$updateExisting && null !== ($idProp = $metadata->getIdFieldProperty())) {
-            $this->appendQueryBuilderExtension($classMetadata, $connection, $idProp, $qb);
+        $orX = $qb->expr()->orX();
+
+        if ($create && null !== ($idProp = $metadata->getIdFieldProperty())) {
+            $this->appendQBAllowCreate($classMetadata, $connection, $idProp, $qb, $orX);
         }
+
+        if ($update && null !== ($idProp = $metadata->getIdFieldProperty())) {
+            $this->appendQBAllowUpdate($classMetadata, $connection, $idProp, $qb, $orX);
+        }
+
+        $qb->andWhere($orX);
 
         return $qb;
     }
@@ -295,26 +316,20 @@ class OutboundBulkQueue
         );
     }
 
-    /**
-     * @param ClassMetadata $classMetadata
-     * @param ConnectionInterface $connection
-     * @param $idProp
-     * @param QueryBuilder $qb
-     *
-     * @throws MappingException
-     */
-    private function appendQueryBuilderExtension(
+    private function appendQBAllowCreate(
         ClassMetadata $classMetadata,
         ConnectionInterface $connection,
         $idProp,
-        QueryBuilder $qb
-    ): void {
+        QueryBuilder $qb,
+        Orx $orX
+    ): void
+    {
         if ($classMetadata->hasField($idProp)) {
-            $qb->andWhere($qb->expr()->isNull('e.'.$idProp));
+            $orX->add($qb->expr()->isNull('e.'.$idProp));
         } elseif ($classMetadata->hasAssociation($idProp)) {
             $association = $classMetadata->getAssociationMapping($idProp);
             if ($association['type'] & ClassMetadataInfo::TO_ONE) {
-                $qb->andWhere($qb->expr()->isNull('e.'.$idProp));
+                $orX->add($qb->expr()->isNull('e.'.$idProp));
             } else {
                 $targetClass   = $association['targetEntity'];
                 $targetManager = $this->registry->getManagerForClass($targetClass);
@@ -333,65 +348,66 @@ class OutboundBulkQueue
                     }
                 }
 
-                $conn = null;
-
-                if ($targetMetadata->hasField($connectionField)) {
-                    $conn = $connection->getName();
-                } elseif ($targetMetadata->hasAssociation($connectionField)) {
-                    $connAssoc   = $targetMetadata->getAssociationMapping($connectionField);
-                    $connClass   = $connAssoc['targetEntity'];
-                    $connManager = $this->registry->getManagerForClass($connClass);
-                    /** @var ClassMetadata $connMetadata */
-                    $connMetadata = $connManager->getClassMetadata($connClass);
-                    $connIdField  = $connMetadata->getSingleIdentifierFieldName();
-                    $conn         = null;
-
-                    if ($connAssoc['type'] & ClassMetadataInfo::TO_ONE) {
-                        $repo = $connManager->getRepository($connClass);
-
-                        if ($connMetadata->hasField('name')) {
-                            $conn = $repo->findOneBy(
-                                [
-                                    'name' => $connection->getName(),
-                                ]
-                            );
-                        } else {
-                            foreach ($repo->findAll() as $item) {
-                                if ($item instanceof ConnectionEntityInterface
-                                    && $item->getName() === $connection->getName()
-                                ) {
-                                    $conn = $item;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (null === $conn) {
-                        throw new \RuntimeException(
-                            sprintf(
-                                "No %s with %s of %s found.",
-                                $connClass,
-                                $connectionField,
-                                $connection->getName()
-                            )
-                        );
-                    }
-
-                    $conn = $connMetadata->getFieldValue($conn, $connIdField);
+                if (!$connectionField) {
+                    throw new \RuntimeException('No connection field was configured on the SFID entity.');
                 }
 
-                if (null !== $conn) {
-                    $qb->leftJoin("e.$idProp", "s")
-                       ->andWhere(
-                           $qb->expr()->orX()
-                              ->add($qb->expr()->neq("s.$connectionField", ":conn"))
-                              ->add($qb->expr()->isNull("s.$connectionField"))
-                       )
-                       ->setParameter("conn", $conn)
-                    ;
-                }
+                $qb->leftJoin("e.$idProp", "s");
+
+                $orX->add($qb->expr()->orX()
+                   ->add($qb->expr()->neq("s.$connectionField", ":conn1"))
+                   ->add($qb->expr()->isNull("s.$connectionField")));
+
+                $qb->setParameter('conn1', $connection->getName());
             }
         }
+    }
+
+    private function appendQBAllowUpdate(
+        ClassMetadata $classMetadata,
+        ConnectionInterface $connection,
+        $idProp,
+        QueryBuilder $qb,
+        Orx $orX
+    ): void
+    {
+        if ($classMetadata->hasField($idProp)) {
+            $orX->add("e.$idProp = :conn2");
+        } elseif ($classMetadata->hasAssociation($idProp)) {
+            $association = $classMetadata->getAssociationMapping($idProp);
+            if ($association['type'] & ClassMetadataInfo::TO_ONE) {
+                $orX->add("e.$idProp = :conn2");
+            } else {
+                $targetClass   = $association['targetEntity'];
+                $targetManager = $this->registry->getManagerForClass($targetClass);
+                /** @var ClassMetadata $targetMetadata */
+                $targetMetadata = $targetManager->getClassMetadata($targetClass);
+
+                // Find Connection Field
+                $connectionField = 'connection';
+                /** @var \ReflectionProperty $property */
+                foreach ($targetMetadata->getReflectionProperties() as $property) {
+                    foreach ($this->reader->getPropertyAnnotations($property) as $annotation) {
+                        if ($annotation instanceof Connection) {
+                            $connectionField = $property->getName();
+                            break;
+                        }
+                    }
+                }
+
+                if (! $connectionField) {
+                    throw new \RuntimeException('No connection field was configured on the SFID entity.');
+                }
+
+                //Make sure we don't add this left join twice.
+                if (!$orX->count()) {
+                    $qb->leftJoin("e.$idProp", "s");
+                }
+
+                $orX->add($qb->expr()->eq("s.$connectionField", ":conn2"));
+
+            }
+        }
+        $qb->setParameter('conn2', $connection->getName());
     }
 }

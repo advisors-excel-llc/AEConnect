@@ -48,23 +48,24 @@ class Configuration
 
     public function hasQueries() : bool
     {
-        return (bool)count($this->queries);
+        return $this->pull->needsDataHydrated() && (bool)count($this->queries);
     }
 
     public function needsTargetObjects() : bool
     {
-        return !(bool)(count($this->queries) + count($this->sObjectTargets));
+        return $this->pull->needsDataHydrated() && !(bool)(count($this->queries) + count($this->sObjectTargets));
     }
 
     public function needsQueriesGenerated() : bool
     {
-        return (bool)((!count($this->queries)) && count($this->sObjectTargets));
+        return $this->pull->needsDataHydrated() && (bool)((!count($this->queries)) && count($this->sObjectTargets));
     }
 
     /**
      * RULES :
      * 1) You can't have queries and sObject targets at the same time
      * 2) You must have provided a Connection name
+     * 3) Updating your local data base with salesforce data and then using your local data base to update salesforce yields nothing.
      */
     public function validateConfiguration() : bool
     {
@@ -75,6 +76,10 @@ class Configuration
         //2
         if (!$this->connectionName) {
             throw new InvalidConfigurationException('You must have provided a Connection name');
+        }
+        //3
+        if ($this->pull->update && $this->push->update) {
+            throw new InvalidConfigurationException('You can only update your local database or update salesforce, never both.');
         }
         return true;
     }
@@ -133,7 +138,7 @@ class Configuration
         return $this->pull;
     }
 
-    public function getPushConfigurations(): Actions
+    public function getPushConfiguration(): Actions
     {
         return $this->push;
     }

@@ -62,7 +62,7 @@ class SyncEvent extends Event
      */
     public function nextTarget(): ?Target
     {
-        return next($this->targetMeta);
+        return next($this->targetMeta) ? current($this->targetMeta) : null;
     }
 
     /**

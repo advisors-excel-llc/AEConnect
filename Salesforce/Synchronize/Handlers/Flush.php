@@ -24,7 +24,7 @@ class Flush implements SyncTargetHandler
         $this->ensureEMOpen();
         // Persist new entities, if any
         foreach ($event->getTarget()->getNewEntities() as $entity) {
-            $em = $this->registry->getEntityManagerForClass(get_class($entity));
+            $em = $this->registry->getManagerForClass(get_class($entity));
             $em->persist($entity);
         }
 
@@ -34,17 +34,17 @@ class Flush implements SyncTargetHandler
 
     private function ensureEMOpen()
     {
-        foreach ($this->registry->getEntityManagerNames() as $key => $emName) {
-            $em = $this->registry->getEntityManager($key);
+        foreach ($this->registry->getManagerNames() as $key => $emName) {
+            $em = $this->registry->getManager($key);
             if (!$em->isOpen()) {
-                $this->registry->resetEntityManager($key);
+                $this->registry->resetManager($key);
             }
         }
     }
 
     private function flushTransacitonal(Target $target)
     {
-        foreach ($this->registry->getEntityManagers() as $manager) {
+        foreach ($this->registry->getManagers() as $manager) {
             /** @var $manager EntityManager */
             if (!$manager->isOpen()) {// Again, another check to make sure the manager is open
                 continue;
@@ -59,7 +59,8 @@ class Flush implements SyncTargetHandler
             } catch (\Throwable $t) {
                 // ensure all EMs are open after any error.
                 $this->ensureEMOpen();
-                // If a transaction fails, try to save entries one by one
+                // If a transaction fails, try to save entries one by one.
+                // This really slows things down with 2 additional queries to the database needed on each updating entity..
                 foreach ($target->records as $record) {
                     $this->flushOne($record);
                 }
@@ -72,8 +73,13 @@ class Flush implements SyncTargetHandler
         if (!$record->entity) {
             return;
         }
-        $manager = $this->registry->getEntityManagerForClass(get_class($record->entity));
-        $manager->merge($record->entity);
+        $manager = $this->registry->getManagerForClass(get_class($record->entity));
+        if (!$record->needPersist) {
+            //If we try to merge a new entity we are going to walk face first into an entity not found error..
+            $manager->merge($record->entity);
+        } else {
+            $manager->persist($record->entity);
+        }
 
         try {
             $manager->flush();

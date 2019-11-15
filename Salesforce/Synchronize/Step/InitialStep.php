@@ -36,6 +36,10 @@ class InitialStep extends Step
         if ($config->needsTargetObjects() || count($config->getSObjectTargets()) > 1) {
             return new GatherTargetSObjectsStep();
         }
+        //If we aren't doing any pulling, lets get on to pushing
+        if ($config->getPushConfiguration()->update || $config->getPushConfiguration()->create) {
+            return new OutboundUpdate();
+        }
         return new EndStep();
     }
 }

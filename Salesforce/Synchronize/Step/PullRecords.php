@@ -32,6 +32,9 @@ class PullRecords extends Step
             //We are moving on to the next sobject for processing
             return $this;
         } else {
+            if ($this->syncEvent->getConfig()->getPushConfiguration()->update || $this->syncEvent->getConfig()->getPushConfiguration()->create) {
+                return new OutboundUpdate();
+            }
             //All done!
             return new EndStep();
         }

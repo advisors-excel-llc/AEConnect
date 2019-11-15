@@ -13,4 +13,5 @@ class Actions
     {
         return $this->update || $this->create || $this->sfidSync;
     }
+
 }

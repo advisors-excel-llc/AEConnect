@@ -81,8 +81,14 @@ class BulkCommand extends Command
                  'update-outbound',
                  'o',
                  InputOption::VALUE_NONE,
-                 'Update existing records in the Salesforce when sending data from local database'
+                 'update existing records in the Salesforce when sending data from local database'
              )
+            ->addOption(
+                'create-outbound',
+                null,
+                InputOption::VALUE_NONE,
+                'creates new records in Salesforce when sending data from local database'
+            )
              ->addOption(
                  'sync-sfids',
                  'c',
@@ -120,10 +126,10 @@ class BulkCommand extends Command
         $pull->update = $input->getOption('update-inbound');
 
         $push = new Actions();
-        $pull->sfidSync = $input->getOption('sync-sfids');
-        $pull->validate = true;
-        $pull->create = $input->getOption('update-outbound');
-        $pull->update = $input->getOption('update-outbound');
+        $push->sfidSync = $input->getOption('sync-sfids');
+        $push->validate = true;
+        $push->create = $input->getOption('create-outbound');
+        $push->update = $input->getOption('update-outbound');
 
         $config = new Configuration(
             $input->getArgument('connection'),
@@ -136,11 +142,7 @@ class BulkCommand extends Command
 
         $this->outputDetails($input, $output, $config);
 
-        $this->wireupProgressListeners($output);
-
         $this->processor->sync($config);
-
-        $this->unwireProgressListeners();
 
         $output->writeln('Bulk sync is now complete.');
     }
@@ -182,15 +184,21 @@ class BulkCommand extends Command
             );
         }
 
-        if ($config->getPushConfigurations()->update) {
-            $output->writeln(
-                '<comment>Salesforce will be updated with data from the local database.</comment>'
-            );
-        }
-
         if ($config->getPullConfiguration()->create) {
             $output->writeln(
                 '<comment>New records will be created in the local database with data from Salesforce.</comment>'
+            );
+        }
+
+        if ($config->getPushConfiguration()->create) {
+            $output->writeln(
+                '<comment>New Salesforce objects will be created with data from the local database.</comment>'
+            );
+        }
+
+        if ($config->getPushConfiguration()->update) {
+            $output->writeln(
+                '<comment>Existing Salesforce objects will be updated with data from the local database.</comment>'
             );
         }
 

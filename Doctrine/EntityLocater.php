@@ -83,7 +83,7 @@ class EntityLocater implements LoggerAwareInterface
             $entityMetaData = $manager->getClassMetadata($metadata->getClassName());
 
             $locator = new LocationQuery();
-            $locator->setRepository($manager->getRepository($metadata->getClassName()));
+            $locator->setRepository($this->registry, $metadata->getClassName());
 
             // Start with connection field.  If such a field exists we are going to require the connection field to
             // equal the connection name.

@@ -3,17 +3,17 @@ services:
         autowire: true
         autoconfigure: true
 
-    AE\ConnectBundle\Salesforce\Synchronize\Handlers\BuildFlatMapOfTargets:
-        autowire: true
-        autoconfigure: true
-        tags:
-            - { name: kernel.event_listener, event: aeconnect.gather_target_sobjects, method: process }
-
     AE\ConnectBundle\Salesforce\Synchronize\Handlers\FindConnection:
         autowire: true
         autoconfigure: true
         tags:
             - { name: kernel.event_listener, event: aeconnect.initial, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\BuildFlatMapOfTargets:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.gather_target_sobjects, method: process }
 
     AE\ConnectBundle\Salesforce\Synchronize\Handlers\GenerateQueries:
         autowire: true
@@ -68,3 +68,9 @@ services:
         autoconfigure: true
         tags:
             - { name: kernel.event_listener, event: aeconnect.flush, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\OutboundUpdate:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.outbound_update, method: process }

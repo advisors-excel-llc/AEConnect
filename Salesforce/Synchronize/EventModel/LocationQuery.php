@@ -3,13 +3,15 @@
 namespace AE\ConnectBundle\Salesforce\Synchronize\EventModel;
 
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
+use Doctrine\Common\Persistence\ObjectRepository;
 use Doctrine\ORM\EntityRepository;
-use Doctrine\ORM\QueryBuilder;
+use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class LocationQuery
 {
-    /** @var EntityRepository */
-    private $repository;
+    /** @var RegistryInterface */
+    private $registry;
+    private $className;
 
     private $externalIds = [];
     private $sfid;
@@ -64,15 +66,24 @@ class LocationQuery
         ];
     }
 
-    public function setRepository(EntityRepository $repository)
+    public function setRepository(RegistryInterface $registry, string $className)
     {
-        $this->repository = $repository;
+        $this->registry = $registry;
+        $this->className = $className;
+    }
+
+    /**
+     * @return ObjectRepository|EntityRepository
+     */
+    public function getRepository(): ObjectRepository
+    {
+        return $this->registry->getRepository($this->className);
     }
 
     public function isOK(): bool
     {
-        //For locator to be OK, it needs either an SFID location or an external ID
-        return (bool)$this->repository && ($this->sfid || count($this->externalIds));
+        //For locator to be OK, it needs either an SFID location or an external ID to base its queries off of.
+        return (bool)$this->registry && ($this->sfid || count($this->externalIds));
     }
 
     /**
@@ -84,7 +95,8 @@ class LocationQuery
         if (!$this->isOK()) {
             return [];
         }
-        $qb = $this->repository->createQueryBuilder('e');
+
+        $qb = $this->getRepository()->createQueryBuilder('e');
 
         $sfidClause = $qb->expr()->orX();
         $extIdClause = $qb->expr()->andX();

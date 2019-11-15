@@ -22,6 +22,9 @@ class CountResultsFromQueries extends Step
         if ($pull->needsDataHydrated()) {
             return new PullRecords();
         }
+        if ($this->syncEvent->getConfig()->getPushConfiguration()->update || $this->syncEvent->getConfig()->getPushConfiguration()->create) {
+            return new OutboundUpdate();
+        }
         return new EndStep();
     }
 }
