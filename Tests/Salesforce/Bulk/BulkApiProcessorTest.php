@@ -46,7 +46,7 @@ class BulkApiProcessorTest extends DatabaseTestCase
         parent::tearDown();
     }
 
-    public function testLargeDataSet()
+    public function _testLargeDataSet()
     {
         /** @var Connection $conn */
         $conn       = $this->doctrine->getConnection();

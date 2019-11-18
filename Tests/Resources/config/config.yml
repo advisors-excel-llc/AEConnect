@@ -48,7 +48,7 @@ doctrine:
         connections:
             default:
                 driver: pdo_sqlite
-                url: 'sqlite:///test_db.sqlite'
+                url: 'sqlite:///%kernel.project_dir%/test_db.sqlite'
                 charset: UTF8
                 mapping_types:
                      uuid_binary: binary
@@ -64,7 +64,7 @@ doctrine:
                         type: annotation
                         is_bundle: false
                         prefix: "AE\\ConnectBundle\\Tests\\Entity"
-                        dir: "Tests/Entity"
+                        dir: "%kernel.root_dir%/Entity"
 fidry_alice_data_fixtures:
     default_purge_mode: truncate
     db_drivers:

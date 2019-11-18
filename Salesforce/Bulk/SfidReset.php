@@ -14,19 +14,32 @@ use AE\ConnectBundle\Connection\Dbal\SalesforceIdEntityInterface;
 use AE\ConnectBundle\Metadata\FieldMetadata;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Persistence\ObjectManager;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\NullLogger;
 use Symfony\Bridge\Doctrine\RegistryInterface;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
-class SfidReset
+class SfidReset implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
     /**
      * @var RegistryInterface
      */
     private $registry;
 
-    public function __construct(RegistryInterface $registry)
+    /**
+     * @var SObjectTreeMaker
+     */
+    private $treeMaker;
+
+    public function __construct(RegistryInterface $registry, SObjectTreeMaker $treeMaker)
     {
         $this->registry = $registry;
+        $this->treeMaker = $treeMaker;
+        $this->logger = new NullLogger();
     }
 
     /**
@@ -37,7 +50,13 @@ class SfidReset
      */
     public function clearIds(ConnectionInterface $connection, array $types)
     {
-        foreach ($types as $type) {
+        $map = $this->treeMaker->buildFlatMap($connection);
+
+        if (!empty($types)) {
+            $map = array_intersect($map, $types);
+        }
+
+        foreach ($map as $type) {
             foreach ($connection->getMetadataRegistry()->findMetadataBySObjectType($type) as $metadata) {
                 $describeSObject = $metadata->getDescribe();
                 // We only want to clear the Ids on objects that will be acted upon
@@ -67,7 +86,7 @@ class SfidReset
      *
      * @throws \Doctrine\ORM\Mapping\MappingException
      */
-    private function doClear(ConnectionInterface $connection, string $class, FieldMetadata $fieldMetadata): void
+    public function doClear(ConnectionInterface $connection, string $class, FieldMetadata $fieldMetadata): void
     {
         $manager = $this->registry->getManagerForClass($class);
         /** @var ClassMetadata $classMetadata */
@@ -77,21 +96,115 @@ class SfidReset
 
         if ($classMetadata->hasAssociation($fieldMetadata->getProperty())) {
             $association   = $classMetadata->getAssociationMapping($fieldMetadata->getProperty());
-            $targetManager = $this->registry->getManagerForClass($association['targetEntity']);
+            $manager = $this->registry->getManagerForClass($association['targetEntity']) ?? $manager;
         }
 
         $idField = $classMetadata->getSingleIdentifierFieldName();
         $repo    = $manager->getRepository($class);
         $offset  = 0;
 
-        while (count(($entities = $repo->findBy([], [$idField => 'ASC'], 20, $offset))) > 0) {
-            foreach ($entities as $entity) {
-                $this->clearSfidOnEntity($connection, $fieldMetadata, $association, $entity, $manager, $targetManager);
+        //This is several orders of magnitude slower so don't go into this subflow.
+        if (! $manager instanceof EntityManager) {
+            $this->logger->warning('#SfidReset -> #doClear | #performance  Selected manager is not an entity manager and now we must use the object manager method for clearing SFIDs');
+            while (count(($entities = $repo->findBy([], [$idField => 'ASC'], 20, $offset))) > 0) {
+                foreach ($entities as $entity) {
+                    $this->clearSfidOnEntity($connection, $fieldMetadata, $association, $entity, $manager);
+                }
+                $manager->clear($class);
+                $offset += count($entities);
+            }
+            return;
+        }
+
+        try {
+            if (! $manager instanceof EntityManager) {
+                throw new InvalidConfigurationException(
+                    '#SfidReset -> #doClear | #performance  Selected manager is not an entity manager.'
+                );
             }
 
-            $manager->clear($class);
-            $offset += count($entities);
+            if (null === $association) {
+                $this->clearSfidAsProperty($manager, $class, $fieldMetadata->getProperty());
+            } else {
+                $this->clearSfidAsAssociation($manager, $connection, $class, $association);
+            }
+        } catch (InvalidConfigurationException $e) {
+            $this->logger->warning($e->getMessage() . '  Trying EM method instead of DQL method (This is several orders of magnitude slower)');
+            while (count(($entities = $repo->findBy([], [$idField => 'ASC'], 20, $offset))) > 0) {
+                foreach ($entities as $entity) {
+                    $this->clearSfidOnEntity($connection, $fieldMetadata, $association, $entity, $manager);
+                }
+                $manager->clear($class);
+                $offset += count($entities);
+            }
+            return;
         }
+    }
+
+    /**
+     * Simplest method, use an executed query to update all entities of a particular type, setting a chosen property name to null.
+     * @param EntityManager $om
+     * @param string $className
+     * @param string $propertyName
+     */
+    private function clearSfidAsProperty(EntityManager $em, string $className, string $propertyName)
+    {
+        $this->logger->info("#SfidReset -> #clearSfidAsPropertyOnEntity | #query  Clearing SFIDs with DQL : UPDATE $className e set e.$propertyName = NULL");
+        $query = $em->createQuery("UPDATE $className e set e.$propertyName = NULL");
+        $query->execute();
+    }
+
+    /**
+     * IN this scenario, the user has an entity they want to clear the SFIDs on, and that entity has a relationship with a salesforce ID class.
+     * In order to build the DQL for this, we need a few annotations to be set properly.
+     * 1)  On the SFID entity, the salesforceId() annotation must have been set at class level to identify that entity as an entity which holds an SFID field and a Connection
+     * 2) The connection property on the field must be annotated with the AECOnnect annotation connection()
+     * 3) the connection property must have be annotated with doctrine settings, making it either a joined toOne table or string column.
+     *
+     * Given these three things are true, we can use DQL to delete out all salesforce ID entries with a query that says
+     * 'Remove all salesforce rows from the database that match a specific connection name and has a relationship to a row within the table belonging to the entity we are clearing SFIDs for.'
+     * @param EntityManager $em
+     * @param ConnectionInterface $connection
+     * @param string $className
+     * @param array $association
+     */
+    private function clearSfidAsAssociation(EntityManager $em, ConnectionInterface $connection, string $className, array $association)
+    {
+        $targetMetadata = $em->getClassMetadata($association['targetEntity']);
+        $targetAeConnectMetadata = $connection->getMetadataRegistry()->findMetadataByClass($association['targetEntity']);
+
+
+        if (!$targetAeConnectMetadata) {
+            throw new InvalidConfigurationException("#sfidReset -> #clearSfidAsOneToAssociation | #preformance  
+            The target entity ({$association['targetEntity']}) for the sfid relationship on $className is not annotated with @SalesforceId for AE Connect.");
+        }
+        if (!$targetAeConnectMetadata->getConnectionNameField()) {
+            throw new InvalidConfigurationException("#sfidReset -> #clearSfidAsOneToAssociation | #preformance  
+            The target entity ({$association['targetEntity']}) does not have a @connection annotation on any property.");
+        }
+
+        $connectionJoin = '';
+        $connectionAndWhere = '';
+        $connectionPropertyName = $targetAeConnectMetadata->getConnectionNameField()->getProperty();
+        $connectionName = $connection->getName();
+
+        if ($targetMetadata->hasField($targetAeConnectMetadata->getConnectionNameField()->getProperty())) {
+            $connectionAndWhere = "e.$connectionPropertyName = '$connectionName'";
+        } elseif ($targetMetadata->hasAssociation($targetAeConnectMetadata->getConnectionNameField()->getProperty())) {
+            $connectionJoin = "LEFT JOIN e.$connectionPropertyName connection";
+            $connectionAndWhere = "connection.name = '$connectionPropertyName'";
+        } else {
+            throw new InvalidConfigurationException("#sfidReset -> #clearSfidAsOneToAssociation | #preformance  
+            The target entity ({$association['targetEntity']}) does not have a doctrine annotation for the connection property.");
+        }
+        $DQL = "DELETE FROM {$association['targetEntity']} e $connectionJoin WHERE $connectionAndWhere AND EXISTS(
+                  SELECT source.id FROM $className source LEFT JOIN source.{$association['fieldName']} target WHERE target.id = e.id
+              )";
+
+        $this->logger->info("#SfidReset -> #clearSfidAsOneToAssociation | #query  Clearing SFIDs with DQL : $DQL");
+
+        $query = $em->createQuery($DQL);
+        $query->execute();
     }
 
     /**
@@ -107,8 +220,7 @@ class SfidReset
         FieldMetadata $fieldMetadata,
         $association,
         $entity,
-        ObjectManager $manager,
-        ?ObjectManager $targetManager = null
+        ObjectManager $manager
     ): void {
         if (null === $association) {
             $val = $fieldMetadata->getValueFromEntity($entity);
@@ -116,8 +228,7 @@ class SfidReset
                 $fieldMetadata->setValueForEntity($entity, null);
             }
         } elseif ($association['type'] & ClassMetadata::TO_ONE) {
-            if (null !== $targetManager
-                && ($val = $fieldMetadata->getValueFromEntity($entity))
+            if (($val = $fieldMetadata->getValueFromEntity($entity))
                 && $val instanceof SalesforceIdEntityInterface
             ) {
                 $conn = $val->getConnection();
@@ -125,10 +236,7 @@ class SfidReset
                         && $conn->getName() === $connection->getName())
                     || (is_string($conn) && $conn === $connection->getName())
                 ) {
-                    $targetManager->remove($val);
-                    if ($targetManager !== $manager) {
-                        $targetManager->flush();
-                    }
+                    $manager->remove($val);
                     $fieldMetadata->setValueForEntity($entity, null);
                 }
             }
@@ -142,10 +250,7 @@ class SfidReset
                     || (is_string($conn) && $conn === $connection->getName())
                 ) {
                     $sfids->removeElement($sfid);
-                    $targetManager->remove($sfid);
-                    if ($targetManager !== $manager) {
-                        $targetManager->flush();
-                    }
+                    $manager->remove($sfid);
                 }
             }
 

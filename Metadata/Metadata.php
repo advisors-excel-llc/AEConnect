@@ -30,7 +30,13 @@ class Metadata
      * @var string
      * @Serializer\Type("string")
      */
-    private $sObjectType;
+    private $sObjectType = '';
+
+    /**
+     * @var string
+     * @Serializer\Type("string")
+     */
+    private $classAnnotation;
 
     /**
      * @var ArrayCollection|FieldMetadata[]
@@ -115,6 +121,22 @@ class Metadata
         $this->sObjectType = $sObjectType;
 
         return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getClassAnnotation(): ?string
+    {
+        return $this->classAnnotation;
+    }
+
+    /**
+     * @param string $classAnnotation
+     */
+    public function setClassAnnotation(string $classAnnotation): void
+    {
+        $this->classAnnotation = $classAnnotation;
     }
 
     /**
