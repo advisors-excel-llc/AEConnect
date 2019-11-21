@@ -195,6 +195,10 @@ class MetadataRegistry
      */
     public function findMetadataByClass(string $className): ?Metadata
     {
+        if (!isset($this->metadata[$className])) {
+            $className = ClassUtils::getRealClass($className);
+        }
+
         return $this->metadata->get($className);
     }
 
