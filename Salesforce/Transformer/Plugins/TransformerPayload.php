@@ -63,6 +63,8 @@ class TransformerPayload
      */
     private $direction;
 
+    private $bulk = false;
+
     public function __construct(int $direction)
     {
         $this->setDirection($direction);
@@ -258,6 +260,16 @@ class TransformerPayload
         }
         $this->direction = $direction;
 
+        return $this;
+    }
+
+    public function isBulk(): bool {
+        return $this->bulk;
+    }
+
+    public function setIsBulk(bool $isBulk): TransformerPayload
+    {
+        $this->bulk = $isBulk;
         return $this;
     }
 }
