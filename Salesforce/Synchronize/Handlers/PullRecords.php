@@ -7,6 +7,7 @@ use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
 use AE\SalesforceRestSdk\Bulk\BatchInfo;
 use AE\SalesforceRestSdk\Bulk\Client;
 use AE\SalesforceRestSdk\Bulk\JobInfo;
+use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
 
 class PullRecords implements SyncTargetHandler
 {
@@ -20,6 +21,12 @@ class PullRecords implements SyncTargetHandler
     private $done = [];
     private $results = [];
     private $query;
+
+    private $job;
+    private $batchId;
+    private $batchResults;
+    /** @var \Generator */
+    private $csv;
 
 
     /**
@@ -88,17 +95,40 @@ class PullRecords implements SyncTargetHandler
      */
     private function bulk(SyncTargetEvent $event)
     {
+        $client = $event->getConnection()->getBulkClient();
+
         if (
-            empty($this->results) &&
+            empty($this->batchResults) && ($this->csv === null || $this->csv->current() === null) &&
             (!isset($this->done[$event->getTarget()->name]) || !$this->done[$event->getTarget()->name])
         ) {
-            $client        = $event->getConnection()->getBulkClient();
-            $job           = $client->createJob($event->getTarget()->name, JobInfo::QUERY, JobInfo::TYPE_CSV);
-            $batch         = $client->addBatch($job, $event->getTarget()->query);
-            $this->results = $this->getBatchResults($client, $job, $batch);
+            $this->job     = $client->createJob($event->getTarget()->name, JobInfo::QUERY, JobInfo::TYPE_CSV);
+            $batch         = $client->addBatch($this->job, $event->getTarget()->query);
+            $this->batchId = $batch->getId();
+            $this->batchResults = $this->getBatchResults($client, $this->job, $batch);
             $this->done[$event->getTarget()->name] = true;
         }
-        return array_splice($this->results, 0, $event->getTarget()->batchSize);
+
+        if (!empty($this->batchResults) && ($this->csv === null || $this->csv->current() === null)) {
+            $nextBatch = array_shift($this->batchResults);
+            $result = $client->getResult($this->job, $this->batchId, $nextBatch);
+            $this->csv = $result->getContents(true);
+        }
+
+        $i = 0;
+        $results = [];
+        do  {
+            $row = $this->csv->current();
+            $object = new CompositeSObject($event->getTarget()->name);
+            foreach ($row as $field => $value) {
+                $object->{$field} = $value;
+            }
+            $object->__SOBJECT_TYPE__ = $event->getTarget()->name;
+            $results[] = $object;
+            $i++;
+            $this->csv->next();
+        } while (($this->csv->current() && $i < $event->getTarget()->batchSize));
+
+        return $results;
     }
 
     /**
