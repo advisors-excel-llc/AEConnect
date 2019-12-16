@@ -26,6 +26,7 @@ class Configuration
         'memory'        => false,
         'database'      => false,
         'anaylsis'      => false,
+        'errors'        => false,
     ];
 
     private $batchSize;
@@ -168,13 +169,14 @@ class Configuration
         return $this->batchSize;
     }
 
-    public function setDebugModules(bool $count, bool $time, bool $memory, bool $database, bool $analysis)
+    public function setDebugModules(bool $count, bool $time, bool $memory, bool $database, bool $analysis, bool $errors)
     {
         $this->debugModules['count'] = $count;
         $this->debugModules['time'] = $time;
         $this->debugModules['memory'] = $memory;
         $this->debugModules['database'] = $database;
         $this->debugModules['analysis'] = $analysis;
+        $this->debugModules['errors'] = $errors;
     }
 
     public function debugCount(): bool
@@ -185,5 +187,10 @@ class Configuration
     public function debugTime(): bool
     {
         return $this->debugModules['time'];
+    }
+
+    public function debugErrors(): bool
+    {
+        return $this->debugModules['errors'];
     }
 }
