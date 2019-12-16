@@ -45,22 +45,30 @@ class CreateEntityWithSObject implements SyncTargetHandler
                             continue;
                         }
 
-                        $newValue = $this->fieldCompiler->compileInbound(
-                            $value,
-                            $record->sObject,
-                            $fieldMetadata,
-                            $entity
-                        );
-
-                        if (null !== $newValue) {
-                            $fieldMetadata->setValueForEntity($entity, $newValue);
+                        try {
+                            $newValue = $this->fieldCompiler->compileInbound(
+                                $value,
+                                $record->sObject,
+                                $fieldMetadata,
+                                $entity,
+                                true
+                            );
+                            if (null !== $newValue) {
+                                $fieldMetadata->setValueForEntity($entity, $newValue);
+                            }
+                        } catch (\Throwable $e) {
+                            $record->error = $e->getMessage();
+                            break;
                         }
                     }
-                    if ($err = $this->validate($entity, $event->getConnection()) === true) {
+                    $err = $this->validate($entity, $event->getConnection());
+                    if ($err === true) {
                         $record->entity = $entity;
                         $record->needPersist = true;
+                        $record->error = '';
                         break;
                     }
+                    $record->error .= $err;
                 }
             }
         }
@@ -90,7 +98,7 @@ class CreateEntityWithSObject implements SyncTargetHandler
         if (count($messages) > 0) {
             $err = '';
             foreach ($messages as $message) {
-                $err .= $message.PHP_EOL;
+                $err .= $message->getPropertyPath() . ' | ' . $message->getMessage() . PHP_EOL;
             }
             return $err;
         }

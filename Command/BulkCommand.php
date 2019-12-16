@@ -37,8 +37,6 @@ class BulkCommand extends Command
      */
     private $dispatcher;
 
-    private $listeners = [];
-
     public function __construct(Sync $processor, EventDispatcherInterface $dispatcher)
     {
         parent::__construct(null);
@@ -96,6 +94,13 @@ class BulkCommand extends Command
                  'Clear the preexisting Salesforce Ids in the local database. Helpful if connecting to a new '.
                  'Salesforce Org or Sandbox'
              )
+            ->addOption(
+                'modules',
+                null,
+                InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
+                'activates debug modules.  can be any of the following:  count | time ',
+                []
+            )
         ;
     }
 
@@ -111,6 +116,7 @@ class BulkCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $types      = $input->getOption('types');
+        $modules    = $input->getOption('modules');
 
         $output->writeln(
             sprintf(
@@ -137,7 +143,16 @@ class BulkCommand extends Command
             $input->getOption('queries'),
             $input->getOption('sync-sfids'),
             $pull,
-            $push
+            $push,
+            $output
+        );
+
+        $config->setDebugModules(
+            (array_search('count', $modules) !== false),
+            (array_search('time', $modules) !== false),
+            (array_search('memory', $modules) !== false),
+            (array_search('database', $modules) !== false),
+            (array_search('analysis', $modules) !== false)
         );
 
         $this->outputDetails($input, $output, $config);
@@ -207,48 +222,6 @@ class BulkCommand extends Command
                 '<comment>Clear all Salesforce IDs from the database. '
                 .'External Ids will be used to match existing records.</comment>'
             );
-        }
-    }
-
-    /**
-     * @param OutputInterface $output
-     */
-    protected function wireupProgressListeners(OutputInterface $output): void
-    {
-        $operation = 'Importing';
-        $progress  = new ProgressBar($output);
-
-        $this->listeners[Events::SET_TOTALS] = function (ProgressEvent $event) use ($progress, $output, $operation) {
-            $total = $event->getOverallTotal();
-            $output->writeln("<info>$operation $total records</info>");
-            $progress->start($event->getOverallTotal());
-        };
-
-        $this->listeners[Events::UPDATE_PROGRESS] = function (UpdateProgressEvent $event) use ($progress, $operation) {
-            $type      = $event->getKey();
-            $processed = $event->getProgressFor($type);
-            $total     = $event->getTotal($type);
-            $progress->setMessage("$operation $type records ($processed / $total)");
-            $progress->setProgress($event->getOverallProgress());
-        };
-
-        $this->listeners[Events::COMPLETE] = function (ProgressEvent $event) use (&$operation, $progress) {
-            $progress->finish();
-
-            if ($operation === 'Importing') {
-                $operation = 'Exporting';
-            }
-        };
-
-        foreach ($this->listeners as $event => $listener) {
-            $this->dispatcher->addListener($event, $listener);
-        }
-    }
-
-    protected function unwireProgressListeners(): void
-    {
-        foreach ($this->listeners as $event => $listener) {
-            $this->dispatcher->removeListener($event, $listener);
         }
     }
 }

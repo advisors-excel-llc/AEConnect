@@ -117,7 +117,9 @@ class LocationQuery
             $getter = 'get' . ucfirst($externalId['field']);
             $extIds = array_map(function (CompositeSObject $sObject) use ($getter) { return $sObject->$getter(); }, $sObjects);
             $extIds = array_filter($extIds);
-            $extIdClause->add($qb->expr()->in("e.{$externalId['property']}", $extIds));
+            if (count($extIds)) {
+                $extIdClause->add($qb->expr()->in("e.{$externalId['property']}", $extIds));
+            }
         }
         $sfidClause->add($extIdClause);
 

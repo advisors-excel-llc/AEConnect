@@ -4,6 +4,7 @@ namespace AE\ConnectBundle\Salesforce\Synchronize;
 
 use AE\ConnectBundle\Salesforce\Synchronize\EventModel\Actions;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Symfony\Component\Console\Output\OutputInterface;
 
 class Configuration
 {
@@ -20,6 +21,7 @@ class Configuration
     private $queries = [];
 
     private $debugModules = [
+        'count'         => false,
         'time'          => false,
         'memory'        => false,
         'database'      => false,
@@ -28,7 +30,18 @@ class Configuration
 
     private $batchSize;
 
-    public function __construct(string $connectionName, array $sObjectTargets, array $queries, bool $clearSFID, Actions $pull, Actions $push, int $batchSize = 50)
+    private $output;
+
+    public function __construct(
+        string $connectionName,
+        array $sObjectTargets,
+        array $queries,
+        bool $clearSFID,
+        Actions $pull,
+        Actions $push,
+        OutputInterface $output,
+        int $batchSize = 50
+    )
     {
         $this->connectionName = $connectionName;
         $this->sObjectTargets = $sObjectTargets;
@@ -39,6 +52,8 @@ class Configuration
 
         $this->pull = $pull;
         $this->push = $push;
+
+        $this->output = $output;
         $this->batchSize = $batchSize;
     }
     public function needsSFIDsCleared() : bool
@@ -143,8 +158,32 @@ class Configuration
         return $this->push;
     }
 
+    public function getOutput(): OutputInterface
+    {
+        return $this->output;
+    }
+
     public function getBatchSize(): int
     {
         return $this->batchSize;
+    }
+
+    public function setDebugModules(bool $count, bool $time, bool $memory, bool $database, bool $analysis)
+    {
+        $this->debugModules['count'] = $count;
+        $this->debugModules['time'] = $time;
+        $this->debugModules['memory'] = $memory;
+        $this->debugModules['database'] = $database;
+        $this->debugModules['analysis'] = $analysis;
+    }
+
+    public function debugCount(): bool
+    {
+        return $this->debugModules['count'];
+    }
+
+    public function debugTime(): bool
+    {
+        return $this->debugModules['time'];
     }
 }

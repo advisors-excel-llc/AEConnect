@@ -79,6 +79,11 @@ class Target
         ));
     }
 
+    public function getRecordsWithErrors(): array
+    {
+        return array_filter($this->records, function (Record $record) { return $record->error !== ''; });
+    }
+
     public function canUpdate(): bool
     {
         return array_reduce($this->records, function (bool $carry, Record $record) { return $carry || $record->canUpdate(); }, false);

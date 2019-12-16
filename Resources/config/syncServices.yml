@@ -9,6 +9,12 @@ services:
         tags:
             - { name: kernel.event_listener, event: aeconnect.initial, method: process }
 
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\RegisterModules:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.initial, method: process }
+
     AE\ConnectBundle\Salesforce\Synchronize\Handlers\BuildFlatMapOfTargets:
         autowire: true
         autoconfigure: true
