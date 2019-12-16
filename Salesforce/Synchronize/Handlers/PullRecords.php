@@ -114,6 +114,11 @@ class PullRecords implements SyncTargetHandler
             $this->csv = $result->getContents(true);
         }
 
+        if ($this->csv->current() === null) {
+            //all done!
+            return [];
+        }
+
         $i = 0;
         $results = [];
         do  {

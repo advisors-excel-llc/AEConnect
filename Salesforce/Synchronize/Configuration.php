@@ -189,6 +189,11 @@ class Configuration
         return $this->debugModules['time'];
     }
 
+    public function debugDatabase(): bool
+    {
+        return $this->debugModules['database'];
+    }
+
     public function debugErrors(): bool
     {
         return $this->debugModules['errors'];

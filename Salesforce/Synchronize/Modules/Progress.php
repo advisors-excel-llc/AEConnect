@@ -68,7 +68,7 @@ class Progress
         $skip = $this->counts[$sObject]['skip'];
 
         $pbar = new ProgressBar($this->output, $event->getTarget()->count);
-        $pbar->setFormat('  %current%/%max%  %percent:3s%% %elapsed:6s%/%estimated:-6s% -- %message%');
+        $pbar->setFormat('  %current%/%max%  %percent:3s%% %elapsed:6s%/%estimated:-6s%  %memory:6s% -- %message%');
         $pbar->setMessage("$sObject ( creates : $create  |  updates : $update  |  skips : $skip )");
         $pbar->start();
 
