@@ -42,7 +42,7 @@ class FieldCompiler
      *
      * @return mixed
      */
-    public function compileInbound($value, SObject $object, FieldMetadata $fieldMetadata, $entity = null)
+    public function compileInbound($value, SObject $object, FieldMetadata $fieldMetadata, $entity = null, $isBulk = false)
     {
         $metadata  = $fieldMetadata->getMetadata();
         $className = $fieldMetadata->getMetadata()->getClassName();
@@ -65,6 +65,7 @@ class FieldCompiler
                                      ->setFieldName($field)
                                      ->setPropertyName($fieldMetadata->getProperty())
                                      ->setValue(is_string($value) && strlen($value) === 0 ? null : $value)
+                                    ->setIsBulk($isBulk)
         ;
 
         $this->transformer->transform($payload);
