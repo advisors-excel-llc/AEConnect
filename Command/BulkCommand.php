@@ -98,7 +98,7 @@ class BulkCommand extends Command
                 'modules',
                 null,
                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
-                'activates debug modules.  can be any of the following:  count | time ',
+                'activates debug modules.  can be any of the following:  count | time | errors ',
                 []
             )
         ;
@@ -152,7 +152,8 @@ class BulkCommand extends Command
             (array_search('time', $modules) !== false),
             (array_search('memory', $modules) !== false),
             (array_search('database', $modules) !== false),
-            (array_search('analysis', $modules) !== false)
+            (array_search('analysis', $modules) !== false),
+            (array_search('errors', $modules) !== false)
         );
 
         $this->outputDetails($input, $output, $config);

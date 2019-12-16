@@ -79,6 +79,9 @@ class Target
         ));
     }
 
+    /**
+     * @return array|Record[]
+     */
     public function getRecordsWithErrors(): array
     {
         return array_filter($this->records, function (Record $record) { return $record->error !== ''; });
