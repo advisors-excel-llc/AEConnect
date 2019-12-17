@@ -49,4 +49,13 @@ abstract class AbstractTransformerPlugin implements TransformerPluginInterface
     {
         // implement body
     }
+
+    /**
+     * This is optional, but if you want to use an annotation to choose your transformer, you must provide a name for your transformer.
+     * Otherwise we will try to rely on the serializer to preform deserializations, or go into the slow motion path and transform based on supports
+     * @return string
+     */
+    public function getName(): string {
+        return '';
+    }
 }

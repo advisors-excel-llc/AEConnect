@@ -15,6 +15,8 @@ class Record
     public $needPersist = false;
     /** @var string  */
     public $error = '';
+    /** @var string */
+    public $warning = '';
 
     public function __construct(?SObject $sObject = null, ?object $entity = null)
     {

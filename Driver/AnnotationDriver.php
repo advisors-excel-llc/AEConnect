@@ -143,6 +143,15 @@ class AnnotationDriver
                                 null
                             )
                         );
+                    } elseif ($item instanceof Field) {
+                        $metadata->addFieldMetadata(
+                            new FieldMetadata(
+                                $metadata,
+                                $name,
+                                $item instanceof SalesforceId ? 'Id' : $item->getName(),
+                                $item->getTransformer()
+                            )
+                        );
                     } else {
                         $metadata->addFieldMetadata(
                             new FieldMetadata(
@@ -196,13 +205,8 @@ class AnnotationDriver
                         $meta = $metadata->getMetadataForProperty($propName);
 
                         if (null === $meta) {
-                            $field = null;
-                            if (!($method instanceof Connection)) {
-                                $field = $method->getName();
-                            }
-
                             $metadata->setConnectionNameField(
-                                ($meta = new FieldMetadata($metadata, $propName, $field))
+                                ($meta = new FieldMetadata($metadata, $propName))
                             );
                         }
                     } else {
@@ -214,9 +218,16 @@ class AnnotationDriver
                                 $field = $method->getName();
                             }
 
-                            $metadata->addFieldMetadata(
-                                ($meta = new FieldMetadata($metadata, $propName, $field))
-                            );
+                            if ($method instanceof Field) {
+                                $transformer = $method->getTransformer();
+                                $metadata->addFieldMetadata(
+                                    ($meta = new FieldMetadata($metadata, $propName, $field, $transformer))
+                                );
+                            } else {
+                                $metadata->addFieldMetadata(
+                                    ($meta = new FieldMetadata($metadata, $propName, $field))
+                                );
+                            }
                         }
                     }
 

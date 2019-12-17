@@ -3,29 +3,55 @@
 namespace AE\ConnectBundle\Salesforce\Synchronize\Handlers;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
+use AE\ConnectBundle\Metadata\FieldMetadata;
+use AE\ConnectBundle\Metadata\RecordTypeMetadata;
 use AE\ConnectBundle\Salesforce\Compiler\FieldCompiler;
+use AE\ConnectBundle\Salesforce\Compiler\ObjectCompiler;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
+use JMS\Serializer\Exception\RuntimeException;
+use JMS\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class CreateEntityWithSObject implements SyncTargetHandler
 {
-    /** @var FieldCompiler  */
+    /** @var FieldCompiler */
     private $fieldCompiler;
+    /** @var ObjectCompiler */
+    private $objectCompiler;
     private $validator;
+    /** @var SerializerInterface $serializer */
+    private $serializer;
+
     /**
      * CreateEntityWithSObject constructor.
      * @param FieldCompiler $fieldCompiler
      * @param ValidatorInterface $validator
+     * @param SerializerInterface $serializer
      */
-    public function __construct(FieldCompiler $fieldCompiler, ValidatorInterface $validator)
+    public function __construct(FieldCompiler $fieldCompiler, ObjectCompiler $objectCompiler, ValidatorInterface $validator, SerializerInterface $serializer)
     {
         $this->fieldCompiler = $fieldCompiler;
         $this->validator = $validator;
+        $this->serializer = $serializer;
+        $this->objectCompiler = $objectCompiler;
     }
 
     public function process(SyncTargetEvent $event): void
     {
-        $classMetas = [];
+        $classMetas = $event->getConnection()->getMetadataRegistry()->findMetadataBySObjectType($event->getTarget()->name);
+        foreach ($classMetas as $classMeta) {
+            foreach ($event->getTarget()->records as $record) {
+                if ($record->canCreateInDatabase()) {
+                    try {
+                        $entity = $this->objectCompiler->fastCompile($classMeta, $record->sObject);
+                    } catch (RuntimeException $e) {
+                        $record->error = '#serialization sObject to entity : ' . $e->getMessage();
+                    }
+                }
+
+        }
+
+
         foreach ($event->getTarget()->records as $record) {
             if ($record->canCreateInDatabase()) {
                 if (empty($classMetas)) {
