@@ -3,36 +3,25 @@
 namespace AE\ConnectBundle\Salesforce\Synchronize\Handlers;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
-use AE\ConnectBundle\Metadata\FieldMetadata;
-use AE\ConnectBundle\Metadata\RecordTypeMetadata;
-use AE\ConnectBundle\Salesforce\Compiler\FieldCompiler;
 use AE\ConnectBundle\Salesforce\Compiler\ObjectCompiler;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
 use JMS\Serializer\Exception\RuntimeException;
-use JMS\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class CreateEntityWithSObject implements SyncTargetHandler
 {
-    /** @var FieldCompiler */
-    private $fieldCompiler;
     /** @var ObjectCompiler */
     private $objectCompiler;
     private $validator;
-    /** @var SerializerInterface $serializer */
-    private $serializer;
 
     /**
      * CreateEntityWithSObject constructor.
-     * @param FieldCompiler $fieldCompiler
+     * @param ObjectCompiler $objectCompiler
      * @param ValidatorInterface $validator
-     * @param SerializerInterface $serializer
      */
-    public function __construct(FieldCompiler $fieldCompiler, ObjectCompiler $objectCompiler, ValidatorInterface $validator, SerializerInterface $serializer)
+    public function __construct(ObjectCompiler $objectCompiler, ValidatorInterface $validator)
     {
-        $this->fieldCompiler = $fieldCompiler;
         $this->validator = $validator;
-        $this->serializer = $serializer;
         $this->objectCompiler = $objectCompiler;
     }
 
@@ -70,9 +59,6 @@ class CreateEntityWithSObject implements SyncTargetHandler
         //S L O W
         foreach ($slowRecords as $record) {
             if ($record->canCreateInDatabase()) {
-                if (empty($classMetas)) {
-                    $classMetas  = $event->getConnection()->getMetadataRegistry()->findMetadataBySObject($record->sObject);
-                }
                 //We won't be sure which meta data we are supposed to target until we've validated constructed classes,
                 // so regardless of if validation is running or not, new creations always validate.
                 foreach ($classMetas as $classMeta) {
