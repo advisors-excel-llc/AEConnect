@@ -24,7 +24,7 @@ class Transformer implements TransformerInterface
 
     public function transform(TransformerPayload $payload)
     {
-        if (isset($this->transformersByName[$payload->getFieldMetadata()->getTransformer()])) {
+        if ($payload->isBulk() && isset($this->transformersByName[$payload->getFieldMetadata()->getTransformer()])) {
             //Fast track, if a field metadata has a transformer selected AEConnect/Field("FieldName", transformer="name")
             //so we can skip out on checking supports and just run the transform.
             $this->transformersByName[$payload->getFieldMetadata()->getTransformer()]->transform($payload);

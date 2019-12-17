@@ -24,17 +24,22 @@ class ObjectCompiler
     public function __construct(FieldCompiler $fieldCompiler, SerializerInterface $serializer)
     {
         $this->serializer = $serializer;
-        $this->compiler = $fieldCompiler;
+        $this->fieldCompiler = $fieldCompiler;
     }
 
-    public function fastCompile(Metadata $classMeta, SObject $SObject)
+    /**
+     * @param Metadata $classMeta
+     * @param SObject $sObject
+     * @return mixed
+     */
+    public function fastCompile(Metadata $classMeta, SObject $sObject)
     {
-        $sObjectArray = $SObject->getFields();
+        $sObjectArray = $sObject->getFields();
         $serializable = [];
         foreach ($classMeta->getFieldMetadata() as $field) {
             /** @var $field FieldMetadata */
             //If we have a custom transformer defined, we won't rely on serialization.
-            if ($field->getTransformer() || $field instanceof RecordTypeMetadata) {
+            if ($field->getTransformer()) {
                 continue;
             }
             if (isset($sObjectArray[$field->getField()])) {
@@ -44,31 +49,50 @@ class ObjectCompiler
 
         $json           = $this->serializer->serialize($serializable, 'json');
         $entity = $this->serializer->deserialize($json, $classMeta->getClassName(), 'json');
-        
+
         foreach ($classMeta->getFieldMetadata() as $field) {
-            if ($field->getTransformer() || $field instanceof RecordTypeMetadata) {
-                try {
-                    $newValue = $this->fieldCompiler->compileInbound(
-                        $record->sObject[$field->getField()],
-                        $record->sObject,
-                        $field,
-                        $record->entity,
-                        true
-                    );
-                    if (null !== $newValue) {
-                        $field->setValueForEntity($record->entity, $newValue);
-                    }
-                } catch (\Throwable $e) {
-                    $record->error = $e->getMessage();
-                    break;
+            if ($field->getTransformer()) {
+                $newValue = $this->fieldCompiler->compileInbound(
+                    $sObject->getFields()[$field->getField()],
+                    $sObject,
+                    $field,
+                    $entity,
+                    true
+                );
+                if (null !== $newValue) {
+                    $field->setValueForEntity($entity, $newValue);
                 }
             }
         }
+
+        return $entity;
     }
 
-    public function slowCompile(Metadata $classMeta, SObject $SObject)
+    /**
+     * @param Metadata $classMeta
+     * @param SObject $sObject
+     * @return mixed
+     */
+    public function slowCompile(Metadata $classMeta, SObject $sObject)
     {
-
+        //Create a new entity
+        $class = $classMeta->getClassName();
+        $entity = new $class;
+        // Apply the field values from the SObject to the Entity
+        foreach ($sObject->getFields() as $field => $value) {
+            if (null === ($fieldMetadata = $classMeta->getMetadataForField($field))) {
+                continue;
+            }
+            $newValue = $this->fieldCompiler->compileInbound(
+                $value,
+                $sObject,
+                $fieldMetadata,
+                $entity
+            );
+            if (null !== $newValue) {
+                $fieldMetadata->setValueForEntity($entity, $newValue);
+            }
+        }
+        return $entity;
     }
-
 }

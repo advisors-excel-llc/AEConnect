@@ -121,4 +121,9 @@ class RecordTypeMetadata extends FieldMetadata
 
         return $this;
     }
+
+    public function getTransformer(): ?string
+    {
+        return 'recordType';
+    }
 }

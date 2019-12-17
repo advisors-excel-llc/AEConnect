@@ -39,62 +39,57 @@ class CreateEntityWithSObject implements SyncTargetHandler
     public function process(SyncTargetEvent $event): void
     {
         $classMetas = $event->getConnection()->getMetadataRegistry()->findMetadataBySObjectType($event->getTarget()->name);
-        foreach ($classMetas as $classMeta) {
-            foreach ($event->getTarget()->records as $record) {
-                if ($record->canCreateInDatabase()) {
+        $slowRecords = [];
+        //F A S T
+        foreach ($event->getTarget()->records as $record) {
+            if ($record->canCreateInDatabase()) {
+                foreach ($classMetas as $classMeta) {
                     try {
                         $entity = $this->objectCompiler->fastCompile($classMeta, $record->sObject);
+                        $err = $this->validate($entity, $event->getConnection());
+                        if ($err === true) {
+                            $record->entity = $entity;
+                            $record->needPersist = true;
+                            $record->error = '';
+                            break;
+                        } else {
+                            $record->error .= $err;
+                        }
                     } catch (RuntimeException $e) {
-                        $record->error = '#serialization sObject to entity : ' . $e->getMessage();
+                        $record->warning = '#performance #serialization sObject to entity : '.$e->getMessage().
+                            PHP_EOL.' will use transformers instead to achieve deserialization.';
+                        $slowRecords[] = $record;
+                        break;
+                    } catch (\Throwable $e) {
+                        $record->error = $e->getMessage();
                     }
                 }
-
+            }
         }
 
-
-        foreach ($event->getTarget()->records as $record) {
+        //S L O W
+        foreach ($slowRecords as $record) {
             if ($record->canCreateInDatabase()) {
                 if (empty($classMetas)) {
                     $classMetas  = $event->getConnection()->getMetadataRegistry()->findMetadataBySObject($record->sObject);
                 }
                 //We won't be sure which meta data we are supposed to target until we've validated constructed classes,
                 // so regardless of if validation is running or not, new creations always validate.
-                // TODO : We can speed this step up by only compiling useful fields by looking at the $this->validation metadata
-                //      TODO cont : for the current class before validating, and if it passes all validation only then fully compile.
                 foreach ($classMetas as $classMeta) {
-                    //Create a new entity
-                    $class = $classMeta->getClassName();
-                    $entity = new $class;
-                    // Apply the field values from the SObject to the Entity
-                    foreach ($record->sObject->getFields() as $field => $value) {
-                        if (null === ($fieldMetadata = $classMeta->getMetadataForField($field))) {
-                            continue;
-                        }
-
-                        try {
-                            $newValue = $this->fieldCompiler->compileInbound(
-                                $value,
-                                $record->sObject,
-                                $fieldMetadata,
-                                $entity,
-                                true
-                            );
-                            if (null !== $newValue) {
-                                $fieldMetadata->setValueForEntity($entity, $newValue);
-                            }
-                        } catch (\Throwable $e) {
-                            $record->error = $e->getMessage();
+                    try {
+                        $entity = $this->objectCompiler->slowCompile($classMeta, $record->sObject);
+                        $err    = $this->validate($entity, $event->getConnection());
+                        if ($err === true) {
+                            $record->entity      = $entity;
+                            $record->needPersist = true;
+                            $record->error       = '';
                             break;
                         }
-                    }
-                    $err = $this->validate($entity, $event->getConnection());
-                    if ($err === true) {
-                        $record->entity = $entity;
-                        $record->needPersist = true;
-                        $record->error = '';
+                        $record->error .= $err;
+                    } catch (\Throwable $e) {
+                        $record->error = $e->getMessage();
                         break;
                     }
-                    $record->error .= $err;
                 }
             }
         }

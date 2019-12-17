@@ -87,6 +87,14 @@ class Target
         return array_filter($this->records, function (Record $record) { return $record->error !== ''; });
     }
 
+    /**
+     * @return array|Record[]
+     */
+    public function getRecordsWithWarnings(): array
+    {
+        return array_filter($this->records, function (Record $record) { return $record->warning !== ''; });
+    }
+
     public function canUpdate(): bool
     {
         return array_reduce($this->records, function (bool $carry, Record $record) { return $carry || $record->canUpdate(); }, false);
