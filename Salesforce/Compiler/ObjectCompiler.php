@@ -59,7 +59,7 @@ class ObjectCompiler
             foreach ($classMeta->getFieldMetadata() as $field) {
                 /** @var $field FieldMetadata */
                 //Ensure we aren't incorrectly overwriting unset values from the Salesforce data
-                if ($field->getTransformer() || !isset($sObjectArray[$field->getField()])) {
+                if ($field->getTransformer() || !array_key_exists($field->getField(), $sObjectArray)) {
                     continue;
                 }
                 $field->setValueForEntity($updateEntity, $field->getValueFromEntity($entity));
@@ -83,7 +83,7 @@ class ObjectCompiler
                     true
                 );
                 //Ensure we aren't incorrectly overwriting unset values from the Salesforce data
-                if (isset($sObjectArray[$field->getField()])) {
+                if (array_key_exists($field->getField(), $sObjectArray)) {
                     $field->setValueForEntity($entity, $newValue);
                 }
             }
@@ -114,9 +114,7 @@ class ObjectCompiler
                 $fieldMetadata,
                 $entity
             );
-            if (null !== $newValue) {
-                $fieldMetadata->setValueForEntity($entity, $newValue);
-            }
+            $fieldMetadata->setValueForEntity($entity, $newValue);
         }
         return $entity;
     }

@@ -39,10 +39,11 @@ class Progress
         }
 
         $createCount = count($event->getTarget()->getNewEntities());
+        $entityCount = count($event->getTarget()->getEntities());
         $this->counts[$sObject] = [
             'create' => $this->counts[$sObject]['create'] + $createCount,
-            'update' => $this->counts[$sObject]['update'] + (count($event->getTarget()->getEntities()) - $createCount),
-            'skip'   => $this->counts[$sObject]['skip'] + count($event->getTarget()->getRecordsWithErrors()),
+            'update' => $this->counts[$sObject]['update'] + ($entityCount - $createCount),
+            'skip'   => $this->counts[$sObject]['skip'] + $event->getTarget()->batchSize - $entityCount,
         ];
         $create = $this->counts[$sObject]['create'];
         $update = $this->counts[$sObject]['update'];
