@@ -93,7 +93,10 @@ class AnnotationDriver
     public function loadMetadataForClass($className, Metadata $metadata, bool $isDefault = false)
     {
         $class             = new \ReflectionClass($className);
-        $sourceAnnotations = $this->getClassAnnotations($class, [SObjectType::class, RecordType::class, SalesforceId::class]);
+        $sourceAnnotations = $this->getClassAnnotations(
+            $class,
+            [SObjectType::class, RecordType::class, SalesforceId::class]
+        );
         /** @var SObjectType|RecordType $sourceAnnotation */
         foreach ($sourceAnnotations as $sourceAnnotation) {
             if ($this->hasConnectionName($sourceAnnotation, $metadata->getConnectionName(), $isDefault)) {
@@ -120,46 +123,56 @@ class AnnotationDriver
                 );
 
                 foreach ($properties as $name => $item) {
-                    if ($item instanceof RecordType) {
-                        $name = array_search($item, $properties, true);
+                    switch (get_class($item)) {
+                        case RecordType::class:
+                            $name = array_search($item, $properties, true);
 
-                        if (false === $name) {
-                            return false;
-                        }
+                            if (false === $name) {
+                                return false;
+                            }
 
-                        $meta = $metadata->getRecordType();
-                        if (null === $meta) {
-                            // If name is set, it always wins
-                            $rtName = $item->getName();
-                            $metadata->addFieldMetadata(($meta = new RecordTypeMetadata($metadata, $rtName, $name)));
-                        }
+                            $meta = $metadata->getRecordType();
+                            if (null === $meta) {
+                                // If name is set, it always wins
+                                $rtName = $item->getName();
+                                $metadata->addFieldMetadata(
+                                    ($meta = new RecordTypeMetadata($metadata, $rtName, $name))
+                                );
+                            }
 
-                        $meta->setProperty($name);
-                    } elseif ($item instanceof Connection) {
-                        $metadata->setConnectionNameField(
-                            new FieldMetadata(
-                                $metadata,
-                                $name,
-                                null
-                            )
-                        );
-                    } elseif ($item instanceof Field) {
-                        $metadata->addFieldMetadata(
-                            new FieldMetadata(
-                                $metadata,
-                                $name,
-                                $item instanceof SalesforceId ? 'Id' : $item->getName(),
-                                $item->getTransformer()
-                            )
-                        );
-                    } else {
-                        $metadata->addFieldMetadata(
-                            new FieldMetadata(
-                                $metadata,
-                                $name,
-                                $item instanceof SalesforceId ? 'Id' : $item->getName()
-                            )
-                        );
+                            $meta->setProperty($name);
+                            break;
+                        case Connection::class:
+                            $metadata->setConnectionNameField(
+                                new FieldMetadata(
+                                    $metadata,
+                                    $name,
+                                    null
+                                )
+                            );
+                            break;
+
+                        case Field::class:
+                            $metadata->addFieldMetadata(
+                                new FieldMetadata(
+                                    $metadata,
+                                    $name,
+                                    $item->getName(),
+                                    $item->getTransformer()
+                                )
+                            );
+                            break;
+
+                        case SalesforceId::class:
+                            $metadata->addFieldMetadata(
+                                new FieldMetadata(
+                                    $metadata,
+                                    $name,
+                                    'Id',
+                                    'sfid'
+                                )
+                            );
+                            break;
                     }
                 }
 
@@ -182,7 +195,7 @@ class AnnotationDriver
                     $propName = strtolower(substr($name, 3, 1)).substr($name, 4);
                     $prefix   = substr($name, 0, 3);
 
-                    if (!in_array($prefix, ['set', 'get'])) {
+                    if (! in_array($prefix, ['set', 'get'])) {
                         continue;
                     }
 
@@ -214,7 +227,7 @@ class AnnotationDriver
 
                         if (null === $meta) {
                             $field = null;
-                            if (!($method instanceof Connection)) {
+                            if (! ($method instanceof Connection)) {
                                 $field = $method->getName();
                             }
 
@@ -248,7 +261,7 @@ class AnnotationDriver
                     [ExternalId::class]
                 );
 
-                if (!empty($extIds)) {
+                if (! empty($extIds)) {
                     foreach (array_keys($extIds) as $prop) {
                         if (null !== ($meta = $metadata->getMetadataForProperty($prop))) {
                             $meta->setIsIdentifier(true);
@@ -290,7 +303,7 @@ class AnnotationDriver
         $properties = [];
         foreach ($class->getProperties() as $property) {
             foreach ($this->reader->getPropertyAnnotations($property) as $propAnnot) {
-                if (!in_array(get_class($propAnnot), $annotations)) {
+                if (! in_array(get_class($propAnnot), $annotations)) {
                     continue;
                 }
 
@@ -324,7 +337,7 @@ class AnnotationDriver
         $methods = [];
         foreach ($class->getMethods() as $method) {
             foreach ($this->reader->getMethodAnnotations($method) as $annot) {
-                if (!in_array(get_class($annot), $annotations)) {
+                if (! in_array(get_class($annot), $annotations)) {
                     continue;
                 }
 
@@ -424,9 +437,9 @@ class AnnotationDriver
      *
      * @param string $className
      *
+     * @return boolean
      * @throws \ReflectionException
      *
-     * @return boolean
      */
     public function isTransient($className)
     {
@@ -450,13 +463,13 @@ class AnnotationDriver
         if ($this->classNames !== null) {
             return $this->classNames;
         }
-        if (!$this->paths) {
+        if (! $this->paths) {
             throw new \RuntimeException('A path is required for mapping.');
         }
         $classes       = [];
         $includedFiles = [];
         foreach ($this->paths as $path) {
-            if (!is_dir($path)) {
+            if (! is_dir($path)) {
                 throw new \RuntimeException('The path `'.$path.'` must be a directory.');
             }
             $iterator = new \RegexIterator(
@@ -469,7 +482,7 @@ class AnnotationDriver
             );
             foreach ($iterator as $file) {
                 $sourceFile = $file[0];
-                if (!preg_match('(^phar:)i', $sourceFile)) {
+                if (! preg_match('(^phar:)i', $sourceFile)) {
                     $sourceFile = realpath($sourceFile);
                 }
                 foreach ($this->excludePaths as $excludePath) {
@@ -485,7 +498,7 @@ class AnnotationDriver
         }
         foreach ($includedFiles as $file) {
             $className = $this->getClassName($file);
-            if (!$this->isTransient($className)) {
+            if (! $this->isTransient($className)) {
                 $classes[] = $className;
             }
         }
@@ -520,7 +533,7 @@ class AnnotationDriver
         $namespace  = null;
         $tokenCount = count($tokens);
         for ($offset = 0; $offset < $tokenCount; $offset++) {
-            if (!is_array($tokens[$offset])) {
+            if (! is_array($tokens[$offset])) {
                 continue;
             }
             if (T_NAMESPACE === $tokens[$offset][0]) {
@@ -547,7 +560,7 @@ class AnnotationDriver
         $tokenCount = count($tokens);
         for ($offset++; $offset < $tokenCount; $offset++) {
             // expecting T_STRING
-            if (!is_array($tokens[$offset])) {
+            if (! is_array($tokens[$offset])) {
                 break;
             }
             if (isset($tokens[$offset][0]) && T_STRING === $tokens[$offset][0]) {
@@ -557,7 +570,7 @@ class AnnotationDriver
             }
             // expecting T_NS_SEPARATOR
             $offset++;
-            if (!is_array($tokens[$offset])) {
+            if (! is_array($tokens[$offset])) {
                 continue;
             }
             if (isset($tokens[$offset][0]) && T_NS_SEPARATOR === $tokens[$offset][0]) {

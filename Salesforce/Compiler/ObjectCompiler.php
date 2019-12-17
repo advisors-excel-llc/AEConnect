@@ -47,11 +47,12 @@ class ObjectCompiler
             }
         }
 
-        $json           = $this->serializer->serialize($serializable, 'json');
+        $json   = $this->serializer->serialize($serializable, 'json');
         $entity = $this->serializer->deserialize($json, $classMeta->getClassName(), 'json');
 
         foreach ($classMeta->getFieldMetadata() as $field) {
-            if ($field->getTransformer()) {
+            //Only use the compileInbound command if we absolutely have to
+            if ($field->getTransformer() && isset($sObject->getFields()[$field->getField()]) && $sObject->getFields()[$field->getField()] !== null) {
                 $newValue = $this->fieldCompiler->compileInbound(
                     $sObject->getFields()[$field->getField()],
                     $sObject,

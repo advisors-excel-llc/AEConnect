@@ -127,9 +127,14 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
 
     protected function transformInbound(TransformerPayload $payload)
     {
+        if (!$payload->getClassMetadata()->hasAssociation($payload->getPropertyName())) {
+            $payload->setValue($payload->getValue());
+            return;
+        }
+
         try {
             // SFID String
-            $value       = $payload->getValue();
+            $value = $payload->getValue();
             $association = $payload->getClassMetadata()->getAssociationMapping($payload->getPropertyName());
             $targetClass = $association['targetEntity'];
             /** @var EntityManager $manager */
@@ -264,5 +269,10 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
         $payload->setValue(new ArrayCollection([$sfid]));
 
         return;
+    }
+
+    public function getName(): string
+    {
+        return 'sfid';
     }
 }
