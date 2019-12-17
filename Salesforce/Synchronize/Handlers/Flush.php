@@ -85,7 +85,7 @@ class Flush implements SyncTargetHandler
             $manager->flush();
         } catch (\Throwable $t) {
             // If an error occurs, note it
-            $record->error = $t->getMessage();
+            $record->error = '#flush ' . $t->getMessage();
             // and ensure EM is open.
             $this->ensureEMOpen();
         }

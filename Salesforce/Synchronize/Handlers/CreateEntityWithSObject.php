@@ -122,9 +122,9 @@ class CreateEntityWithSObject implements SyncTargetHandler
         );
 
         if (count($messages) > 0) {
-            $err = '';
+            $err = PHP_EOL . '#validation ' . PHP_EOL;
             foreach ($messages as $message) {
-                $err .= $message->getPropertyPath() . ' | ' . $message->getMessage() . PHP_EOL;
+                $err .= '#' . $message->getPropertyPath() . ' | ' . $message->getMessage() . PHP_EOL;
             }
             return $err;
         }
