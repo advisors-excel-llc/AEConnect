@@ -13,6 +13,8 @@ use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Query;
+use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\NullLogger;
@@ -42,6 +44,8 @@ class EntityLocater implements LoggerAwareInterface
      */
     private $fieldCompiler;
 
+    private $cachedDQL = [];
+
     public function __construct(RegistryInterface $registry, FieldCompiler $fieldCompiler)
     {
         $this->registry      = $registry;
@@ -65,6 +69,49 @@ class EntityLocater implements LoggerAwareInterface
             // We are ready
             $target->executeLocators();
         }
+    }
+
+    /**
+     * Given an entity class name and a set of SFIDs, we need to return an array of matched IDs off the entities table
+     * @param string $class
+     * @param array $sfids
+     * @param ConnectionInterface $connection
+     * @return mixed - an array of arrays with the shape [$id, $sfid]
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     */
+    public function locateEntitiesBySFID(string $class, array $sfids, ConnectionInterface $connection)
+    {
+        //If we haven't seen this class before, we need to construct a query for it to use.
+        if (!isset($this->cachedDQL[$class])) {
+            /** @var EntityManager $manager */
+            $classMeta      = $connection->getMetadataRegistry()->findMetadataByClass($class);
+            $manager        = $this->registry->getManagerForClass($classMeta->getClassName());
+            $entityMetaData = $manager->getClassMetadata($classMeta->getClassName());
+            $repository     = $manager->getRepository($classMeta->getClassName());
+            $sfidProperty   = $classMeta->getIdFieldProperty();
+
+            $qb = $repository->createQueryBuilder('e');
+
+            if ($entityMetaData->hasAssociation($sfidProperty)) {
+                $association             = $entityMetaData->getAssociationMapping($sfidProperty);
+                $targetAeConnectMetadata = $connection->getMetadataRegistry()->findMetadataByClass(
+                    $association['targetEntity']
+                );
+                if ($targetAeConnectMetadata) {
+                    $associationSFIDProperty = $targetAeConnectMetadata->getIdFieldProperty();
+                    $qb->select('e.id, s.'.$associationSFIDProperty . ' as sfid')
+                       ->leftJoin('e.'.$sfidProperty, 's')
+                       ->where('s.'.$associationSFIDProperty.' IN (:sfids)');
+                }
+            } elseif ($entityMetaData->hasField($sfidProperty)) {
+                $qb->select('e.id, e.'.$sfidProperty . ' as sfid')
+                   ->where('e.'.$sfidProperty.' IN (:sfids)');
+            }
+
+            $this->cachedDQL[$class] = $qb->getQuery();
+        }
+
+        return $this->cachedDQL[$class]->execute(['sfids' => $sfids]);
     }
 
     /**

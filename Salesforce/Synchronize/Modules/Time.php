@@ -26,6 +26,8 @@ class Time
         'sync' => null,
         'update' => null,
         'create' => null,
+        'associate' => null,
+        'validate' => null,
         'flush' => null,
     ];
 
@@ -36,6 +38,8 @@ class Time
         'sync' => 0,
         'update' => 0,
         'create' => 0,
+        'associate' => 0,
+        'validate' => 0,
         'flush' => 0,
     ];
     /** @var Table */
@@ -61,6 +65,12 @@ class Time
 
         $dispatch->addListener('aeconnect.create_entity_with_sobject', [$this, 'createStart'], 999);
         $dispatch->addListener('aeconnect.create_entity_with_sobject', [$this, 'createComplete'], -999);
+
+        $dispatch->addListener('aeconnect.transform_associations', [$this, 'associateStart'], 999);
+        $dispatch->addListener('aeconnect.transform_associations', [$this, 'associateComplete'], -999);
+
+        $dispatch->addListener('aeconnect.validate', [$this, 'validateStart'], 999);
+        $dispatch->addListener('aeconnect.validate', [$this, 'validateComplete'], -999);
 
         $dispatch->addListener('aeconnect.flush', [$this, 'flushStart'], 999);
         $dispatch->addListener('aeconnect.flush', [$this, 'flushComplete'], -999);
@@ -164,6 +174,38 @@ class Time
     {
         $this->iterations['create']++;
         $this->timers['create']->stop();
+    }
+
+    public function associateStart(SyncTargetEvent $event)
+    {
+        $this->render('Associating pre existing entities to the entity with SFIDs');
+        if (!isset($this->timers['associate'])) {
+            $this->timers['associate'] = $this->stopwatch->start('associate');
+        } else {
+            $this->timers['associate']->start();
+        }
+    }
+
+    public function associateComplete(SyncTargetEvent $event)
+    {
+        $this->iterations['associate']++;
+        $this->timers['associate']->stop();
+    }
+
+    public function validateStart(SyncTargetEvent $event)
+    {
+        $this->render('Validating entities');
+        if (!isset($this->timers['validate'])) {
+            $this->timers['validate'] = $this->stopwatch->start('validate');
+        } else {
+            $this->timers['validate']->start();
+        }
+    }
+
+    public function validateComplete()
+    {
+        $this->iterations['validate']++;
+        $this->timers['validate']->stop();
     }
 
     public function flushStart(SyncTargetEvent $event)

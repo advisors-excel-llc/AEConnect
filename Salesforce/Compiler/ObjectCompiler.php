@@ -27,13 +27,7 @@ class ObjectCompiler
         $this->fieldCompiler = $fieldCompiler;
     }
 
-    /**
-     * @param Metadata $classMeta
-     * @param SObject $sObject
-     * @param object $updateEntity
-     * @return mixed
-     */
-    public function fastCompile(Metadata $classMeta, SObject $sObject, ?object $updateEntity = null)
+    public function deserializeSobject(Metadata $classMeta, SObject $sObject, ?object $updateEntity = null)
     {
         $sObjectArray = $sObject->getFields();
         $serializable = [];
@@ -67,7 +61,42 @@ class ObjectCompiler
             //Now we can run the transformers as normal without any additional overhead for syncing.
             $entity = $updateEntity;
         }
+        return $entity;
+    }
 
+    public function SFIDCompile(Metadata $classMeta, SObject $sObject, object $entity)
+    {
+        $field = $classMeta->getMetadataForField('Id');
+
+        $newValue = $this->fieldCompiler->compileInbound(
+            $sObject->getId(),
+            $sObject,
+            $field,
+            $entity,
+            true
+        );
+        $field->setValueForEntity($entity, $newValue);
+
+        $recordField = $classMeta->getRecordType();
+        $newValue = $this->fieldCompiler->compileInbound(
+            $sObject->getRecordTypeId(),
+            $sObject,
+            $recordField,
+            $entity,
+            true
+        );
+        $recordField->setValueForEntity($entity, $newValue);
+    }
+
+    /**
+     * @param Metadata $classMeta
+     * @param SObject $sObject
+     * @param object $updateEntity
+     * @return mixed
+     */
+    public function fastCompile(Metadata $classMeta, SObject $sObject, ?object $updateEntity = null)
+    {
+        $entity = $this->deserializeSobject($classMeta, $sObject, $updateEntity);
         foreach ($classMeta->getFieldMetadata() as $field) {
             //Only use the compileInbound command if we absolutely have to
             if ($field->getTransformer() &&
@@ -83,7 +112,7 @@ class ObjectCompiler
                     true
                 );
                 //Ensure we aren't incorrectly overwriting unset values from the Salesforce data
-                if (array_key_exists($field->getField(), $sObjectArray)) {
+                if (array_key_exists($field->getField(),  $sObject->getFields())) {
                     $field->setValueForEntity($entity, $newValue);
                 }
             }
