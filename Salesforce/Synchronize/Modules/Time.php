@@ -114,7 +114,6 @@ class Time
 
     public function locateStart(SyncTargetEvent $event)
     {
-        $this->render('Locating sObjects in database.');
         if (!isset($this->timers['locate'])) {
             $this->timers['locate'] = $this->stopwatch->start('locate');
         } else {
@@ -130,7 +129,6 @@ class Time
 
     public function syncStart(SyncTargetEvent $event)
     {
-        $this->render('Syncing sObject SFIDs to database');
         if (!isset($this->timers['sync'])) {
             $this->timers['sync'] = $this->stopwatch->start('sync');
         } else {
@@ -178,7 +176,6 @@ class Time
 
     public function associateStart(SyncTargetEvent $event)
     {
-        $this->render('Associating pre existing entities to the entity with SFIDs');
         if (!isset($this->timers['associate'])) {
             $this->timers['associate'] = $this->stopwatch->start('associate');
         } else {
@@ -194,7 +191,6 @@ class Time
 
     public function validateStart(SyncTargetEvent $event)
     {
-        $this->render('Validating entities');
         if (!isset($this->timers['validate'])) {
             $this->timers['validate'] = $this->stopwatch->start('validate');
         } else {

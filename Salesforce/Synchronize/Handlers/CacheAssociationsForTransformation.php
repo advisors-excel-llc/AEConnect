@@ -7,10 +7,13 @@ use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
 use AE\ConnectBundle\Salesforce\Transformer\Util\AssociationCache;
+use AE\ConnectBundle\Util\GetEmTrait;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class CacheAssociationsForTransformation implements SyncTargetHandler
 {
+    use GetEmTrait;
+
     /** @var AssociationCache $cache */
     protected $cache;
 
@@ -41,7 +44,7 @@ class CacheAssociationsForTransformation implements SyncTargetHandler
             }
 
             $classMeta = $event->getConnection()->getMetadataRegistry()->findMetadataForEntity($record->entity);
-            $entityMeta = $this->registry->getEntityManagerForClass($classMeta->getClassName())->getClassMetadata($classMeta->getClassName());
+            $entityMeta = $this->getEm($classMeta->getClassName(), $this->registry)->getClassMetadata($classMeta->getClassName());
             $fields = $this->getTransformerFields($classMeta);
 
             foreach ($fields as $fieldMetadata) {
