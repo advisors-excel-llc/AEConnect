@@ -247,7 +247,7 @@ class Account {
     
     /**
      * @var string 
-     * @ORM\OneToMany(targetEntity="App\Entity\Contact", mappedBy="account")
+     * @ORM\OneToMany(targetEntity="App\Entity\Contact", mappedBy="account", transformer="assocation")
      */
     private $contact;
     
@@ -282,7 +282,7 @@ class Contact {
     /**
      * @var string 
      * @ORM\ManyToOne(targetEntity="App\Entity\Account", inversedBy="contact")
-     * @Field("AccountId", connections={"default", "other_connection"})
+     * @Field("AccountId", connections={"default", "other_connection", transformer="assocation"})
      */
     private $account;
     

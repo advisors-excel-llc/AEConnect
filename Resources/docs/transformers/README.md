@@ -7,8 +7,21 @@ The most notorious of the transformers is the `AssociationTransformer`. This tra
 to map associated entities to and from Salesforce. It, like all the other transformers, does this using some very simplistic
 methods.
 
-It's probably a good time to mention that transformers operate at a field level. So they only ever agree to handle a value
-given for a field/property and set a value in the payload for that given field/property of an SObject/Entity.
+For the most part, we utilize JMS serialization to deserialize sObjects we recieve from Salesforce into entities.  
+Ensure that all fields that do not need to be transformed with custom code are type hinted correctly for JMS to deserialize them.
+Of particular importance is the hints on Date fields, as JMS will not be as efficient without "DateTime<'Y-m-d\TH:i:s.000\+0000'>"
+
+Otherwise, you are able to add a hint on a field annotation which will tell ae connect which Transformer to use 
+(And to not allow JMS to try to errantly deserialize something that should be deserialized by a transformer instead)
+These types of transformers are done field by field, with the exception of the aforementioned AssociationTransformer.
+The annotation should lok a little bit like this:
+
+     * @Field("AccountId", connections={"default", "other_connection", transformer="assocation"})
+     
+with the transformer name provided by the overridable function ` getName()` on the transformer of your choice.
+
+The association transformer is allowed to run in BULK mode during bulk sync, which avoids making 1 database call per sObject field that
+needs to be associated to another sObject, and instead makes database calls to get all of the data it needs per batch.
 
 ## Custom Transformers
 
@@ -36,6 +49,11 @@ This tells the Transformer services, "Hey! Yea! I can work with that payload." o
 > Just because a transformer returns true in its supports() method, doesn't mean it has to actually do
 > something to the payload data. Think of the supports() method as a window to say "Hey! I'll take a closer look at that"
 > The quicker the transformer can say no, the faster the data for the entire entity is transformed.
+
+During BULK, you can also opt to plug directly into the event that fires off signalling the start of bulk transform.
+You are able to subscribe to a dispatcher event with this tag aded to a symfony service:
+    `- { name: kernel.event_listener, event: aeconnect.transform, method: process }`
+and you will be given a batch of records to work on instead of a single field at a time.
 
 ### Transforming Inbound
 
