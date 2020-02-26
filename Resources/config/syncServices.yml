@@ -81,6 +81,12 @@ services:
         tags:
             - { name: kernel.event_listener, event: aeconnect.transform_associations, method: process }
 
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\CustomTransformHandler:
+        autowire: true,
+        autoconfigure: true,
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.transform, method: process }
+
     AE\ConnectBundle\Salesforce\Synchronize\Handlers\ValidateEntities:
         autowire: true
         autoconfigure: true

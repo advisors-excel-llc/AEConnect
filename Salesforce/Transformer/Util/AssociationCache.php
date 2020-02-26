@@ -25,7 +25,10 @@ class AssociationCache
 
     public function save($data)
     {
-        foreach ($data as $row)
-        $this->cache->save($row['sfid'], $row['id'], 100000);
+        foreach ($data as $class => $rows) {
+            foreach ($rows as $row) {
+                $this->cache->save($row['sfid'], [$class, $row['id']], 100000);
+            }
+        }
     }
 }

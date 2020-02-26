@@ -37,6 +37,7 @@ class ObjectCompiler
             if ($field->getTransformer()) {
                 continue;
             }
+
             if (isset($sObjectArray[$field->getField()])) {
                 $serializable[$field->getProperty()] = $sObjectArray[$field->getField()];
             }
@@ -76,16 +77,28 @@ class ObjectCompiler
             true
         );
         $field->setValueForEntity($entity, $newValue);
+    }
 
-        $recordField = $classMeta->getRecordType();
-        $newValue = $this->fieldCompiler->compileInbound(
-            $sObject->getRecordTypeId(),
-            $sObject,
-            $recordField,
-            $entity,
-            true
-        );
-        $recordField->setValueForEntity($entity, $newValue);
+    public function runTransformers(Metadata $classMeta, SObject $sObject, object $entity)
+    {
+        foreach ($classMeta->getFieldMetadata() as $fieldMetadata) {
+            if ($fieldMetadata->getTransformer() === null || $fieldMetadata->getTransformer() === ''
+                || $fieldMetadata->getTransformer() === 'association'
+                || $fieldMetadata->getTransformer() === 'sfid') {
+                continue;
+            }
+            $newValue = $this->fieldCompiler->compileInbound(
+                $sObject->getFields()[$fieldMetadata->getField()],
+                $sObject,
+                $fieldMetadata,
+                $entity,
+                true
+            );
+            //Ensure we aren't incorrectly overwriting unset values from the Salesforce data
+            if (array_key_exists($fieldMetadata->getField(),  $sObject->getFields())) {
+                $fieldMetadata->setValueForEntity($entity, $newValue);
+            }
+        }
     }
 
     /**

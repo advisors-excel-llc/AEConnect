@@ -27,6 +27,7 @@ class Time
         'update' => null,
         'create' => null,
         'associate' => null,
+        'transform' => null,
         'validate' => null,
         'flush' => null,
     ];
@@ -39,6 +40,7 @@ class Time
         'update' => 0,
         'create' => 0,
         'associate' => 0,
+        'transform' => 0,
         'validate' => 0,
         'flush' => 0,
     ];
@@ -68,6 +70,9 @@ class Time
 
         $dispatch->addListener('aeconnect.transform_associations', [$this, 'associateStart'], 999);
         $dispatch->addListener('aeconnect.transform_associations', [$this, 'associateComplete'], -999);
+
+        $dispatch->addListener('aeconnect.transform', [$this, 'transformStart'], 999);
+        $dispatch->addListener('aeconnect.transform', [$this, 'transformComplete'], -999);
 
         $dispatch->addListener('aeconnect.validate', [$this, 'validateStart'], 999);
         $dispatch->addListener('aeconnect.validate', [$this, 'validateComplete'], -999);
@@ -187,6 +192,21 @@ class Time
     {
         $this->iterations['associate']++;
         $this->timers['associate']->stop();
+    }
+
+    public function transformStart(SyncTargetEvent $event)
+    {
+        if (!isset($this->timers['transform'])) {
+            $this->timers['transform'] = $this->stopwatch->start('transform');
+        } else {
+            $this->timers['transform']->start();
+        }
+    }
+
+    public function transformComplete(SyncTargetEvent $event)
+    {
+        $this->iterations['transform']++;
+        $this->timers['transform']->stop();
     }
 
     public function validateStart(SyncTargetEvent $event)

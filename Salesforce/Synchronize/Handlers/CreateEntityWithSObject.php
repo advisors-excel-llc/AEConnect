@@ -13,16 +13,13 @@ class CreateEntityWithSObject implements SyncTargetHandler
 {
     /** @var ObjectCompiler */
     private $objectCompiler;
-    private $validator;
 
     /**
      * CreateEntityWithSObject constructor.
      * @param ObjectCompiler $objectCompiler
-     * @param ValidatorInterface $validator
      */
-    public function __construct(ObjectCompiler $objectCompiler, ValidatorInterface $validator)
+    public function __construct(ObjectCompiler $objectCompiler)
     {
-        $this->validator = $validator;
         $this->objectCompiler = $objectCompiler;
     }
 
@@ -39,7 +36,7 @@ class CreateEntityWithSObject implements SyncTargetHandler
                         $newRecord->needCreate = true;
                         $records[] = $newRecord;
                     } catch (RuntimeException $e) {
-                        $record->warning = '#serialization sObject to entity : ' . $e->getMessage();
+                        $record->error = '#serialization sObject to entity : ' . $e->getMessage();
                         break;
                     } catch (\Throwable $e) {
                         $record->error = $e->getMessage();

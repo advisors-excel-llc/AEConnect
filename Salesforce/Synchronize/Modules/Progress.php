@@ -51,7 +51,7 @@ class Progress
         $skip = $this->counts[$sObject]['skip'];
 
         $this->progressBar->setMessage("$sObject ( creates : $create  |  updates : $update  |  skips : $skip )");
-        $this->progressBar->advance(count($event->getTarget()->records));
+        $this->progressBar->advance($event->getTarget()->batchSize);
     }
 
     private function generateProgressBar(SyncTargetEvent $event)

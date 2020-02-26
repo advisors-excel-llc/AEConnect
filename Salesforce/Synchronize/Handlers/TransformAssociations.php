@@ -35,10 +35,14 @@ class TransformAssociations implements SyncTargetHandler
 
             foreach ($classMeta->getFieldMetadata() as $fieldMeta) {
                 if ($fieldMeta->getTransformer() === 'association' && $record->sObject->getFields()[$fieldMeta->getField()]) {
-                    $fieldMeta->setValueForEntity(
-                        $record->entity,
-                        $entityManager->getReference(get_class($record->entity), $this->cache->fetch($record->sObject->getFields()[$fieldMeta->getField()]))
-                    );
+                    $hit = $this->cache->fetch($record->sObject->getFields()[$fieldMeta->getField()]);
+                    // TODO : Here we can actually recover from this dreaded issue https://github.com/advisors-excel-llc/AEConnect/issues/213
+                    if ($hit !== false) {
+                        $fieldMeta->setValueForEntity(
+                            $record->entity,
+                            $entityManager->getReference($hit[0], $hit[1])
+                        );
+                    }
                 }
             }
         }
