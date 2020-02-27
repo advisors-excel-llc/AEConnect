@@ -32,4 +32,9 @@ class RecordTypeTransformer extends AbstractTransformerPlugin
 
         $payload->setValue($recordTypeId);
     }
+
+    public function getName(): string
+    {
+        return 'recordType';
+    }
 }

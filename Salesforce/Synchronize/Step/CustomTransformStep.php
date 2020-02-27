@@ -5,10 +5,9 @@ namespace AE\ConnectBundle\Salesforce\Synchronize\Step;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
-class CreateEntityWithSObject extends Step
+class CustomTransformStep extends Step
 {
-    const NAME = 'aeconnect.create_entity_with_sobject';
-
+    const NAME = 'aeconnect.transform';
     function execute(EventDispatcherInterface $dispatcher): void
     {
         $target = $this->syncEvent->getCurrentTarget();
@@ -18,6 +17,6 @@ class CreateEntityWithSObject extends Step
 
     function nextStep(): Step
     {
-        return new TransformStep();
+        return new ValidateStep();
     }
 }

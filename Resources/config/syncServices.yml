@@ -69,6 +69,30 @@ services:
         tags:
             - { name: kernel.event_listener, event: aeconnect.create_entity_with_sobject, method: process }
 
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\CacheAssociationsForTransformation:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.transform_associations, method: process, priority: 10 }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\TransformAssociations:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.transform_associations, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\CustomTransformHandler:
+        autowire: true,
+        autoconfigure: true,
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.transform, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\ValidateEntities:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.validate, method: process }
+
     AE\ConnectBundle\Salesforce\Synchronize\Handlers\Flush:
         autowire: true
         autoconfigure: true

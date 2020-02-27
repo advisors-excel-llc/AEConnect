@@ -3,105 +3,49 @@
 namespace AE\ConnectBundle\Salesforce\Synchronize\Handlers;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
-use AE\ConnectBundle\Salesforce\Compiler\FieldCompiler;
+use AE\ConnectBundle\Salesforce\Compiler\ObjectCompiler;
+use AE\ConnectBundle\Salesforce\Synchronize\EventModel\Record;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
+use JMS\Serializer\Exception\RuntimeException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class CreateEntityWithSObject implements SyncTargetHandler
 {
-    /** @var FieldCompiler  */
-    private $fieldCompiler;
-    private $validator;
+    /** @var ObjectCompiler */
+    private $objectCompiler;
+
     /**
      * CreateEntityWithSObject constructor.
-     * @param FieldCompiler $fieldCompiler
-     * @param ValidatorInterface $validator
+     * @param ObjectCompiler $objectCompiler
      */
-    public function __construct(FieldCompiler $fieldCompiler, ValidatorInterface $validator)
+    public function __construct(ObjectCompiler $objectCompiler)
     {
-        $this->fieldCompiler = $fieldCompiler;
-        $this->validator = $validator;
+        $this->objectCompiler = $objectCompiler;
     }
 
     public function process(SyncTargetEvent $event): void
     {
-        $classMetas = [];
-        foreach ($event->getTarget()->records as $record) {
-            if ($record->canCreateInDatabase()) {
-                if (empty($classMetas)) {
-                    $classMetas  = $event->getConnection()->getMetadataRegistry()->findMetadataBySObject($record->sObject);
-                }
-                //We won't be sure which meta data we are supposed to target until we've validated constructed classes,
-                // so regardless of if validation is running or not, new creations always validate.
-                // TODO : We can speed this step up by only compiling useful fields by looking at the $this->validation metadata
-                //      TODO cont : for the current class before validating, and if it passes all validation only then fully compile.
-                foreach ($classMetas as $classMeta) {
-                    //Create a new entity
-                    $class = $classMeta->getClassName();
-                    $entity = new $class;
-                    // Apply the field values from the SObject to the Entity
-                    foreach ($record->sObject->getFields() as $field => $value) {
-                        if (null === ($fieldMetadata = $classMeta->getMetadataForField($field))) {
-                            continue;
-                        }
-
-                        try {
-                            $newValue = $this->fieldCompiler->compileInbound(
-                                $value,
-                                $record->sObject,
-                                $fieldMetadata,
-                                $entity,
-                                true
-                            );
-                            if (null !== $newValue) {
-                                $fieldMetadata->setValueForEntity($entity, $newValue);
-                            }
-                        } catch (\Throwable $e) {
-                            $record->error = $e->getMessage();
-                            break;
-                        }
-                    }
-                    $err = $this->validate($entity, $event->getConnection());
-                    if ($err === true) {
-                        $record->entity = $entity;
-                        $record->needPersist = true;
-                        $record->error = '';
+        $classMetas = $event->getConnection()->getMetadataRegistry()->findMetadataBySObjectType($event->getTarget()->name);
+        $records = [];
+        foreach ($classMetas as $classMeta) {
+            foreach ($event->getTarget()->records as $record) {
+                if ($record->canCreateInDatabase()) {
+                    try {
+                        $newRecord = new Record($record->sObject, $this->objectCompiler->deserializeSobject($classMeta, $record->sObject));
+                        $this->objectCompiler->SFIDCompile($classMeta, $newRecord->sObject, $newRecord->entity);
+                        $newRecord->needCreate = true;
+                        $records[] = $newRecord;
+                    } catch (RuntimeException $e) {
+                        $record->error = '#serialization sObject to entity : ' . $e->getMessage();
                         break;
+                    } catch (\Throwable $e) {
+                        $record->error = $e->getMessage();
                     }
-                    $record->error .= $err;
+                } else {
+                    $records[] = $record;
                 }
             }
         }
-    }
-
-    /**
-     * @param $entity
-     * @param ConnectionInterface $connection
-     */
-    private function validate($entity, ConnectionInterface $connection)
-    {
-        $groups = [
-            'ae_connect.inbound',
-            'ae_connect.inbound.'.$connection->getName(),
-        ];
-
-        if ($connection->isDefault() && 'default' !== $connection->getName()) {
-            $groups[] = 'ae_connect_inbound.default';
-        }
-
-        $messages = $this->validator->validate(
-            $entity,
-            null,
-            $groups
-        );
-
-        if (count($messages) > 0) {
-            $err = PHP_EOL . '#validation ' . PHP_EOL;
-            foreach ($messages as $message) {
-                $err .= '#' . $message->getPropertyPath() . ' | ' . $message->getMessage() . PHP_EOL;
-            }
-            return $err;
-        }
-        return true;
+        $event->getTarget()->records = $records;
     }
 }

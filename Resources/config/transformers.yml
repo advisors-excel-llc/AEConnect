@@ -7,6 +7,8 @@ services:
     AE\ConnectBundle\Salesforce\Transformer\TransformerInterface:
         alias: AE\ConnectBundle\Salesforce\Transformer\Transformer
         public: true
+    AE\ConnectBundle\Salesforce\Transformer\Util\AssociationCache:
+        public: true
     AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder:
         arguments:
             $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'

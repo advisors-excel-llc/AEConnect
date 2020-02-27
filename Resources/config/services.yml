@@ -70,6 +70,10 @@ services:
     AE\ConnectBundle\Salesforce\Compiler\FieldCompiler:
         $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
         $transformer: '@AE\ConnectBundle\Salesforce\Transformer\TransformerInterface'
+    AE\ConnectBundle\Salesforce\Compiler\ObjectCompiler:
+        arguments:
+            $fieldCompiler: '@AE\ConnectBundle\Salesforce\Compiler\FieldCompiler'
+            $serializer: '@JMS\Serializer\SerializerInterface'
     AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'

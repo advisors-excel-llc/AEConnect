@@ -1,8 +1,6 @@
 <?php
 
-
 namespace AE\ConnectBundle\Salesforce\Synchronize\Handlers;
-
 
 use AE\ConnectBundle\Salesforce\Synchronize\EventModel\Record;
 use AE\ConnectBundle\Salesforce\Synchronize\EventModel\Target;
@@ -74,7 +72,7 @@ class Flush implements SyncTargetHandler
             return;
         }
         $manager = $this->registry->getManagerForClass(get_class($record->entity));
-        if (!$record->needPersist) {
+        if (!$record->needPersist()) {
             //If we try to merge a new entity we are going to walk face first into an entity not found error..
             $manager->merge($record->entity);
         } else {

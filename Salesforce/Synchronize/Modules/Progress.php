@@ -39,17 +39,19 @@ class Progress
         }
 
         $createCount = count($event->getTarget()->getNewEntities());
+        $updateCount = count($event->getTarget()->getUpdateEntities());
+
         $this->counts[$sObject] = [
             'create' => $this->counts[$sObject]['create'] + $createCount,
-            'update' => $this->counts[$sObject]['update'] + (count($event->getTarget()->getEntities()) - $createCount),
-            'skip'   => $this->counts[$sObject]['skip'] + count($event->getTarget()->getRecordsWithErrors()),
+            'update' => $this->counts[$sObject]['update'] + $updateCount,
+            'skip'   => $this->counts[$sObject]['skip'] + $event->getTarget()->batchSize - ($createCount + $updateCount),
         ];
         $create = $this->counts[$sObject]['create'];
         $update = $this->counts[$sObject]['update'];
         $skip = $this->counts[$sObject]['skip'];
 
         $this->progressBar->setMessage("$sObject ( creates : $create  |  updates : $update  |  skips : $skip )");
-        $this->progressBar->advance(count($event->getTarget()->records));
+        $this->progressBar->advance($event->getTarget()->batchSize);
     }
 
     private function generateProgressBar(SyncTargetEvent $event)

@@ -31,7 +31,8 @@ class SyncSFIDs implements SyncTargetHandler
                     $record->sObject->getId(),
                     $record->sObject,
                     $fieldMetadata,
-                    $record->entity
+                    $record->entity,
+                    true
                 );
                 if (null !== $newValue) {
                     $fieldMetadata->setValueForEntity($record->entity, $newValue);

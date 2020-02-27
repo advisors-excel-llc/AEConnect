@@ -31,6 +31,11 @@ class Field
      */
     private $connections = ["default"];
 
+    /**
+     * @var string
+     */
+    private $transformer;
+
     public function __construct(array $values)
     {
         if (!empty($values)) {
@@ -41,6 +46,10 @@ class Field
                 }
 
                 unset($values['connections']);
+            }
+
+            if (array_key_exists("transformer", $values)) {
+                $this->transformer = $values['transformer'];
             }
 
             if (array_key_exists("name", $values)) {
@@ -65,6 +74,11 @@ class Field
     public function getConnections(): array
     {
         return $this->connections;
+    }
+
+    public function getTransformer(): ?string
+    {
+        return $this->transformer;
     }
 
     /**

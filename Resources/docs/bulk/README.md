@@ -22,29 +22,54 @@ Ok, now that that's all out of the way, let's sync!
 > ALWAYS! ALWAYS! ALWAYS! Backup data before performing operations that alter data
 
 ```bash
-# This command will sync all new entities for all object types for all connections
-$ bin/console ae_connect:bulk
-
-# This command will sync all new entities for all object types for only the default connection
+# This is the base of the command, you must select a connection to run the bulk sync against.  In these example cases, we will choose default.
 $ bin/console ae_connect:bulk default
 
-# This command will sync all entities down but only new entities up for all connections
-$ bin/console ae_connect:bulk -i
+# Next you have to choose some targets.  You can either choose targets VIA --types SOBJECT_NAME --types SOBJECT_NAME2 and so on to bulk sync
+$ bin/console ae_connect:bulk default --types Account
 
-# This command will sync all entities up but only new entities down for all connections
-$ bin/console ae_connect:bulk -o
+# Or you can choose targets based off of queries that you've written like so --queries SELECT * FROM SOBJECTNAME WHERE clause
+$ bin/console ae_connect:bulk default --queries "SELECT * FROM ACCOUNT WHERE NAME like 'A%'"
 
-# This command will sync only new entities associated with accounts for all connections
-$ bin/console ae_connect:bulk -t Account
+# Next we have to specify what we want to do with our selected targets, wether it be updating our database or sending data to Salesforce.
+# We have a few options for what we want to do,
 
-# Use -c to clear all existing Salesforce IDs from the database. They will be re-synced to existing entities using
-# the external id. This is handy for sandbox refreshes.
-$ bin/console ae_connect:bulk -c
+# If we want to capture SFIDs from salesforce and update SFIDs on th database, use -c
+# This is most useful if you've refreshed your sandbox and want to synch your SFIDs between salesforce and your database.
+# NOTE : YOU MUST HAVE UNIQUE IDENTIFIER OTHER THAN SFID ON YOUR ENTITY FOR THIS TO WORK
+$ bin/console ae_connect:bulk default --types Account -c
+
+#If we want to create new entities that we do not have in our local database that are in salesforce, use --create-inbound
+$ bin/console ae_connect:bulk default --types Account --create-inbound
+
+# If we want to update entities that already exist in our database with fresh data from salesforce, use --update-inbound
+$ bin/console ae_connect:bulk default --types Account --update-inbound
+
+#  NOTE : THE FOLLOWING TWO COMMANDS ASSUME YOU HAVE SYNCd SFIDs ! ! !
+
+# If we want to create entities in salesforce with data in our database, use --create-outbound
+$ bin/console ae_connect:bulk default --types Account --create-outbound
+
+# and lastly, if we want to update entities in salesforce with data in our database, use --update-outbound
+bin/console ae_connect:bulk default --types Account --update-outbound
+
+# We also offer a set of debugging modules for you to choose to add through --modules $moduleName
+
+# count
+#   Will show a progress bar for your currently running command.
+
+# time
+#   Will show a data table containing the times and average run times for all the steps in sync for an in depth view of run time speeds.
+
+# errors
+#    Will output all validation, serialization, and database errors to your monolog logger->error() path.
+#   (Pro tip : change your monolog output to a file rather than console so you don't get buried in error messages)
+bin/console ae_connect:bulk default --types Account --modules time --modules errors --modules count
 
 # Let's put it all together!
 # This command will sync all entities associated the Account and Contact types both up and down for the default connection
-# clearing all pre-existing Salesforce IDs
-$ bin/console ae_connect:bulk default -t Account -t Contact -i -o -c
+# clearing all pre-existing Salesforce IDs while also showing the progress bar
+$ bin/console ae_connect:bulk default -t Account -t Contact -c --create-inbound --update-inbound --create-outbound --update-outbound --modules count
 
 ```
 

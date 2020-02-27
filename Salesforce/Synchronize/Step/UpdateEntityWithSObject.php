@@ -21,6 +21,6 @@ class UpdateEntityWithSObject extends Step
         if ($this->syncEvent->getConfig()->getPullConfiguration()->create && $this->syncEvent->getCurrentTarget()->canCreateInDatabase()) {
             return new CreateEntityWithSObject();
         }
-        return new Flush();
+        return new TransformStep();
     }
 }
