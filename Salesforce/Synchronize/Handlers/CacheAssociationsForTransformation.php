@@ -80,7 +80,7 @@ class CacheAssociationsForTransformation implements SyncTargetHandler
         }
 
         $transformingField = [];
-        foreach ($classMeta->getFieldMetadata() as $fieldMetadata) {
+        foreach ($classMeta->getActiveFieldMetadata() as $fieldMetadata) {
             if ($fieldMetadata->getTransformer() === 'association') {
                 $transformingField[] = $fieldMetadata;
             }

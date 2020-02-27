@@ -33,8 +33,14 @@ class TransformAssociations implements SyncTargetHandler
             $classMeta = $event->getConnection()->getMetadataRegistry()->findMetadataForEntity($record->entity);
             $entityManager = $this->getEm(get_class($record->entity), $this->registry);
 
-            foreach ($classMeta->getFieldMetadata() as $fieldMeta) {
-                if ($fieldMeta->getTransformer() === 'association' && $record->sObject->getFields()[$fieldMeta->getField()]) {
+            foreach ($classMeta->getActiveFieldMetadata() as $fieldMeta) {
+                if ($fieldMeta->getTransformer() === 'association') {
+                    if (!$record->sObject->getFields()[$fieldMeta->getField()]) {
+                        $fieldMeta->setValueForEntity(
+                            $record->entity,
+                            null
+                        );
+                    }
                     $hit = $this->cache->fetch($record->sObject->getFields()[$fieldMeta->getField()]);
                     // TODO : Here we can actually recover from this dreaded issue https://github.com/advisors-excel-llc/AEConnect/issues/213
                     if ($hit !== false) {

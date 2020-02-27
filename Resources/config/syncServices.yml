@@ -25,6 +25,12 @@ services:
         autowire: true
         autoconfigure: true
         tags:
+            - { name: kernel.event_listener, event: aeconnect.generate_queries, method: process, priority: 1 }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\ModifyQueries:
+        autowire: true
+        autoconfigure: true
+        tags:
             - { name: kernel.event_listener, event: aeconnect.generate_queries, method: process }
 
     AE\ConnectBundle\Salesforce\Synchronize\Handlers\GetQueryCounts:

@@ -26,7 +26,7 @@ class InitialStep extends Step
         $config = $this->syncEvent->getConfig();
         //If the user has given us any queries, we can skip ahead a few steps to the run queries step
         if ($config->hasQueries()) {
-            return new CountResultsFromQueries();
+            return new GenerateQueriesFromTargets();
         }
         //If the user has given us a single target object, we can skip ahead to computing queries based on targets step
         if ($config->needsQueriesGenerated() && count($config->getSObjectTargets()) == 1) {
