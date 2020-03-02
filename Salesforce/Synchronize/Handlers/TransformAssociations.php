@@ -40,6 +40,7 @@ class TransformAssociations implements SyncTargetHandler
                             $record->entity,
                             null
                         );
+                        continue;
                     }
                     $hit = $this->cache->fetch($record->sObject->getFields()[$fieldMeta->getField()]);
                     // TODO : Here we can actually recover from this dreaded issue https://github.com/advisors-excel-llc/AEConnect/issues/213
