@@ -31,16 +31,13 @@ class ObjectCompiler
     {
         $sObjectArray = $sObject->getFields();
         $serializable = [];
-        foreach ($classMeta->getFieldMetadata() as $field) {
+        foreach ($classMeta->getActiveFieldMetadata() as $field) {
             /** @var $field FieldMetadata */
             //If we have a custom transformer defined, we won't rely on serialization.
             if ($field->getTransformer()) {
                 continue;
             }
-
-            if (isset($sObjectArray[$field->getField()])) {
-                $serializable[$field->getProperty()] = $sObjectArray[$field->getField()];
-            }
+            $serializable[$field->getProperty()] = $sObjectArray[$field->getField()];
         }
 
         $entity = $this->serializer->deserialize(
@@ -51,10 +48,9 @@ class ObjectCompiler
 
         if ($updateEntity !== null) {
             //We have to over write this updateEntity class with the filled data on our deserialized entity now.
-            foreach ($classMeta->getFieldMetadata() as $field) {
+            foreach ($classMeta->getActiveFieldMetadata() as $field) {
                 /** @var $field FieldMetadata */
-                //Ensure we aren't incorrectly overwriting unset values from the Salesforce data
-                if ($field->getTransformer() || !array_key_exists($field->getField(), $sObjectArray)) {
+                if ($field->getTransformer()) {
                     continue;
                 }
                 $field->setValueForEntity($updateEntity, $field->getValueFromEntity($entity));
@@ -81,12 +77,13 @@ class ObjectCompiler
 
     public function runTransformers(Metadata $classMeta, SObject $sObject, object $entity)
     {
-        foreach ($classMeta->getFieldMetadata() as $fieldMetadata) {
+        foreach ($classMeta->getActiveFieldMetadata() as $fieldMetadata) {
             if ($fieldMetadata->getTransformer() === null || $fieldMetadata->getTransformer() === ''
                 || $fieldMetadata->getTransformer() === 'association'
                 || $fieldMetadata->getTransformer() === 'sfid') {
                 continue;
             }
+
             $newValue = $this->fieldCompiler->compileInbound(
                 $sObject->getFields()[$fieldMetadata->getField()],
                 $sObject,
@@ -94,10 +91,8 @@ class ObjectCompiler
                 $entity,
                 true
             );
-            //Ensure we aren't incorrectly overwriting unset values from the Salesforce data
-            if (array_key_exists($fieldMetadata->getField(),  $sObject->getFields())) {
-                $fieldMetadata->setValueForEntity($entity, $newValue);
-            }
+
+            $fieldMetadata->setValueForEntity($entity, $newValue);
         }
     }
 

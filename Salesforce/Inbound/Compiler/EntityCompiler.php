@@ -293,10 +293,7 @@ class EntityCompiler
             }
 
             $newValue = $this->fieldCompiler->compileInbound($value, $object, $fieldMetadata, $entity);
-
-            if (null !== $newValue) {
-                $fieldMetadata->setValueForEntity($entity, $newValue);
-            }
+            $fieldMetadata->setValueForEntity($entity, $newValue);
         }
     }
 }

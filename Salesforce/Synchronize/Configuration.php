@@ -47,7 +47,11 @@ class Configuration
         $this->connectionName = $connectionName;
         $this->sObjectTargets = $sObjectTargets;
         foreach ($queries as $query) {
-            $this->addQuery('', $query);
+            $target = trim(substr($query, strpos($query, ' FROM ') + 6));
+            if (strpos( $target, ' ') !== false) {
+                $target = substr($target, 0, strpos($target, ' '));
+            }
+            $this->addQuery(ucwords($target), $query);
         }
         $this->clearSFID = $clearSFID;
 
@@ -147,6 +151,11 @@ class Configuration
     public function getQueries(): array
     {
         return $this->queries;
+    }
+
+    public function clearQueries()
+    {
+        $this->queries = [];
     }
 
     public function getPullConfiguration(): Actions
