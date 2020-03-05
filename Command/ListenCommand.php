@@ -50,17 +50,17 @@ class ListenCommand extends Command implements LoggerAwareInterface
                  'default'
              )
             ->addOption(
-                'memoryLimit',
+                'memory-limit',
                     null,
                     InputOption::VALUE_OPTIONAL,
                     'Memory Limit in MiB.  If the memory limit is exceeded the next time an sObject is consumed, the process will close.',
                     null
                 )
             ->addOption(
-                'countLimit',
+                'message-limit',
                 null,
                 InputOption::VALUE_OPTIONAL,
-                'Recieve Limit.  If the number of messages we receive from salesforce exceeds this number, the process will close.',
+                'Message Limit.  If the number of messages we receive from salesforce exceeds this number, the process will close.',
                 null
             )
         ;
@@ -71,12 +71,12 @@ class ListenCommand extends Command implements LoggerAwareInterface
         $connectionName = $input->getArgument('connectionName');
         $connection     = $this->connectionManager->getConnection($connectionName);
 
-        if ($input->getOption('memoryLimit')) {
-            $this->consumer->setMemoryLimit($input->getOption('memoryLimit'));
+        if ($input->getOption('memory-limit')) {
+            $this->consumer->setMemoryLimit($input->getOption('memory-limit'));
         }
 
-        if ($input->getOption('countLimit')) {
-            $this->consumer->setCountLimit($input->getOption('countLimit'));
+        if ($input->getOption('message-limit')) {
+            $this->consumer->setMessageLimit($input->getOption('message-limit'));
         }
 
         if (null === $connection) {

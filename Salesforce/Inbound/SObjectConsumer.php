@@ -25,7 +25,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
     use LoggerAwareTrait;
 
     private $consumeCount = 0;
-    private $countLimit = PHP_INT_MAX;
+    private $messageLimit = PHP_INT_MAX;
     private $memoryLimit = PHP_INT_MAX;
 
     /**
@@ -78,7 +78,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
             );
         }
 
-        if ($this->consumeCount > $this->countLimit) {
+        if ($this->consumeCount > $this->messageLimit) {
             $trace = debug_backtrace();
             throw new MemoryLimitException(
                 'Count Limit exceeded after ' . $memory / (1024 * 1024) . ' MiB were consumed.  Function call stack is currently at ' . count($trace),
@@ -93,9 +93,9 @@ class SObjectConsumer implements SalesforceConsumerInterface
         $this->memoryLimit = $limit;
     }
 
-    public function setCountLimit(int $limit)
+    public function setMessageLimit(int $limit)
     {
-        $this->countLimit = $limit;
+        $this->messageLimit = $limit;
     }
 
     public function getPriority(): ?int
