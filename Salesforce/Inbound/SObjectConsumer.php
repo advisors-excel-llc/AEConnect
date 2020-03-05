@@ -10,6 +10,7 @@ namespace AE\ConnectBundle\Salesforce\Inbound;
 
 use AE\ConnectBundle\Connection\ConnectionsTrait;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
+use AE\ConnectBundle\Util\Exceptions\MemoryLimitException;
 use AE\SalesforceRestSdk\Bayeux\ChannelInterface;
 use AE\SalesforceRestSdk\Bayeux\Message;
 use AE\SalesforceRestSdk\Bayeux\Salesforce\Event;
@@ -23,6 +24,10 @@ class SObjectConsumer implements SalesforceConsumerInterface
     use ConnectionsTrait;
     use LoggerAwareTrait;
 
+    private $consumeCount = 0;
+    private $countLimit = PHP_INT_MAX;
+    private $memoryLimit = PHP_INT_MAX;
+
     /**
      * @var SalesforceConnector
      */
@@ -31,7 +36,6 @@ class SObjectConsumer implements SalesforceConsumerInterface
     public function __construct(SalesforceConnector $connector, ?LoggerInterface $logger = null)
     {
         $this->connector = $connector;
-
         $this->setLogger($logger ?: new NullLogger());
     }
 
@@ -62,6 +66,27 @@ class SObjectConsumer implements SalesforceConsumerInterface
                 $this->consumeChangeEvent($data->getPayload());
             }
         }
+        $this->consumeCount++;
+        $memory = memory_get_usage();
+
+        if (($memory / (1024 * 1024)) > $this->memoryLimit || $this->consumeCount > $this->countLimit) {
+            $trace = debug_backtrace();
+            throw new MemoryLimitException(
+                'Memory Limit exceeded after ' . $this->consumeCount . ' polls.  Function call stack is currently at ' . count($trace),
+                0,
+                $memory / (1024 * 1024)
+        );
+        }
+    }
+
+    public function setMemoryLimit(int $limit)
+    {
+        $this->memoryLimit = $limit;
+    }
+
+    public function setCountLimit(int $limit)
+    {
+        $this->countLimit = $limit;
     }
 
     public function getPriority(): ?int
