@@ -81,7 +81,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
         if ($this->consumeCount > $this->countLimit) {
             $trace = debug_backtrace();
             throw new MemoryLimitException(
-                'Count Limit exceeded after ' . $this->consumeCount . ' polls.  Function call stack is currently at ' . count($trace),
+                'Count Limit exceeded after ' . $memory / (1024 * 1024) . ' MiB were consumed.  Function call stack is currently at ' . count($trace),
                 0,
                 $memory / (1024 * 1024)
             );
