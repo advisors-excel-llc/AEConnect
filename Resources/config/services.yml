@@ -154,6 +154,7 @@ services:
     AE\ConnectBundle\Command\ListenCommand:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
+            $consumer: '@AE\ConnectBundle\Salesforce\Inbound\SObjectConsumer'
             $logger: '@?Psr\Log\LoggerInterface'
         tags: ['console.command']
     AE\ConnectBundle\Command\PollCommand:
