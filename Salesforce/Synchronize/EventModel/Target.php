@@ -66,6 +66,12 @@ class Target
         return array_filter(array_map(function (Record $record) { return $record->sObject; }, $this->records));
     }
 
+    /**
+     * Get all entities, in the case of new sObjects which have passed the createEntityWithSObject step from an sObject that
+     * is associated with a discriminated super entity, there will be several entities that were derived from the same sObject.
+     * We will not know which of these entities is 'real' until validation step.
+     * @return array
+     */
     public function getEntities(): array
     {
         return array_filter(array_map(function (Record $record) { return $record->entity; }, $this->records));
@@ -75,7 +81,15 @@ class Target
     {
         return array_filter(array_map(
             function (Record $record) { return $record->entity; },
-            array_filter($this->records, function (Record $record) { return $record->needPersist; })
+            array_filter($this->records, function (Record $record) { return $record->needPersist(); })
+        ));
+    }
+
+    public function getUpdateEntities(): array
+    {
+        return array_filter(array_map(
+            function (Record $record) { return $record->entity; },
+            array_filter($this->records, function (Record $record) { return $record->needUpdate; })
         ));
     }
 
@@ -85,6 +99,14 @@ class Target
     public function getRecordsWithErrors(): array
     {
         return array_filter($this->records, function (Record $record) { return $record->error !== ''; });
+    }
+
+    /**
+     * @return array|Record[]
+     */
+    public function getRecordsWithWarnings(): array
+    {
+        return array_filter($this->records, function (Record $record) { return $record->warning !== ''; });
     }
 
     public function canUpdate(): bool

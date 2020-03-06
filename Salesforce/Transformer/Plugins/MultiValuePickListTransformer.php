@@ -92,4 +92,9 @@ class MultiValuePickListTransformer extends AbstractTransformerPlugin
 
         $payload->setValue(implode(';', $value));
     }
+
+    public function getName(): string
+    {
+        return 'array';
+    }
 }

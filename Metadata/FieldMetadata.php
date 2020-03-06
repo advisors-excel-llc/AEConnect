@@ -33,6 +33,12 @@ class FieldMetadata extends AbstractFieldMetadata
     protected $isIdentifier = false;
 
     /**
+     * @var string
+     * @Serializer\Type("string")
+     */
+    protected $transformer;
+
+    /**
      * @var Metadata
      * @Serializer\Exclude()
      * @Serializer\Type("AE\ConnectBundle\Metadata\Metadata")
@@ -41,21 +47,23 @@ class FieldMetadata extends AbstractFieldMetadata
 
     /**
      * FieldMetadata constructor.
-     *
      * @param Metadata $metadata
-     * @param null|string $property
-     * @param null|string $field
+     * @param string|null $property
+     * @param string|null $field
+     * @param string|null $transformer
      * @param bool $isIdentifying
      */
     public function __construct(
         Metadata $metadata,
         ?string $property = null,
         ?string $field = null,
+        ?string $transformer = null,
         bool $isIdentifying = false
     ) {
         $this->metadata     = $metadata;
         $this->property     = $property;
         $this->field        = $field;
+        $this->transformer  = $transformer;
         $this->isIdentifier = $isIdentifying;
     }
 
@@ -77,6 +85,16 @@ class FieldMetadata extends AbstractFieldMetadata
         $this->field = $field;
 
         return $this;
+    }
+
+    public function getTransformer(): ?string
+    {
+        return $this->transformer;
+    }
+
+    public function setTransformer(?string $transformer)
+    {
+        $this->transformer = $transformer;
     }
 
     /**

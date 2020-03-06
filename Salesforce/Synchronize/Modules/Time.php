@@ -26,6 +26,9 @@ class Time
         'sync' => null,
         'update' => null,
         'create' => null,
+        'associate' => null,
+        'transform' => null,
+        'validate' => null,
         'flush' => null,
     ];
 
@@ -36,6 +39,9 @@ class Time
         'sync' => 0,
         'update' => 0,
         'create' => 0,
+        'associate' => 0,
+        'transform' => 0,
+        'validate' => 0,
         'flush' => 0,
     ];
     /** @var Table */
@@ -61,6 +67,15 @@ class Time
 
         $dispatch->addListener('aeconnect.create_entity_with_sobject', [$this, 'createStart'], 999);
         $dispatch->addListener('aeconnect.create_entity_with_sobject', [$this, 'createComplete'], -999);
+
+        $dispatch->addListener('aeconnect.transform_associations', [$this, 'associateStart'], 999);
+        $dispatch->addListener('aeconnect.transform_associations', [$this, 'associateComplete'], -999);
+
+        $dispatch->addListener('aeconnect.transform', [$this, 'transformStart'], 999);
+        $dispatch->addListener('aeconnect.transform', [$this, 'transformComplete'], -999);
+
+        $dispatch->addListener('aeconnect.validate', [$this, 'validateStart'], 999);
+        $dispatch->addListener('aeconnect.validate', [$this, 'validateComplete'], -999);
 
         $dispatch->addListener('aeconnect.flush', [$this, 'flushStart'], 999);
         $dispatch->addListener('aeconnect.flush', [$this, 'flushComplete'], -999);
@@ -104,7 +119,6 @@ class Time
 
     public function locateStart(SyncTargetEvent $event)
     {
-        $this->render('Locating sObjects in database.');
         if (!isset($this->timers['locate'])) {
             $this->timers['locate'] = $this->stopwatch->start('locate');
         } else {
@@ -120,7 +134,6 @@ class Time
 
     public function syncStart(SyncTargetEvent $event)
     {
-        $this->render('Syncing sObject SFIDs to database');
         if (!isset($this->timers['sync'])) {
             $this->timers['sync'] = $this->stopwatch->start('sync');
         } else {
@@ -164,6 +177,51 @@ class Time
     {
         $this->iterations['create']++;
         $this->timers['create']->stop();
+    }
+
+    public function associateStart(SyncTargetEvent $event)
+    {
+        if (!isset($this->timers['associate'])) {
+            $this->timers['associate'] = $this->stopwatch->start('associate');
+        } else {
+            $this->timers['associate']->start();
+        }
+    }
+
+    public function associateComplete(SyncTargetEvent $event)
+    {
+        $this->iterations['associate']++;
+        $this->timers['associate']->stop();
+    }
+
+    public function transformStart(SyncTargetEvent $event)
+    {
+        if (!isset($this->timers['transform'])) {
+            $this->timers['transform'] = $this->stopwatch->start('transform');
+        } else {
+            $this->timers['transform']->start();
+        }
+    }
+
+    public function transformComplete(SyncTargetEvent $event)
+    {
+        $this->iterations['transform']++;
+        $this->timers['transform']->stop();
+    }
+
+    public function validateStart(SyncTargetEvent $event)
+    {
+        if (!isset($this->timers['validate'])) {
+            $this->timers['validate'] = $this->stopwatch->start('validate');
+        } else {
+            $this->timers['validate']->start();
+        }
+    }
+
+    public function validateComplete()
+    {
+        $this->iterations['validate']++;
+        $this->timers['validate']->stop();
     }
 
     public function flushStart(SyncTargetEvent $event)

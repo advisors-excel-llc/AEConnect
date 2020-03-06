@@ -21,5 +21,9 @@ class Errors
         {
             $this->logger->error($errorRecords->error, $errorRecords->sObject->getFields());
         }
+        foreach ($event->getTarget()->getRecordsWithWarnings() as $warningRecords)
+        {
+            $this->logger->error($warningRecords->error, $warningRecords->sObject->getFields());
+        }
     }
 }

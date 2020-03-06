@@ -381,4 +381,9 @@ class AssociationTransformer extends AbstractTransformerPlugin
 
         $payload->setValue($sfid);
     }
+
+    public function getName() : string
+    {
+        return 'association';
+    }
 }

@@ -164,6 +164,7 @@ class DbalConnectionDriver
                                         $metadata,
                                         $proxyFieldMeta->getProperty(),
                                         $proxyFieldMeta->getField(),
+                                        $proxyFieldMeta->getTransformer(),
                                         $proxyFieldMeta->isIdentifier()
                                     );
                                 }

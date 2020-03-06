@@ -21,37 +21,8 @@ class GenerateQueries implements SyncHandler
 
     public function process(SyncEvent $event): void
     {
-        $connection = $event->getConnection();
-        $metadataRegistry = $connection->getMetadataRegistry();
-
         foreach ($event->getConfig()->getSObjectTargets() as $type) {
-            $recordTypes = [];
-            $fields = [];
-            foreach ($metadataRegistry->findMetadataBySObjectType($type) as $metadata) {
-                if (!$metadata->getDescribe()->isQueryable()) {
-                    $this->logger->debug('#AECONNECT #generateQueries -> #process {obj} is not queryable', ['obj' => $type]);
-                    continue;
-                }
-                $fields = array_merge($fields, $metadata->getPropertyMap());
-                // If the metadata has a class-level RecordType annotation, let's use it to filter
-                // but the moment there's metadata for the same type that doesn't have a class-level
-                // RecordType annotation, we need to get records of any record type and filter them out locally
-                $recordType = $metadata->getRecordType();
-                if (null !== $recordTypes && null !== $recordType && null !== $recordType->getName()) {
-                    $recordTypes[] = $metadata->getRecordTypeId($recordType->getName());
-                } else {
-                    $recordTypes = null;
-                }
-            }
-            if (empty($fields)) {
-                return;
-            }
-            $fields = array_unique($fields);
-            $query = "SELECT ".implode(',', $fields)." FROM $type";
-
-            if (!empty($recordTypes)) {
-                $query .= " WHERE RecordTypeId IN ('".implode("', '", $recordTypes)."')";
-            }
+            $query = "SELECT * FROM $type";
             $event->getConfig()->addQuery($type, $query);
         }
     }

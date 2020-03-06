@@ -46,6 +46,12 @@ class Metadata
     private $fieldMetadata;
 
     /**
+     * @var ArrayCollection|FieldMetadata[]
+     * @Serializer\Exclude
+     */
+    private $activeFieldMetadatas;
+
+    /**
      * @var DescribeSObject
      * @Serializer\Type("AE\SalesforceRestSdk\Model\Rest\Metadata\DescribeSObject")
      */
@@ -72,6 +78,7 @@ class Metadata
     public function __construct(string $connectionName)
     {
         $this->fieldMetadata  = new ArrayCollection();
+        $this->activeFieldMetadatas = new ArrayCollection();
         $this->connectionName = $connectionName;
     }
 
@@ -145,6 +152,24 @@ class Metadata
     public function getFieldMetadata(): ArrayCollection
     {
         return $this->fieldMetadata;
+    }
+
+    public function addActiveFieldMetadata(FieldMetadata $metadata): Metadata
+    {
+        if ($this->activeFieldMetadatas === null) {
+            $this->activeFieldMetadatas = new ArrayCollection();
+        }
+        if (!$this->activeFieldMetadatas->contains($metadata)) {
+            $this->activeFieldMetadatas->add($metadata);
+            $metadata->setMetadata($this);
+        }
+
+        return $this;
+    }
+
+    public function getActiveFieldMetadata(): ArrayCollection
+    {
+        return $this->activeFieldMetadatas;
     }
 
     /**

@@ -12,4 +12,5 @@ interface TransformerPluginInterface
 {
     public function supports(TransformerPayload $payload): bool;
     public function transform(TransformerPayload $payload);
+    public function getName(): string;
 }

@@ -9,12 +9,22 @@ class Record
 {
     /** @var SObject|null */
     public $sObject;
-    /** @var object|null  */
+    /** @var object|null */
     public $entity;
-    /** @var bool */
-    public $needPersist = false;
+    /** @var bool - An entity which has been marked as needing update.
+     * This is true AFTER successful deserialization on an sObject for which a pre existing entity was located in the database.
+     */
+    public $needUpdate = false;
+    /** @var bool - An entity which has been marked as needing create
+     * This is true AFTER successful deserialization on an sObject for which a pre existing entity was NOT located in the database.
+     */
+    public $needCreate = false;
+    /** @var bool - An entity which has passed symfony Validation successfully. */
+    public $valid = false;
     /** @var string  */
     public $error = '';
+    /** @var string */
+    public $warning = '';
 
     public function __construct(?SObject $sObject = null, ?object $entity = null)
     {
@@ -35,6 +45,15 @@ class Record
     public function canCreateInDatabase(): bool
     {
         return $this->sObject !== null && $this->entity === null;
+    }
+
+    /**
+     * An entity is only said to need to be persisted if it has both passed validation and is marked for needing creation.
+     * @return bool
+     */
+    public function needPersist(): bool
+    {
+        return $this->valid && $this->needCreate;
     }
 
     public function matchEntityToSObject(array $entities, LocationQuery $locator): void

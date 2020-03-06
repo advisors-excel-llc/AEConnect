@@ -15,6 +15,7 @@ use AE\ConnectBundle\Util\PrioritizedCollection;
 class Transformer implements TransformerInterface
 {
     private $transformers;
+    private $transformersByName = [];
 
     public function __construct()
     {
@@ -23,6 +24,12 @@ class Transformer implements TransformerInterface
 
     public function transform(TransformerPayload $payload)
     {
+        if ($payload->isBulk() && isset($this->transformersByName[$payload->getFieldMetadata()->getTransformer()])) {
+            //Fast track, if a field metadata has a transformer selected AEConnect/Field("FieldName", transformer="name")
+            //so we can skip out on checking supports and just run the transform.
+            $this->transformersByName[$payload->getFieldMetadata()->getTransformer()]->transform($payload);
+            return;
+        }
         /** @var TransformerPluginInterface $transformer */
         foreach ($this->transformers as $transformer) {
             if ($transformer->supports($payload)) {
@@ -34,5 +41,8 @@ class Transformer implements TransformerInterface
     public function registerPlugin(TransformerPluginInterface $transformer, int $priority = 0)
     {
         $this->transformers->add($transformer, $priority);
+        if ($transformer->getName()) {
+            $this->transformersByName[$transformer->getName()] = $transformer;
+        }
     }
 }

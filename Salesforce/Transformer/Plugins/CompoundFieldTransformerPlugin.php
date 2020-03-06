@@ -40,4 +40,9 @@ class CompoundFieldTransformerPlugin implements TransformerPluginInterface
         // via prePersist or preUpdate lifecycle events
         $payload->setValue(implode(' ', $value));
     }
+
+    public function getName(): string
+    {
+        return 'compoundField';
+    }
 }
