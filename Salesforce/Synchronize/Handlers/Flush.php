@@ -5,12 +5,15 @@ namespace AE\ConnectBundle\Salesforce\Synchronize\Handlers;
 use AE\ConnectBundle\Salesforce\Synchronize\EventModel\Record;
 use AE\ConnectBundle\Salesforce\Synchronize\EventModel\Target;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
+use AE\ConnectBundle\Util\GetEmTrait;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class Flush implements SyncTargetHandler
 {
+    use GetEmTrait;
+
     private $registry;
     public function __construct(RegistryInterface $registry)
     {
@@ -22,7 +25,7 @@ class Flush implements SyncTargetHandler
         $this->ensureEMOpen();
         // Persist new entities, if any
         foreach ($event->getTarget()->getNewEntities() as $entity) {
-            $em = $this->registry->getManagerForClass(get_class($entity));
+            $em = $this->getEm(get_class($entity), $this->registry);
             $em->persist($entity);
         }
 
@@ -71,12 +74,12 @@ class Flush implements SyncTargetHandler
         if (!$record->entity) {
             return;
         }
-        $manager = $this->registry->getManagerForClass(get_class($record->entity));
-        if (!$record->needPersist()) {
+        $manager = $this->getEm(get_class($record->entity), $this->registry);
+        if ($record->needPersist()) {
             //If we try to merge a new entity we are going to walk face first into an entity not found error..
-            $manager->merge($record->entity);
-        } else {
             $manager->persist($record->entity);
+        } elseif ($record->needUpdate) {
+            $manager->merge($record->entity);
         }
 
         try {

@@ -18,7 +18,13 @@ trait GetEmTrait
         if (isset($this->ems[$className]) && $this->ems[$className]->isOpen()) {
             return $this->ems[$className];
         }
-        $this->ems[$className] = $registry->getEntityManagerForClass($className);
+        $manager = $registry->getEntityManagerForClass($className);
+
+        while (method_exists($manager, 'getWrappedValueHolderValue')) {
+            $manager = $manager->getWrappedValueHolderValue();
+        }
+
+        $this->ems[$className] = $manager;
 
         return $this->ems[$className];
     }
