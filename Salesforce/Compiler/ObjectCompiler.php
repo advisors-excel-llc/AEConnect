@@ -5,30 +5,39 @@ namespace AE\ConnectBundle\Salesforce\Compiler;
 use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Metadata\RecordTypeMetadata;
+use AE\ConnectBundle\Util\GetEmTrait;
 use AE\SalesforceRestSdk\Model\SObject;
 use JMS\Serializer\Exception\RuntimeException;
 use JMS\Serializer\SerializerInterface;
+use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class ObjectCompiler
 {
+    use GetEmTrait;
+
     /** @var SerializerInterface  */
     private $serializer;
     /** @var FieldCompiler */
     private $fieldCompiler;
+    /** @var RegistryInterface */
+    private $registry;
 
     /**
      * ObjectCompiler constructor.
-     * @param FieldCompiler $compiler
+     * @param FieldCompiler $fieldCompiler
      * @param SerializerInterface $serializer
+     * @param RegistryInterface $registry
      */
-    public function __construct(FieldCompiler $fieldCompiler, SerializerInterface $serializer)
+    public function __construct(FieldCompiler $fieldCompiler, SerializerInterface $serializer, RegistryInterface $registry)
     {
         $this->serializer = $serializer;
         $this->fieldCompiler = $fieldCompiler;
+        $this->registry = $registry;
     }
 
     public function deserializeSobject(Metadata $classMeta, SObject $sObject, ?object $updateEntity = null)
     {
+        $doctrineMetadata = $this->getEm($classMeta->getClassName(), $this->registry)->getClassMetadata($classMeta->getClassName());
         $sObjectArray = $sObject->getFields();
         $serializable = [];
         foreach ($classMeta->getActiveFieldMetadata() as $field) {
@@ -38,6 +47,12 @@ class ObjectCompiler
                 continue;
             }
             $serializable[$field->getProperty()] = $sObjectArray[$field->getField()];
+            // There are a lot of instances where Salesforce likes to save data as empty string instead of null.  This causes SEVERE issues
+            // with JMS so to protect us against that data we want to interpret all empty strings as null unless the type of field
+            // is a string itself.
+            if ($sObjectArray[$field->getField()] === '' && $doctrineMetadata->getTypeOfField($field->getProperty()) !== 'string') {
+                $serializable[$field->getProperty()] = null;
+            }
         }
 
         $entity = $this->serializer->deserialize(
