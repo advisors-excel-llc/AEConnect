@@ -3,6 +3,7 @@
 namespace AE\ConnectBundle\Doctrine;
 
 use AE\ConnectBundle\Connection\ConnectionInterface;
+use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Compiler\FieldCompiler;
 use AE\ConnectBundle\Salesforce\Synchronize\EventModel\LocationQuery;
@@ -165,7 +166,7 @@ class EntityLocater implements LoggerAwareInterface
             foreach ($identifiers as $prop => $field) {
                 // We'll first ensure that our salesforce results will include this identifier by checking the query for the
                 // inclusion of just this field
-                if (!strpos($target->query, $field)) {
+                if ($metadata->getActiveFieldMetadata()->exists(function($key, FieldMetadata $field) { return $field->getField() === $field; })) {
                     //Don't use the field if we didn't query the field...
                     continue;
                 }
@@ -182,7 +183,7 @@ class EntityLocater implements LoggerAwareInterface
             }
 
             //And lastly SFID.  This run we unfortunately have to support associations as well as fields, so get ready to see this
-            if (strpos($target->query, 'Id')) {
+            if ($metadata->getActiveFieldMetadata()->exists(function($key, FieldMetadata $field) { return $field->getField() === 'Id'; })) {
                 $sfidProperty = $metadata->getIdFieldProperty();
                 if ($entityMetaData->hasAssociation($sfidProperty)) {
                     $association = $entityMetaData->getAssociationMapping($sfidProperty);

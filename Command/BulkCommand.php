@@ -98,7 +98,7 @@ class BulkCommand extends Command
                 'modules',
                 null,
                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
-                'activates debug modules.  can be any of the following:  count | time | errors ',
+                'activates debug modules.  can be any of the following:  count | time | errors | database ',
                 []
             )
         ;
