@@ -74,6 +74,7 @@ services:
         arguments:
             $fieldCompiler: '@AE\ConnectBundle\Salesforce\Compiler\FieldCompiler'
             $serializer: '@JMS\Serializer\SerializerInterface'
+            $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
     AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
