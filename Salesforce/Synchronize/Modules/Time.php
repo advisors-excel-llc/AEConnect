@@ -98,7 +98,6 @@ class Time
             'total',
             'percent'
         ]);
-
     }
 
     public function pullStart(SyncTargetEvent $event)
@@ -149,7 +148,6 @@ class Time
 
     public function updateStart(SyncTargetEvent $event)
     {
-        $this->render('Updating pre existing entities with new sObject data ');
         if (!isset($this->timers['update'])) {
             $this->timers['update'] = $this->stopwatch->start('update');
         } else {
@@ -165,7 +163,6 @@ class Time
 
     public function createStart(SyncTargetEvent $event)
     {
-        $this->render('Creating new entities from sObject data');
         if (!isset($this->timers['create'])) {
             $this->timers['create'] = $this->stopwatch->start('create');
         } else {
@@ -226,7 +223,6 @@ class Time
 
     public function flushStart(SyncTargetEvent $event)
     {
-        $this->render('Flushing data');
         if (!isset($this->timers['flush'])) {
             $this->timers['flush'] = $this->stopwatch->start('flush');
         } else {
@@ -242,7 +238,6 @@ class Time
 
     private function render($nextStep = 'master')
     {
-        $this->output->clear();
         $totalDuration = $this->timers['master']->getDuration();
         $rows = [];
         foreach (array_filter($this->timers) as $step => $timer) {
@@ -259,6 +254,7 @@ class Time
         $this->table->setRows($rows);
 
         $this->table->render();
+        $this->output->clear();
     }
 
     public function end(SyncEvent $event)
