@@ -41,7 +41,7 @@ class Configuration
         Actions $pull,
         Actions $push,
         OutputInterface $output,
-        int $batchSize = 50
+        int $batchSize = 100
     )
     {
         $this->connectionName = $connectionName;
