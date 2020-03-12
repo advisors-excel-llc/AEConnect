@@ -110,9 +110,9 @@ class Database implements SQLLogger
         $rows[] = new TableSeparator();
         $rows[] = [new TableCell(" Total queries : $this->qCount time : $this->qTime ", ['colspan' => 3])];
         $this->table->setRows($rows);
-
-        $this->table->render();
         $this->output->clear();
+        $this->table->render();
+
     }
 
     /**
@@ -138,6 +138,6 @@ class Database implements SQLLogger
     public function stopQuery()
     {
         $event = $this->watch->stop('query');
-        $this->qTime += $event->getDuration();
+        $this->qTime += $event->getPeriods()[array_key_last($event->getPeriods())]->getDuration();
     }
 }

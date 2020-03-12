@@ -51,7 +51,7 @@ class Time
 
     public function register(EventDispatcherInterface $dispatch)
     {
-        $dispatch->addListener('aeconnect.count_results_from_queries', [$this, 'receiveCounts'], 100);
+        $dispatch->addListener('aeconnect.count_results_from_queries', [$this, 'receiveCounts'], -100);
 
         $dispatch->addListener('aeconnect.pull_records', [$this, 'pullStart'], 999);
         $dispatch->addListener('aeconnect.pull_records', [$this, 'pullComplete'], -999);
@@ -95,6 +95,7 @@ class Time
             'step name',
             'iterations',
             'average',
+            'last 10',
             'total',
             'percent'
         ]);
@@ -241,10 +242,16 @@ class Time
         $totalDuration = $this->timers['master']->getDuration();
         $rows = [];
         foreach (array_filter($this->timers) as $step => $timer) {
+            $pieces = array_slice($timer->getPeriods(), -10);
+            $last10 = 0;
+            foreach ($pieces as $period) {
+                $last10 += $period->getDuration();
+            }
             $rows[] = [
                 $step,
                 $this->iterations[$step],
                 $timer->getDuration() / $this->iterations[$step],
+                $last10 / 10,
                 $timer->getDuration(),
                 min(100, $timer->getDuration() / $totalDuration * 100) . '%'
             ];
@@ -253,8 +260,9 @@ class Time
         $rows[] = [new TableCell(" $nextStep ", ['colspan' => 5])];
         $this->table->setRows($rows);
 
-        $this->table->render();
         $this->output->clear();
+        $this->table->render();
+
     }
 
     public function end(SyncEvent $event)

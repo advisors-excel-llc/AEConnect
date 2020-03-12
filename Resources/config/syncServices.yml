@@ -99,6 +99,12 @@ services:
         tags:
             - { name: kernel.event_listener, event: aeconnect.validate, method: process }
 
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\ManipulateSequenceGenerator:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.flush, method: process, priority: 10 }
+
     AE\ConnectBundle\Salesforce\Synchronize\Handlers\Flush:
         autowire: true
         autoconfigure: true
