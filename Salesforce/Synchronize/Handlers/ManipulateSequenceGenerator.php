@@ -38,7 +38,7 @@ class ManipulateSequenceGenerator extends AbstractIdGenerator implements SyncTar
         $newEntities = $event->getTarget()->getNewEntities();
         $allocationSize = count($newEntities);
         if ($allocationSize > 0) {
-            $class = get_class($newEntities[0]);
+            $class = get_class(array_pop($newEntities));
             $em = $this->getEm($class, $this->registry);
             $metadata = $em->getClassMetadata($class);
 
