@@ -18,13 +18,13 @@ class Progress
 
     public function register(EventDispatcherInterface $dispatch)
     {
-        $dispatch->addListener('aeconnect.count_results_from_queries', [$this, 'receiveCounts'], -100);
+        $dispatch->addListener('aeconnect.count_results_from_queries', [$this, 'receiveCounts'], 100);
         $dispatch->addListener('aeconnect.flush', [$this, 'incrementCounts'], -100);
     }
 
     public function receiveCounts(SyncEvent $event)
     {
-        $this->output = $event->getConfig()->getOutput();
+        $this->output = $event->getConfig()->getOutput()->section();
     }
 
     public function incrementCounts(SyncTargetEvent $event)

@@ -51,7 +51,7 @@ class Time
 
     public function register(EventDispatcherInterface $dispatch)
     {
-        $dispatch->addListener('aeconnect.count_results_from_queries', [$this, 'receiveCounts'], 100);
+        $dispatch->addListener('aeconnect.count_results_from_queries', [$this, 'receiveCounts'], -100);
 
         $dispatch->addListener('aeconnect.pull_records', [$this, 'pullStart'], 999);
         $dispatch->addListener('aeconnect.pull_records', [$this, 'pullComplete'], -999);
@@ -95,10 +95,10 @@ class Time
             'step name',
             'iterations',
             'average',
+            'last 10',
             'total',
             'percent'
         ]);
-
     }
 
     public function pullStart(SyncTargetEvent $event)
@@ -149,7 +149,6 @@ class Time
 
     public function updateStart(SyncTargetEvent $event)
     {
-        $this->render('Updating pre existing entities with new sObject data ');
         if (!isset($this->timers['update'])) {
             $this->timers['update'] = $this->stopwatch->start('update');
         } else {
@@ -165,7 +164,6 @@ class Time
 
     public function createStart(SyncTargetEvent $event)
     {
-        $this->render('Creating new entities from sObject data');
         if (!isset($this->timers['create'])) {
             $this->timers['create'] = $this->stopwatch->start('create');
         } else {
@@ -226,7 +224,6 @@ class Time
 
     public function flushStart(SyncTargetEvent $event)
     {
-        $this->render('Flushing data');
         if (!isset($this->timers['flush'])) {
             $this->timers['flush'] = $this->stopwatch->start('flush');
         } else {
@@ -242,14 +239,19 @@ class Time
 
     private function render($nextStep = 'master')
     {
-        $this->output->clear();
         $totalDuration = $this->timers['master']->getDuration();
         $rows = [];
         foreach (array_filter($this->timers) as $step => $timer) {
+            $pieces = array_slice($timer->getPeriods(), -10);
+            $last10 = 0;
+            foreach ($pieces as $period) {
+                $last10 += $period->getDuration();
+            }
             $rows[] = [
                 $step,
                 $this->iterations[$step],
                 $timer->getDuration() / $this->iterations[$step],
+                $last10 / 10,
                 $timer->getDuration(),
                 min(100, $timer->getDuration() / $totalDuration * 100) . '%'
             ];
@@ -258,7 +260,9 @@ class Time
         $rows[] = [new TableCell(" $nextStep ", ['colspan' => 5])];
         $this->table->setRows($rows);
 
+        $this->output->clear();
         $this->table->render();
+
     }
 
     public function end(SyncEvent $event)

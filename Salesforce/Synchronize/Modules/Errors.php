@@ -12,7 +12,7 @@ class Errors
 
     public function register(EventDispatcherInterface $dispatch)
     {
-        $dispatch->addListener('aeconnect.flush', [$this, 'recordErrors'], 101);
+        $dispatch->addListener('aeconnect.flush', [$this, 'recordErrors'], -101);
     }
 
     public function recordErrors(SyncTargetEvent $event)

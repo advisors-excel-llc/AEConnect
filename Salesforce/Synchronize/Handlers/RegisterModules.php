@@ -4,6 +4,7 @@
 namespace AE\ConnectBundle\Salesforce\Synchronize\Handlers;
 
 
+use AE\ConnectBundle\Salesforce\Synchronize\Modules\Database;
 use AE\ConnectBundle\Salesforce\Synchronize\Modules\Errors;
 use AE\ConnectBundle\Salesforce\Synchronize\Modules\Progress;
 use AE\ConnectBundle\Salesforce\Synchronize\Modules\Time;
@@ -51,7 +52,11 @@ class RegisterModules implements SyncHandler
             $errors->setLogger($this->logger);
         }
         if ($event->getConfig()->debugDatabase()) {
-            //If we ever write a module to look at the doctrine loggers we'd also have to set some sqlLogger here to the configuration.
+            $database = new Database();
+            $database->register($this->dispatcher);
+            foreach ($this->registry->getConnections() as $connection) {
+                $connection->getConfiguration()->setSQLLogger($database);
+            }
         } else {
             foreach ($this->registry->getConnections() as $connection) {
                 $connection->getConfiguration()->setSQLLogger(null);
