@@ -13,7 +13,7 @@ use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
-use Doctrine\ORM\Event\LifecycleEventArgs;
+use Doctrine\Persistence\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\OnClearEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\ORM\Event\PreFlushEventArgs;
@@ -87,7 +87,7 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
 
     public function prePersist(LifecycleEventArgs $event)
     {
-        $entity = $event->getEntity();
+        $entity = $event->getObject();
         $this->upsertEntity($entity);
     }
 
@@ -98,7 +98,7 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
 
     public function preUpdate(LifecycleEventArgs $event)
     {
-        $entity = $event->getEntity();
+        $entity = $event->getObject();
         $this->upsertEntity($entity);
     }
 
@@ -109,7 +109,7 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
 
     public function preRemove(LifecycleEventArgs $event)
     {
-        $entity = $event->getEntity();
+        $entity = $event->getObject();
         $this->removeEntity($entity);
     }
 
