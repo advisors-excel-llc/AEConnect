@@ -16,7 +16,6 @@ use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use Doctrine\Persistence\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\OnClearEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
-use Doctrine\ORM\Event\PreFlushEventArgs;
 use Doctrine\ORM\Events;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
