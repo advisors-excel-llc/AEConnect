@@ -10,7 +10,7 @@ use AE\ConnectBundle\Salesforce\Synchronize\Modules\Progress;
 use AE\ConnectBundle\Salesforce\Synchronize\Modules\Time;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncEvent;
 use Psr\Log\LoggerAwareTrait;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -21,14 +21,14 @@ class RegisterModules implements SyncHandler
 
     private $dispatcher;
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
     public function __construct(
         EventDispatcherInterface $dispatcher,
         LoggerInterface $logger,
-        RegistryInterface $registry
+        ManagerRegistry $registry
     )
     {
         $this->dispatcher = $dispatcher;

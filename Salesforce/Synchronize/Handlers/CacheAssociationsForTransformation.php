@@ -8,7 +8,7 @@ use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
 use AE\ConnectBundle\Salesforce\Transformer\Util\AssociationCache;
 use AE\ConnectBundle\Util\GetEmTrait;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 class CacheAssociationsForTransformation implements SyncTargetHandler
 {
@@ -17,7 +17,7 @@ class CacheAssociationsForTransformation implements SyncTargetHandler
     /** @var AssociationCache $cache */
     protected $cache;
 
-    /** @var RegistryInterface */
+    /** @var ManagerRegistry */
     protected $registry;
 
     /** @var EntityLocater */
@@ -25,7 +25,7 @@ class CacheAssociationsForTransformation implements SyncTargetHandler
 
     private $transformingFields = [];
 
-    public function __construct(AssociationCache $cache, RegistryInterface $registry, EntityLocater $locater)
+    public function __construct(AssociationCache $cache, ManagerRegistry $registry, EntityLocater $locater)
     {
         $this->cache = $cache;
         $this->registry = $registry;

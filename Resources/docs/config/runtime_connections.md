@@ -92,7 +92,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use AE\ConnectBundle\Sdk\AuthProvider\MutableOAuthProvider;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use AE\ConnectBundle\Connection\Dbal\RefreshTokenCredentialsInterface;
 use Symfony\Component\HttpFoundation\Response;
 use AE\ConnectBundle\Driver\DbalConnectionDriver;
@@ -107,7 +107,7 @@ use App\Entity\OrgConnection;
 class SalesforceConnection extends Controller {
     
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $doctrine;
     
@@ -116,7 +116,7 @@ class SalesforceConnection extends Controller {
      */
     private $dbalDriver;
     
-    public function __construct(RegistryInterface $doctrine, DbalConnectionDriver $driver)
+    public function __construct(ManagerRegistry $doctrine, DbalConnectionDriver $driver)
      {
          $this->doctrine   = $doctrine;
          $this->dbalDriver = $driver;

@@ -19,7 +19,7 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class EntityCompiler
@@ -37,7 +37,7 @@ class EntityCompiler
     private $validator;
 
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
@@ -53,7 +53,7 @@ class EntityCompiler
 
     public function __construct(
         ConnectionManagerInterface $connectionManager,
-        RegistryInterface $registry,
+        ManagerRegistry $registry,
         EntityLocater $entityLocater,
         FieldCompiler $fieldCompiler,
         ValidatorInterface $validator,

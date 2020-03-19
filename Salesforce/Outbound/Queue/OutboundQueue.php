@@ -20,7 +20,7 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 class OutboundQueue implements LoggerAwareInterface
 {
@@ -39,7 +39,7 @@ class OutboundQueue implements LoggerAwareInterface
     private $connectionManager;
 
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
@@ -56,7 +56,7 @@ class OutboundQueue implements LoggerAwareInterface
     public function __construct(
         CacheProvider $cache,
         ConnectionManagerInterface $connectionManager,
-        RegistryInterface $registry,
+        ManagerRegistry $registry,
         FieldCompiler $fieldCompiler,
         ?LoggerInterface $logger = null
     ) {

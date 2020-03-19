@@ -5,7 +5,7 @@ namespace AE\ConnectBundle\Salesforce\Synchronize\Handlers;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
 use AE\ConnectBundle\Salesforce\Transformer\Util\AssociationCache;
 use AE\ConnectBundle\Util\GetEmTrait;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 class TransformAssociations implements SyncTargetHandler
 {
@@ -13,10 +13,10 @@ class TransformAssociations implements SyncTargetHandler
 
     /** @var AssociationCache $cache */
     protected $cache;
-    /** @var RegistryInterface  */
+    /** @var ManagerRegistry  */
     protected $registry;
 
-    public function __construct(AssociationCache $cache, RegistryInterface $registry)
+    public function __construct(AssociationCache $cache, ManagerRegistry $registry)
     {
         $this->cache = $cache;
         $this->registry = $registry;

@@ -13,7 +13,7 @@ use AE\ConnectBundle\Connection\Dbal\SalesforceIdEntityInterface;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\ORM\Mapping\ClassMetadata;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 class SfidFinder
 {
@@ -23,11 +23,11 @@ class SfidFinder
     private $reader;
 
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
-    public function __construct(Reader $reader, RegistryInterface $registry)
+    public function __construct(Reader $reader, ManagerRegistry $registry)
     {
         $this->reader   = $reader;
         $this->registry = $registry;

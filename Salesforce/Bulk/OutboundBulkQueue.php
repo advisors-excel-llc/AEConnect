@@ -26,14 +26,14 @@ use Doctrine\ORM\Tools\Pagination\Paginator;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 class OutboundBulkQueue
 {
     use LoggerAwareTrait;
 
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
@@ -68,7 +68,7 @@ class OutboundBulkQueue
     private $batchSize = 50;
 
     public function __construct(
-        RegistryInterface $registry,
+        ManagerRegistry $registry,
         EntityTreeMaker $treeMaker,
         SObjectCompiler $compiler,
         OutboundQueue $outboundQueue,

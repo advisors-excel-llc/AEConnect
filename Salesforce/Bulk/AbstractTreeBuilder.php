@@ -11,16 +11,16 @@ namespace AE\ConnectBundle\Salesforce\Bulk;
 use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Metadata\MetadataRegistry;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 abstract class AbstractTreeBuilder
 {
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     protected $registry;
 
-    public function __construct(RegistryInterface $registry)
+    public function __construct(ManagerRegistry $registry)
     {
         $this->registry = $registry;
     }

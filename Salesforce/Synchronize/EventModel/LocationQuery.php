@@ -3,13 +3,12 @@
 namespace AE\ConnectBundle\Salesforce\Synchronize\EventModel;
 
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
-use Doctrine\Common\Persistence\ObjectRepository;
-use Doctrine\ORM\EntityRepository;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ObjectRepository;
+use Doctrine\Persistence\ManagerRegistry;
 
 class LocationQuery
 {
-    /** @var RegistryInterface */
+    /** @var ManagerRegistry */
     private $registry;
     private $className;
 
@@ -66,14 +65,14 @@ class LocationQuery
         ];
     }
 
-    public function setRepository(RegistryInterface $registry, string $className)
+    public function setRepository(ManagerRegistry $registry, string $className)
     {
         $this->registry = $registry;
         $this->className = $className;
     }
 
     /**
-     * @return ObjectRepository|EntityRepository
+     * @return ObjectRepository
      */
     public function getRepository(): ObjectRepository
     {

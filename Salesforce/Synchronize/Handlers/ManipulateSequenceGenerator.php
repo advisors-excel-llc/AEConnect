@@ -1,6 +1,5 @@
 <?php
 
-
 namespace AE\ConnectBundle\Salesforce\Synchronize\Handlers;
 
 use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
@@ -8,18 +7,19 @@ use AE\ConnectBundle\Util\GetEmTrait;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Id\AbstractIdGenerator;
 use Doctrine\ORM\Id\SequenceGenerator;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 class ManipulateSequenceGenerator extends AbstractIdGenerator implements SyncTargetHandler
 {
     use GetEmTrait;
 
+    /** @var ManagerRegistry */
     private $registry;
     private $sequenceGeneratorDefinition;
     /** @var SequenceGenerator $wrappedGenerator */
     private $wrappedGenerator;
 
-    public function __construct(RegistryInterface $registry)
+    public function __construct(ManagerRegistry $registry)
     {
         $this->registry = $registry;
     }
