@@ -98,6 +98,11 @@ class Target
         return array_filter($this->records, function (Record $record) { return $record->error !== ''; });
     }
 
+    public function getRecordsWithEntities(): array
+    {
+        return array_filter($this->records, function (Record $record) { return $record->entity !== null; });
+    }
+
     /**
      * @return array|Record[]
      */
