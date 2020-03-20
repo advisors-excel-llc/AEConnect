@@ -23,12 +23,12 @@ class ValidateEntities implements SyncTargetHandler
     {
         $validated = [];
         //Lets try to validate classes in order of MOST OFTEN using this sweet trick.
-        $recordClasses = array_map(function (Record $record) { return get_class($record->entity); }, $event->getTarget()->records);
+        $recordClasses = array_map(function (Record $record) { return get_class($record->entity); }, $event->getTarget()->getRecordsWithEntities());
         $this->order = array_merge(array_combine($recordClasses, array_fill(0, count($recordClasses), 0)), $this->order);
         arsort($this->order, SORT_NUMERIC);
 
         $recordsByClass = array_reduce(
-            $event->getTarget()->records,
+            $event->getTarget()->getRecordsWithEntities(),
             function ($carry, Record $record) { $carry[get_class($record->entity)][] = $record; return $carry; },
             array_combine(array_keys($this->order), array_fill(0, count($this->order), []))
         );
