@@ -2,9 +2,6 @@
 
 namespace AE\ConnectBundle\Salesforce\Synchronize\EventModel;
 
-use Doctrine\Bundle\DoctrineBundle\Registry;
-use Doctrine\Common\Persistence\ObjectManager;
-
 class Target
 {
     public $name = '';
