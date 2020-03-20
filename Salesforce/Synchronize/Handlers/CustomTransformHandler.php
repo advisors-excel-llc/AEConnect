@@ -21,7 +21,7 @@ class CustomTransformHandler implements SyncTargetHandler
 
     public function process(SyncTargetEvent $event): void
     {
-        foreach ($event->getTarget()->records as $record) {
+        foreach ($event->getTarget()->getRecordsWithEntities() as $record) {
             $classMeta = $event->getConnection()->getMetadataRegistry()->findMetadataForEntity($record->entity);
             $this->objectCompiler->runTransformers($classMeta, $record->sObject, $record->entity);
         }
