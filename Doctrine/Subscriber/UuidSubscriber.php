@@ -10,10 +10,10 @@ namespace AE\ConnectBundle\Doctrine\Subscriber;
 
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use Doctrine\Common\EventSubscriber;
-use Doctrine\Common\Util\ClassUtils;
 use Doctrine\DBAL\Types\Type;
-use Doctrine\ORM\Event\LifecycleEventArgs;
-use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\EntityManager;
+use Doctrine\Persistence\Event\LifecycleEventArgs;
+use Doctrine\Orm\Mapping\ClassMetadata;
 use Ramsey\Uuid\Doctrine\UuidBinaryOrderedTimeType;
 use Ramsey\Uuid\Doctrine\UuidBinaryType;
 use Ramsey\Uuid\Doctrine\UuidType;
@@ -49,9 +49,10 @@ class UuidSubscriber implements EventSubscriber
      */
     public function prePersist(LifecycleEventArgs $event)
     {
-        $entity = $event->getEntity();
-        $class  = ClassUtils::getClass($entity);
-        $this->populateUuids($entity, $event->getEntityManager()->getClassMetadata($class));
+        $em = $event->getObjectManager();
+        if ($em instanceof EntityManager) {
+            $this->populateUuids($event->getObject(), $em->getClassMetadata(get_class($event->getObject())));
+        }
     }
 
     /**
@@ -61,9 +62,10 @@ class UuidSubscriber implements EventSubscriber
      */
     public function preUpdate(LifecycleEventArgs $event)
     {
-        $entity = $event->getEntity();
-        $class  = ClassUtils::getClass($entity);
-        $this->populateUuids($entity, $event->getEntityManager()->getClassMetadata($class));
+        $em = $event->getObjectManager();
+        if ($em instanceof EntityManager) {
+            $this->populateUuids($event->getObject(), $em->getClassMetadata(get_class($event->getObject())));
+        }
     }
 
     /**

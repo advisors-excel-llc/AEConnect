@@ -8,18 +8,17 @@
 
 namespace AE\ConnectBundle\Salesforce\Compiler;
 
-use AE\ConnectBundle\AuthProvider\SoapProvider;
 use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
 use AE\ConnectBundle\Salesforce\Transformer\TransformerInterface;
 use AE\SalesforceRestSdk\Model\SObject;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 class FieldCompiler
 {
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
@@ -28,7 +27,7 @@ class FieldCompiler
      */
     private $transformer;
 
-    public function __construct(RegistryInterface $registry, TransformerInterface $transformer)
+    public function __construct(ManagerRegistry $registry, TransformerInterface $transformer)
     {
         $this->registry    = $registry;
         $this->transformer = $transformer;

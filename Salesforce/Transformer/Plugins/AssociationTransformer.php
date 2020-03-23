@@ -25,7 +25,7 @@ use Doctrine\ORM\Proxy\Proxy;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class AssociationTransformer extends AbstractTransformerPlugin
@@ -37,7 +37,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
     private $connectionManager;
 
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $managerRegistry;
 
@@ -53,7 +53,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
 
     public function __construct(
         ConnectionManagerInterface $connectionManager,
-        RegistryInterface $managerRegistry,
+        ManagerRegistry $managerRegistry,
         ValidatorInterface $validator,
         SfidFinder $sfidFinder,
         ?LoggerInterface $logger = null

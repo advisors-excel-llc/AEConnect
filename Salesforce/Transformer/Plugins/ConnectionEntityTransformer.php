@@ -8,21 +8,15 @@
 
 namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 
-use AE\ConnectBundle\Annotations\Connection;
-use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder;
-use Doctrine\Common\Annotations\AnnotationRegistry;
-use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\MappingException;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class ConnectionEntityTransformer extends AbstractTransformerPlugin implements LoggerAwareInterface
 {

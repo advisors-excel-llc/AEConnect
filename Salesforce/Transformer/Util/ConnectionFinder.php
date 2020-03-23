@@ -19,14 +19,14 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 class ConnectionFinder implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
@@ -35,7 +35,7 @@ class ConnectionFinder implements LoggerAwareInterface
      */
     private $reader;
 
-    public function __construct(RegistryInterface $registry, Reader $reader, ?LoggerInterface $logger = null)
+    public function __construct(ManagerRegistry $registry, Reader $reader, ?LoggerInterface $logger = null)
     {
         $this->registry = $registry;
         $this->reader   = $reader;

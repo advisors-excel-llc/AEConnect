@@ -14,8 +14,6 @@ use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Mapping\ClassMetadata;
-use Doctrine\ORM\Query;
-use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\NullLogger;
@@ -23,7 +21,7 @@ use Ramsey\Uuid\Doctrine\UuidBinaryOrderedTimeType;
 use Ramsey\Uuid\Doctrine\UuidBinaryType;
 use Ramsey\Uuid\Doctrine\UuidType;
 use Ramsey\Uuid\Uuid;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * Created by PhpStorm.
@@ -36,7 +34,7 @@ class EntityLocater implements LoggerAwareInterface
     use LoggerAwareTrait;
 
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
@@ -47,7 +45,7 @@ class EntityLocater implements LoggerAwareInterface
 
     private $cachedDQL = [];
 
-    public function __construct(RegistryInterface $registry, FieldCompiler $fieldCompiler)
+    public function __construct(ManagerRegistry $registry, FieldCompiler $fieldCompiler)
     {
         $this->registry      = $registry;
         $this->logger        = new NullLogger();

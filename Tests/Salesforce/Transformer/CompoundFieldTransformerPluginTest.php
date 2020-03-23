@@ -8,13 +8,10 @@
 
 namespace AE\ConnectBundle\Tests\Salesforce\Transformer;
 
-use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\CompoundFieldTransformerPlugin;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
 use AE\ConnectBundle\Tests\Entity\Contact;
-use AE\ConnectBundle\Tests\KernelTestCase;
 use AE\SalesforceRestSdk\Model\SObject;
-use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class CompoundFieldTransformerPluginTest extends AbstractTransformerTest
 {

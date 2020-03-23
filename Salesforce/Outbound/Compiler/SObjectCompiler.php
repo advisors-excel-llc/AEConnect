@@ -13,8 +13,6 @@ use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Compiler\FieldCompiler;
-use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
-use AE\ConnectBundle\Salesforce\Transformer\Transformer;
 use AE\SalesforceRestSdk\Model\Rest\Composite\CompositeSObject;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManager;
@@ -23,7 +21,7 @@ use Doctrine\ORM\UnitOfWork;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class SObjectCompiler
@@ -36,7 +34,7 @@ class SObjectCompiler
     private $connectionManager;
 
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
@@ -52,7 +50,7 @@ class SObjectCompiler
 
     public function __construct(
         ConnectionManagerInterface $connectionManager,
-        RegistryInterface $registry,
+        ManagerRegistry $registry,
         FieldCompiler $fieldCompiler,
         ValidatorInterface $validator,
         ?LoggerInterface $logger = null

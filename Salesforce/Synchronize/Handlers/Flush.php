@@ -8,14 +8,14 @@ use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
 use AE\ConnectBundle\Util\GetEmTrait;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 class Flush implements SyncTargetHandler
 {
     use GetEmTrait;
 
     private $registry;
-    public function __construct(RegistryInterface $registry)
+    public function __construct(ManagerRegistry $registry)
     {
         $this->registry = $registry;
     }

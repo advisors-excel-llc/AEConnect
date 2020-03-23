@@ -4,12 +4,10 @@ namespace AE\ConnectBundle\Salesforce\Compiler;
 
 use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Metadata\Metadata;
-use AE\ConnectBundle\Metadata\RecordTypeMetadata;
 use AE\ConnectBundle\Util\GetEmTrait;
 use AE\SalesforceRestSdk\Model\SObject;
-use JMS\Serializer\Exception\RuntimeException;
 use JMS\Serializer\SerializerInterface;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 class ObjectCompiler
 {
@@ -19,16 +17,16 @@ class ObjectCompiler
     private $serializer;
     /** @var FieldCompiler */
     private $fieldCompiler;
-    /** @var RegistryInterface */
+    /** @var ManagerRegistry */
     private $registry;
 
     /**
      * ObjectCompiler constructor.
      * @param FieldCompiler $fieldCompiler
      * @param SerializerInterface $serializer
-     * @param RegistryInterface $registry
+     * @param ManagerRegistry $registry
      */
-    public function __construct(FieldCompiler $fieldCompiler, SerializerInterface $serializer, RegistryInterface $registry)
+    public function __construct(FieldCompiler $fieldCompiler, SerializerInterface $serializer, ManagerRegistry $registry)
     {
         $this->serializer = $serializer;
         $this->fieldCompiler = $fieldCompiler;
