@@ -40,7 +40,7 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * Class DbalConnectionDriver
@@ -57,7 +57,7 @@ class DbalConnectionDriver
     private $connectionManager;
 
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
@@ -75,13 +75,13 @@ class DbalConnectionDriver
      * DbalConnectionDriver constructor.
      *
      * @param ConnectionManagerInterface $connectionManager
-     * @param RegistryInterface $registry
+     * @param ManagerRegistry $registry
      * @param PollingService $pollingService
      * @param null|LoggerInterface $logger
      */
     public function __construct(
         ConnectionManagerInterface $connectionManager,
-        RegistryInterface $registry,
+        ManagerRegistry $registry,
         PollingService $pollingService,
         ?LoggerInterface $logger = null
     ) {

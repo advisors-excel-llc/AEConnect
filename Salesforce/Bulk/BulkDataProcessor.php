@@ -8,16 +8,9 @@
 
 namespace AE\ConnectBundle\Salesforce\Bulk;
 
-use AE\ConnectBundle\Connection\ConnectionInterface;
-use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
-use AE\ConnectBundle\Connection\Dbal\SalesforceIdEntityInterface;
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\ORM\EntityRepository;
-use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\MappingException;
-use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class BulkDataProcessor
 {

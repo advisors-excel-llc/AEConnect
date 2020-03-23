@@ -10,7 +10,7 @@ namespace AE\ConnectBundle\Tests\Salesforce\Transformer;
 
 use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Tests\KernelTestCase;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 abstract class AbstractTransformerTest extends KernelTestCase
 {
@@ -20,7 +20,7 @@ abstract class AbstractTransformerTest extends KernelTestCase
     protected $connectionManager;
 
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     protected $registry;
 
@@ -28,7 +28,7 @@ abstract class AbstractTransformerTest extends KernelTestCase
     {
         parent::setUp();
         $this->connectionManager = $this->get(ConnectionManagerInterface::class);
-        $this->registry          = $this->get(RegistryInterface::class);
+        $this->registry          = $this->get(ManagerRegistry::class);
     }
 
     abstract public function testOutbound();

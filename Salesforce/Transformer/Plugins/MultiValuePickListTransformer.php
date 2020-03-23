@@ -12,16 +12,16 @@ use Doctrine\DBAL\Types\ArrayType;
 use Doctrine\DBAL\Types\JsonType;
 use Doctrine\DBAL\Types\SimpleArrayType;
 use Doctrine\DBAL\Types\Type;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 class MultiValuePickListTransformer extends AbstractTransformerPlugin
 {
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
-    public function __construct(RegistryInterface $registry)
+    public function __construct(ManagerRegistry $registry)
     {
         $this->registry = $registry;
     }

@@ -11,16 +11,16 @@ namespace AE\ConnectBundle\Salesforce\Transformer\Plugins;
 use Doctrine\DBAL\DBALException;
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 class DateTimeTransformer extends AbstractTransformerPlugin
 {
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
-    public function __construct(RegistryInterface $registry)
+    public function __construct(ManagerRegistry $registry)
     {
         $this->registry = $registry;
     }

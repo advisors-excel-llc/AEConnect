@@ -12,9 +12,6 @@ use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Doctrine\EntityLocater;
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\SalesforceRestSdk\Model\SObject;
-use Ramsey\Uuid\Doctrine\UuidType;
-use Ramsey\Uuid\Uuid;
-use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class BulkPreprocessor
 {

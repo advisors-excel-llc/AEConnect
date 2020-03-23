@@ -13,20 +13,20 @@ use AE\ConnectBundle\Connection\Dbal\ConnectionEntityInterface;
 use AE\ConnectBundle\Connection\Dbal\SalesforceIdEntityInterface;
 use AE\ConnectBundle\Metadata\FieldMetadata;
 use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Persistence\ObjectManager;
+use Doctrine\Persistence\ObjectManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\NullLogger;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
 class SfidReset implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     private $registry;
 
@@ -35,7 +35,7 @@ class SfidReset implements LoggerAwareInterface
      */
     private $treeMaker;
 
-    public function __construct(RegistryInterface $registry, SObjectTreeMaker $treeMaker)
+    public function __construct(ManagerRegistry $registry, SObjectTreeMaker $treeMaker)
     {
         $this->registry = $registry;
         $this->treeMaker = $treeMaker;

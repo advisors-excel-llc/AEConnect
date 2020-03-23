@@ -8,13 +8,10 @@
 
 namespace AE\ConnectBundle\Tests\Salesforce\Transformer;
 
-use AE\ConnectBundle\Manager\ConnectionManagerInterface;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\MultiValuePickListTransformer;
 use AE\ConnectBundle\Salesforce\Transformer\Plugins\TransformerPayload;
 use AE\ConnectBundle\Tests\Entity\Account;
-use AE\ConnectBundle\Tests\KernelTestCase;
 use AE\SalesforceRestSdk\Model\SObject;
-use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class MutliValuePicklistTest extends AbstractTransformerTest
 {

@@ -31,7 +31,7 @@ services:
                 type: 'AE\SalesforceRestSdk\Model\SObject'
     AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $registry: '@Doctrine\Persistence\ManagerRegistry'
         $fieldCompiler: '@AE\ConnectBundle\Salesforce\Compiler\FieldCompiler'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
         $logger: '@Psr\Log\LoggerInterface'
@@ -40,7 +40,7 @@ services:
         $entityCompiler: '@AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler'
         $producer: '@enqueue.client.ae_connect.producer'
         $serializer: '@JMS\Serializer\SerializerInterface'
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $registry: '@Doctrine\Persistence\ManagerRegistry'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor:
         arguments:
@@ -54,7 +54,7 @@ services:
     AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue:
         $cache: '@doctrine_cache.providers.ae_connect_outbound_queue'
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $registry: '@Doctrine\Persistence\ManagerRegistry'
         $fieldCompiler: '@AE\ConnectBundle\Salesforce\Compiler\FieldCompiler'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Doctrine\Subscriber\UuidSubscriber:
@@ -63,24 +63,24 @@ services:
         tags: ['doctrine.event_subscriber']
     AE\ConnectBundle\Doctrine\EntityLocater:
         arguments:
-            $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+            $registry: '@Doctrine\Persistence\ManagerRegistry'
             $fieldCompiler: '@AE\ConnectBundle\Salesforce\Compiler\FieldCompiler'
         calls:
             - ['setLogger', ['@Psr\Log\LoggerInterface']]
     AE\ConnectBundle\Salesforce\Compiler\FieldCompiler:
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $registry: '@Doctrine\Persistence\ManagerRegistry'
         $transformer: '@AE\ConnectBundle\Salesforce\Transformer\TransformerInterface'
     AE\ConnectBundle\Salesforce\Compiler\ObjectCompiler:
         arguments:
             $fieldCompiler: '@AE\ConnectBundle\Salesforce\Compiler\FieldCompiler'
             $serializer: '@JMS\Serializer\SerializerInterface'
-            $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+            $registry: '@Doctrine\Persistence\ManagerRegistry'
     AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
         $fieldCompiler: '@AE\ConnectBundle\Salesforce\Compiler\FieldCompiler'
         $entityLocater: '@AE\ConnectBundle\Doctrine\EntityLocater'
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $registry: '@Doctrine\Persistence\ManagerRegistry'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Inbound\SObjectConsumer:
         arguments:
@@ -92,9 +92,9 @@ services:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
     AE\ConnectBundle\Salesforce\Bulk\EntityTreeMaker:
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $registry: '@Doctrine\Persistence\ManagerRegistry'
     AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker:
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $registry: '@Doctrine\Persistence\ManagerRegistry'
     AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor:
         $entityLocater: '@AE\ConnectBundle\Doctrine\EntityLocater'
     AE\ConnectBundle\Salesforce\Bulk\BulkApiProcessor:
@@ -121,7 +121,7 @@ services:
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue:
         $compiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $registry: '@Doctrine\Persistence\ManagerRegistry'
         $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\EntityTreeMaker'
         $outboundQueue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
         $reader: '@Doctrine\Common\Annotations\Reader'
@@ -129,7 +129,7 @@ services:
         $batchSize: '%ae_connect.db_batch_size%'
         $logger: '@Psr\Log\LoggerInterface'
     AE\ConnectBundle\Salesforce\Bulk\SfidReset:
-        $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+        $registry: '@Doctrine\Persistence\ManagerRegistry'
         $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker'
     AE\ConnectBundle\Salesforce\Bulk\BulkDataProcessor:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
@@ -187,7 +187,7 @@ services:
     AE\ConnectBundle\Driver\DbalConnectionDriver:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
-            $registry: '@Symfony\Bridge\Doctrine\RegistryInterface'
+            $registry: '@Doctrine\Persistence\ManagerRegistry'
             $pollingService: '@AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService'
             $logger: '@?Psr\Log\LoggerInterface'
         public: true

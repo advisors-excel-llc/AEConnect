@@ -13,7 +13,7 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use Fidry\AliceDataFixtures\LoaderInterface;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Finder\Finder;
 
 trait DatabaseTestTrait
@@ -23,7 +23,7 @@ trait DatabaseTestTrait
      */
     protected $loader;
     /**
-     * @var RegistryInterface
+     * @var ManagerRegistry
      */
     protected $doctrine;
 
@@ -58,19 +58,19 @@ trait DatabaseTestTrait
     }
 
     /**
-     * @return RegistryInterface
+     * @return ManagerRegistry
      */
-    public function getDoctrine(): RegistryInterface
+    public function getDoctrine(): ManagerRegistry
     {
         return $this->doctrine;
     }
 
     /**
-     * @param RegistryInterface $doctrine
+     * @param ManagerRegistry $doctrine
      *
      * @return DatabaseTestTrait
      */
-    public function setDoctrine(RegistryInterface $doctrine)
+    public function setDoctrine(ManagerRegistry $doctrine)
     {
         $this->doctrine = $doctrine;
 
