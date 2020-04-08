@@ -29,22 +29,15 @@ class CompositeSObjectSubscriber extends CompositeSObjectHandler
             $context
         );
 
-        $metadata = $context->getMetadataFactory()->getMetadataForClass(CompositeSObject::class);
-        $visitor->startVisitingObject($metadata, $sObject, $type, $context);
-
         // Find and deserialize any ReferencePlaceholders that may exist
         foreach ($sObject->getFields() as $field => $value) {
             if (is_array($value) && in_array('entityRefId', array_keys($value))) {
                 $sObject->$field = $context->getNavigator()->accept(
                     $value,
-                    ['name' => ReferencePlaceholder::class],
-                    $context
-                )
-                ;
+                    ['name' => ReferencePlaceholder::class]
+                );
             }
         }
-
-        $visitor->endVisitingObject($metadata, $sObject, $type, $context);
 
         return $sObject;
     }
