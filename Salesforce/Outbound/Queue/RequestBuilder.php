@@ -3,7 +3,7 @@
  * Created by PhpStorm.
  * User: alex.boyce
  * Date: 10/16/18
- * Time: 11:31 AM
+ * Time: 11:31 AM.
  */
 
 namespace AE\ConnectBundle\Salesforce\Outbound\Queue;
@@ -21,8 +21,6 @@ class RequestBuilder
 {
     /**
      * @param $items
-     *
-     * @return array
      */
     public static function build($items): array
     {
@@ -56,13 +54,6 @@ class RequestBuilder
         ];
     }
 
-    /**
-     * @param array $inserts
-     * @param array $updates
-     * @param array $deletes
-     *
-     * @return CompositeRequest
-     */
     public static function buildRequest(array $inserts = [], array $updates = [], array $deletes = []): CompositeRequest
     {
         $builder = new CompositeRequestBuilder();
@@ -106,16 +97,12 @@ class RequestBuilder
         return $builder->build();
     }
 
-    /**
-     * @param DependencyNode $node
-     * @param ArrayCollection $collection
-     */
     private static function addToCollection(DependencyNode $node, ArrayCollection $collection)
     {
-        $item   = $node->getItem();
-        $type   = $item->getSObject()->getType();
+        $item = $node->getItem();
+        $type = $item->getSObject()->getType();
         $intent = $item->getIntent();
-        $refId  = $item->getReferenceId();
+        $refId = $item->getReferenceId();
 
         /** @var ItemizedCollection $subCollection */
         $subCollection = $collection->get($intent);
@@ -130,27 +117,21 @@ class RequestBuilder
         }
     }
 
-    /**
-     * @param DependencyNode $node
-     * @param ArrayCollection $collection
-     *
-     * @return bool
-     */
     private static function canAddToCollection(DependencyNode $node, ArrayCollection $collection): bool
     {
-        $insertCount  = 0;
+        $insertCount = 0;
         $updateCounts = [];
         $deleteCounts = [];
-        $insertTypes  = [];
+        $insertTypes = [];
 
         self::countSubRequests($node, $insertCount, $updateCounts, $deleteCounts, $insertTypes);
 
-        $collectionInsertCount  = ceil($collection->get(CompilerResult::INSERT)->count() % 200);
+        $collectionInsertCount = ceil($collection->get(CompilerResult::INSERT)->count() % 200);
         $collectionUpdateCounts = [];
         $collectionDeleteCounts = [];
-        $totalInserts           = $collectionInsertCount + $insertCount;
-        $totalUpdates           = 0;
-        $totalDeletes           = 0;
+        $totalInserts = $collectionInsertCount + $insertCount;
+        $totalUpdates = 0;
+        $totalDeletes = 0;
 
         foreach ($collection->get(CompilerResult::UPDATE)->getKeys() as $type) {
             if (!array_key_exists($type, $collectionUpdateCounts)) {
@@ -161,7 +142,7 @@ class RequestBuilder
 
         foreach ($updateCounts as $type => $count) {
             $collectionCount = array_key_exists($type, $collectionUpdateCounts) ? $collectionUpdateCounts[$type] : 0;
-            $totalUpdates    += ceil(($collectionCount + $count) % 200);
+            $totalUpdates += ceil(($collectionCount + $count) % 200);
         }
 
         foreach ($collection->get(CompilerResult::DELETE)->getKeys() as $type) {
@@ -173,19 +154,12 @@ class RequestBuilder
 
         foreach ($deleteCounts as $type => $count) {
             $collectionCount = array_key_exists($type, $collectionDeleteCounts) ? $collectionDeleteCounts[$type] : 0;
-            $totalDeletes    += ceil(($collectionCount + $count) % 200);
+            $totalDeletes += ceil(($collectionCount + $count) % 200);
         }
 
         return 25 >= ($totalInserts + $totalUpdates + $totalDeletes);
     }
 
-    /**
-     * @param DependencyNode $node
-     * @param int $insertCount
-     * @param array $updateCounts
-     * @param array $deleteCounts
-     * @param array $insertTypes
-     */
     private static function countSubRequests(
         DependencyNode $node,
         int &$insertCount,
@@ -193,9 +167,9 @@ class RequestBuilder
         array &$deleteCounts,
         array &$insertTypes
     ) {
-        $item   = $node->getItem();
+        $item = $node->getItem();
         $intent = $item->getIntent();
-        $type   = $item->getSObject()->getType();
+        $type = $item->getSObject()->getType();
 
         switch ($intent) {
             case CompilerResult::INSERT:
@@ -217,17 +191,11 @@ class RequestBuilder
         }
     }
 
-    /**
-     * @param ItemizedCollection $collection
-     * @param array $partitions
-     *
-     * @return array
-     */
     private static function partitionInserts(
         ItemizedCollection $collection,
         array $partitions = []
     ): array {
-        $waitList  = new ItemizedCollection();
+        $waitList = new ItemizedCollection();
         $partition = end($partitions);
 
         if (false === $partition) {
@@ -236,13 +204,13 @@ class RequestBuilder
 
         /** @var CompilerResult $item */
         foreach ($collection as $item) {
-            $type  = $item->getSObject()->getType();
+            $type = $item->getSObject()->getType();
             $types = null === $partition ? [] : $partition->getKeys();
 
-            if ((false === array_search($type, $types) && count($types) === 5) || count($partition) === 200) {
+            if ((false === array_search($type, $types) && 5 === count($types)) || 200 === count($partition)) {
                 self::processWaitList($partitions, $waitList);
                 // Check to see if we've created any room in the current partition
-                if ((false === array_search($type, $types) && count($types) === 5) || count($partition) === 200) {
+                if ((false === array_search($type, $types) && 5 === count($types)) || 200 === count($partition)) {
                     $partitions[uniqid('insert_')] = $partition = new ItemizedCollection();
                 }
             }
@@ -254,7 +222,7 @@ class RequestBuilder
         self::processWaitList($partitions, $waitList);
 
         if (!$waitList->isEmpty()) {
-            if (count(array_diff($collection->getKeys(), $waitList->getKeys())) === 0) {
+            if (0 === count(array_diff($collection->getKeys(), $waitList->getKeys()))) {
                 $partitions[uniqid('insert_')] = new ItemizedCollection();
             }
             $partitions = self::partitionInserts($waitList, $partitions);
@@ -270,7 +238,7 @@ class RequestBuilder
         reset($partitions);
         /** @var CompilerResult $item */
         foreach ($currentPartition as $item) {
-            $object    = $item->getSObject();
+            $object = $item->getSObject();
             $defRefIds = [];
 
             foreach ($object->getFields() as $value) {
@@ -307,48 +275,37 @@ class RequestBuilder
     }
 
     /**
-     * @param ItemizedCollection $collection
-     *
      * @return array
      */
     private static function partitionCollection(ItemizedCollection $collection)
     {
         $partitions = [];
-        $types      = $collection->getKeys();
+        $types = $collection->getKeys();
 
         foreach ($types as $type) {
-            $items      = $collection->get($type);
+            $items = $collection->get($type);
             $partitions = array_merge($partitions, self::partition($items));
         }
 
         return $partitions;
     }
 
-    /**
-     * @param array $items
-     *
-     * @return array
-     */
     private static function partition(array $items): array
     {
         $partitions = [];
-        $offset     = 0;
+        $offset = 0;
 
         while (($slice = array_slice($items, $offset, 200, true))) {
             $partitions[uniqid('coll_')] = $slice;
-            $offset                      += count($slice);
+            $offset += count($slice);
         }
 
         return $partitions;
     }
 
-    /**
-     * @param array $set
-     * @param array $inserts
-     */
     private static function hydrateReferencePlaceholders(array $set, array $inserts)
     {
-        /** @var CompilerResult $item */
+        /* @var CompilerResult $item */
         foreach ($set as $items) {
             foreach ($items as $item) {
                 $object = $item->getSObject();
@@ -356,7 +313,7 @@ class RequestBuilder
                     if ($value instanceof ReferencePlaceholder) {
                         list($row, $ref) = self::getReferenceIdForPlaceholder($value, $inserts);
                         if (null !== $ref) {
-                            $reference      = new Reference($ref);
+                            $reference = new Reference($ref);
                             $object->$field = $reference->field('['.$row.'].id');
                         }
                     }
@@ -365,12 +322,6 @@ class RequestBuilder
         }
     }
 
-    /**
-     * @param ReferencePlaceholder $placeholder
-     * @param array $inserts
-     *
-     * @return array
-     */
     private static function getReferenceIdForPlaceholder(ReferencePlaceholder $placeholder, array $inserts): array
     {
         $entityId = $placeholder->getEntityRefId();
