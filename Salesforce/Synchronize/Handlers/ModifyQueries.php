@@ -11,9 +11,9 @@ use Psr\Log\NullLogger;
 class ModifyQueries implements SyncHandler
 {
     use LoggerAwareTrait;
+
     /**
      * GetAllTargets constructor.
-     * @param LoggerInterface|null $logger
      */
     public function __construct(?LoggerInterface $logger = null)
     {
@@ -24,10 +24,9 @@ class ModifyQueries implements SyncHandler
     {
         $queries = $event->getConfig()->getQueries();
         $event->getConfig()->clearQueries();
-        foreach ($queries as $target => $query)
-        {
+        foreach ($queries as $target => $query) {
             $classMetas = $event->getConnection()->getMetadataRegistry()->findMetadataBySObjectType($target);
-            $query = strtoupper($query);
+            $query = $this->handleUpperCasing($query);
             $query = $this->handleAsterik($classMetas, $query);
             $query = $this->handleRecordTypeWhereClause($classMetas, strtoupper($target), $query);
             $this->activateFields($classMetas, strtoupper($target), $query);
@@ -38,20 +37,35 @@ class ModifyQueries implements SyncHandler
     }
 
     /**
-     * Changes out a * in a query for all of the fields that AEConnect is listening on
-     * @param array $metadatas
-     * @param string $query
-     * @return string
+     * Upper cases a query, but does not upper case parameters of a query like SFIDs.
+     */
+    private function handleUpperCasing(string $query): string
+    {
+        $queryParts = explode("'", $query);
+        // This capitalizes every other string, and since we exploded on ',
+        // we are capitalizing everything that is not surrounded in quotes.
+        $cappedParts = array_map(
+            function (string $part, int $idx) { return (bool) ($idx % 2) ? $part : strtoupper($part); },
+            $queryParts,
+            array_keys($queryParts)
+        );
+
+        return implode("'", $cappedParts);
+    }
+
+    /**
+     * Changes out a * in a query for all of the fields that AEConnect is listening on.
      */
     private function handleAsterik(array $metadatas, string $query): string
     {
-        if (strpos($query, '*') === false) {
+        if (false === strpos($query, '*')) {
             return $query;
         }
         $fields = [];
         foreach ($metadatas as $metadata) {
             $fields = array_merge($fields, $metadata->getPropertyMap());
         }
+
         return str_replace('*', strtoupper(implode(',', $fields)), $query);
     }
 
@@ -79,9 +93,9 @@ class ModifyQueries implements SyncHandler
         $recordTypePredicate = "WHERE RecordTypeId IN ('".implode("', '", $recordTypes)."')";
         //We need to carefully modify the query to include only the record types we need.
         //First lets see if there is already a where clause
-        if ($wherePosition = strpos($query, 'WHERE') === false) {
+        if ($wherePosition = false === strpos($query, 'WHERE')) {
             //There isn't, so we just need to return our where clause appended to the query.
-            return implode($target . ' ' . $recordTypePredicate . ' ', explode($target, $query, 2));
+            return implode($target.' '.$recordTypePredicate.' ', explode($target, $query, 2));
         }
 
         // Check if the where clause includes RECORDTYPE already or not.
@@ -92,28 +106,29 @@ class ModifyQueries implements SyncHandler
             $whereClause = substr($whereClause, 0, $orderByPosition);
         }
 
-        if (strpos($whereClause, 'RECORDTYPE') !== false) {
+        if (false !== strpos($whereClause, 'RECORDTYPE')) {
             //The query already includes a record type filter, best to leave the query alone.
             return $query;
         }
 
-        return str_replace('WHERE', $recordTypePredicate . ' AND ', $query);
+        return str_replace('WHERE', $recordTypePredicate.' AND ', $query);
     }
 
     /**
-     * During a BULK SYNC, a user may have elected a subset of fields to include in the
+     * During a BULK SYNC, a user may have elected a subset of fields to include in the.
+     *
      * @param Metadata[] $metadatas
-     * @param string $query
+     *
      * @return string
      */
     private function activateFields(array $metadatas, string $target, string $query)
     {
-        $fieldListStr = str_replace(' ', '', substr($query, strpos($query, 'SELECT') + 7, strpos($query, 'FROM ' . $target) - 7));
+        $fieldListStr = str_replace(' ', '', substr($query, strpos($query, 'SELECT') + 7, strpos($query, 'FROM '.$target) - 7));
         //These are all the fields we want active from our SELECT.  Anything outside of that we want to pretend they don't exist.
         $fields = explode(',', $fieldListStr);
-        foreach($metadatas as $metadata) {
+        foreach ($metadatas as $metadata) {
             foreach ($metadata->getFieldMetadata() as $fieldMetadata) {
-                if (array_search(strtoupper($fieldMetadata->getField()), $fields) !== false) {
+                if (false !== array_search(strtoupper($fieldMetadata->getField()), $fields)) {
                     $metadata->addActiveFieldMetadata($fieldMetadata);
                 }
             }
@@ -123,15 +138,18 @@ class ModifyQueries implements SyncHandler
     private function isQueryable(array $metadatas, string $query): bool
     {
         foreach ($metadatas as $metadata) {
-            if (! $metadata->getDescribe()->isQueryable()) {
+            if (!$metadata->getDescribe()->isQueryable()) {
                 $this->logger->debug(
                     '#AECONNECT #generateQueries -> #process {obj} is not queryable',
                     ['obj' => $metadata->getClassName()]
                 );
+
                 return false;
             }
+
             return true;
         }
+
         return false;
     }
 }
