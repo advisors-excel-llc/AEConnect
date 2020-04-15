@@ -7,6 +7,7 @@ class Target
     public $name = '';
     public $query = '';
     public $count = 0;
+    public $bulkOffset = 0;
     /** @var array|Record[] */
     public $records = [];
 

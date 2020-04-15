@@ -36,6 +36,19 @@ class GetQueryCounts implements SyncHandler
             $targetObj->name = $target;
             $targetObj->query = $query;
             $targetObj->count = min($response->getRecords()[0]->getExpr0() - $offset, $limit);
+
+            // Bulk API does not support OFFSET so we have to add OFFSET to LIMIT, and then
+            // strip OFFSET out from our query and instead skip that many records in the CSV we get back.
+            if ($targetObj->count > $event->getConnection()->getBulkApiMinCount()) {
+                // Add a bulk offset amount here so we know to SKIP that many records later on.
+                $targetObj->bulkOffset = $offset;
+                // remove OFFSET
+                $targetObj->query = preg_replace('/OFFSET[\s]+[^\s,]+(,[\s]*[\S]+)*/', '', $targetObj->query);
+                // Replace LIMIT with offset + limit
+                $newLimit = $limit + $offset;
+                $targetObj->query = preg_replace('/LIMIT[\s]+[^\s,]+(,[\s]*[\S]+)*/', "LIMIT $newLimit", $targetObj->query);
+            }
+
             $event->addTarget($targetObj);
         }
     }
