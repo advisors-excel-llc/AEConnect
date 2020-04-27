@@ -3,7 +3,7 @@
  * Created by PhpStorm.
  * User: alex.boyce
  * Date: 10/21/18
- * Time: 3:08 PM
+ * Time: 3:08 PM.
  */
 
 namespace AE\ConnectBundle\Salesforce\Inbound;
@@ -14,6 +14,7 @@ use AE\ConnectBundle\Util\Exceptions\MemoryLimitException;
 use AE\SalesforceRestSdk\Bayeux\ChannelInterface;
 use AE\SalesforceRestSdk\Bayeux\Message;
 use AE\SalesforceRestSdk\Bayeux\Salesforce\Event;
+use AE\SalesforceRestSdk\Bayeux\Salesforce\StreamingData;
 use AE\SalesforceRestSdk\Model\SObject;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -32,6 +33,19 @@ class SObjectConsumer implements SalesforceConsumerInterface
      * @var SalesforceConnector
      */
     private $connector;
+    private $throughputCalculations = [
+        'lastTime' => 0,
+        'averageTime' => 0,
+        'averageTimeBySObject' => [],
+        'last100' => 0,
+        'last100Queue' => null,
+        'throughput' => [
+            'count' => 0,
+            'time' => 0,
+            'perMinute' => 0,
+            'perHour' => 0,
+        ],
+    ];
 
     public function __construct(SalesforceConnector $connector, ?LoggerInterface $logger = null)
     {
@@ -43,21 +57,26 @@ class SObjectConsumer implements SalesforceConsumerInterface
     {
         return [
             'objects' => '*',
-            'topics'  => '*',
+            'topics' => '*',
         ];
     }
 
     public function consume(ChannelInterface $channel, Message $message)
     {
         $data = $message->getData();
+        $replayId = $data->getEvent()->getReplayId();
+
+        $sObject = substr($this->getSfidFromData($data), 0, 3);
 
         $this->logger->debug(
-            "LISTENER RECEIVED: Channel `{channel}` | {data}",
+            "#LISTENER RECEIVED #$sObject $replayId: Channel `{channel}` | {data}",
             [
                 'channel' => $channel->getChannelId(),
-                'data'    => $message->getData(),
+                'data' => $message->getData(),
             ]
         );
+
+        $start = microtime(true);
 
         if (null !== $data) {
             if (null !== $data->getSobject()) {
@@ -66,26 +85,88 @@ class SObjectConsumer implements SalesforceConsumerInterface
                 $this->consumeChangeEvent($data->getPayload());
             }
         }
-        $this->consumeCount++;
+
+        $this->logger->debug("#LISTENER COMPLETE #$sObject $replayId");
+
+        $stop = microtime(true);
+        $this->throughputCalculations = $this->throughPut($this->throughputCalculations, $stop - $start, $this->getSfidFromData($data));
+        $this->logger->info('THROUGHPUT CALCULATIONS {throughput}', ['throughput' => $this->throughputCalculations]);
+
+        ++$this->consumeCount;
         $memory = memory_get_usage();
 
         if (($memory / (1024 * 1024)) > $this->memoryLimit) {
             $trace = debug_backtrace();
-            throw new MemoryLimitException(
-                'Memory Limit exceeded after ' . $this->consumeCount . ' polls.  Function call stack is currently at ' . count($trace),
-                0,
-                $memory / (1024 * 1024)
-            );
+            throw new MemoryLimitException('Memory Limit exceeded after '.$this->consumeCount.' polls.  Function call stack is currently at '.count($trace), 0, $memory / (1024 * 1024));
         }
 
         if ($this->consumeCount > $this->messageLimit) {
             $trace = debug_backtrace();
-            throw new MemoryLimitException(
-                'Count Limit exceeded after ' . $memory / (1024 * 1024) . ' MiB were consumed.  Function call stack is currently at ' . count($trace),
-                0,
-                $memory / (1024 * 1024)
-            );
+            throw new MemoryLimitException('Count Limit exceeded after '.$memory / (1024 * 1024).' MiB were consumed.  Function call stack is currently at '.count($trace), 0, $memory / (1024 * 1024));
         }
+    }
+
+    private function throughPut(array $throughputCalculations, $time, ?string $sfid = null): array
+    {
+        //last time
+        $throughputCalculations['lastTime'] = $time;
+
+        //throughput
+        ++$throughputCalculations['throughput']['count'];
+        $throughputCalculations['throughput']['time'] += $time;
+        $throughputCalculations['throughput']['perMinute'] =
+            $throughputCalculations['throughput']['count'] / ($throughputCalculations['throughput']['time'] / 60);
+        $throughputCalculations['throughput']['perHour'] =
+            $throughputCalculations['throughput']['count'] / ($throughputCalculations['throughput']['time'] / 3600);
+
+        //average
+        $throughputCalculations['averageTime'] = $throughputCalculations['throughput']['count'] / $throughputCalculations['throughput']['time'];
+
+        // last 100 average
+        if (!$throughputCalculations['last100Queue']) {
+            $throughputCalculations['last100Queue'] = new \SplQueue();
+        }
+        /** @var \SplQueue $q */
+        $q = $throughputCalculations['last100Queue'];
+        $throughputCalculations['last100'] += $time;
+        $q->enqueue($time);
+        if ($q->count() > 100) {
+            $throughputCalculations['last100'] -= $q->dequeue();
+        }
+
+        //averageBysObject
+        if ($sfid) {
+            $sObject = substr($sfid, 0, 3);
+            if (!isset($throughputCalculations['averageTimeBySObject'][$sObject])) {
+                $throughputCalculations['averageTimeBySObject'][$sObject] = [
+                    'lastTime' => 0,
+                    'averageTime' => 0,
+                    'last100' => 0,
+                    'last100Queue' => null,
+                    'throughput' => [
+                        'count' => 0,
+                        'time' => 0,
+                        'perMinute' => 0,
+                        'perHour' => 0,
+                    ],
+                ];
+            }
+            $throughputCalculations['averageTimeBySObject'][$sObject] = $this->throughPut($throughputCalculations['averageTimeBySObject'][$sObject], $time);
+        }
+        return $throughputCalculations;
+    }
+
+    private function getSfidFromData(?StreamingData $data): string
+    {
+        if (!$data) {
+            return 'N/A';
+        }
+        if (null !== $data->getSobject()) {
+            return $data->getSobject()->getId();
+        } elseif (null !== $data->getPayload() && is_array($data->getPayload())) {
+            return $data->getPayload()['ChangeEventHeader']['recordIds'][0];
+        }
+        return 'N/A';
     }
 
     public function setMemoryLimit(int $limit)
@@ -116,16 +197,16 @@ class SObjectConsumer implements SalesforceConsumerInterface
         }
 
         switch ($intent) {
-            case "CREATE":
+            case 'CREATE':
                 $intent = SalesforceConsumerInterface::CREATED;
                 break;
-            case "UPDATE":
+            case 'UPDATE':
                 $intent = SalesforceConsumerInterface::UPDATED;
                 break;
-            case "DELETE":
+            case 'DELETE':
                 $intent = SalesforceConsumerInterface::DELETED;
                 break;
-            case "UNDELETE":
+            case 'UNDELETE':
                 $intent = SalesforceConsumerInterface::UNDELETED;
                 break;
             default:
@@ -135,7 +216,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
         $sObject = new SObject(
             $payload + [
                 '__SOBJECT_TYPE__' => $changeEventHeader['entityName'],
-                'Id'               => $changeEventHeader['recordIds'][0],
+                'Id' => $changeEventHeader['recordIds'][0],
             ]
         );
 
