@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3cbe95802cf405986fae5461267f90b3",
+    "content-hash": "81542b3ff1e14f962b31de8534be9b10",
     "packages": [
         {
             "name": "ae/salesforce-rest-sdk",
-            "version": "v1.4.0",
+            "version": "v1.4.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/advisors-excel-llc/salesforce-rest-sdk.git",
-                "reference": "53804af03f14a92dc3afcd8d0cedc4f595902082"
+                "reference": "18e327aa54acedf472117bb5dc4e7016881932c0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/advisors-excel-llc/salesforce-rest-sdk/zipball/53804af03f14a92dc3afcd8d0cedc4f595902082",
-                "reference": "53804af03f14a92dc3afcd8d0cedc4f595902082",
+                "url": "https://api.github.com/repos/advisors-excel-llc/salesforce-rest-sdk/zipball/18e327aa54acedf472117bb5dc4e7016881932c0",
+                "reference": "18e327aa54acedf472117bb5dc4e7016881932c0",
                 "shasum": ""
             },
             "require": {
@@ -59,10 +59,10 @@
             ],
             "description": "An SDK for the Salesforce Rest API",
             "support": {
-                "source": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/tree/v1.4.0",
+                "source": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/tree/v1.4.1",
                 "issues": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/issues"
             },
-            "time": "2020-03-06T22:46:15+00:00"
+            "time": "2020-04-27T23:14:56+00:00"
         },
         {
             "name": "doctrine/annotations",

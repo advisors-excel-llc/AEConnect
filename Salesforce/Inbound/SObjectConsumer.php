@@ -38,7 +38,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
         'averageTime' => 0,
         'averageTimeBySObject' => [],
         'last100' => 0,
-        'last100Queue' => null,
+        'last100Queue' => 0,
         'throughput' => [
             'count' => 0,
             'time' => 0,
@@ -46,6 +46,8 @@ class SObjectConsumer implements SalesforceConsumerInterface
             'perHour' => 0,
         ],
     ];
+
+    private $last100Queues = [];
 
     public function __construct(SalesforceConnector $connector, ?LoggerInterface $logger = null)
     {
@@ -72,7 +74,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
             "#LISTENER RECEIVED #$sObject $replayId: Channel `{channel}` | {data}",
             [
                 'channel' => $channel->getChannelId(),
-                'data' => $message->getData(),
+                'data' => $message->getData()->getSobject() ?? $message->getData()->getPayload(),
             ]
         );
 
@@ -85,16 +87,21 @@ class SObjectConsumer implements SalesforceConsumerInterface
                 $this->consumeChangeEvent($data->getPayload());
             }
         }
-
-        $this->logger->debug("#LISTENER COMPLETE #$sObject $replayId");
-
         $stop = microtime(true);
-        $this->throughputCalculations = $this->throughPut($this->throughputCalculations, $stop - $start, $this->getSfidFromData($data));
-        $this->logger->info('THROUGHPUT CALCULATIONS {throughput}', ['throughput' => $this->throughputCalculations]);
-
         ++$this->consumeCount;
-        $memory = memory_get_usage();
+        $speed = $stop - $start;
+        $this->logger->debug("#LISTENER COMPLETE #$sObject $replayId in $speed s");
 
+        $this->throughputCalculations = $this->throughPut($this->throughputCalculations, $speed, $this->getSfidFromData($data));
+
+        if (0 === $this->consumeCount % 50) {
+            $this->logger->info(
+                'THROUGHPUT CALCULATIONS {throughput}',
+                ['throughput' => $this->throughputCalculations]
+            );
+        }
+
+        $memory = memory_get_usage();
         if (($memory / (1024 * 1024)) > $this->memoryLimit) {
             $trace = debug_backtrace();
             throw new MemoryLimitException('Memory Limit exceeded after '.$this->consumeCount.' polls.  Function call stack is currently at '.count($trace), 0, $memory / (1024 * 1024));
@@ -123,11 +130,11 @@ class SObjectConsumer implements SalesforceConsumerInterface
         $throughputCalculations['averageTime'] = $throughputCalculations['throughput']['count'] / $throughputCalculations['throughput']['time'];
 
         // last 100 average
-        if (!$throughputCalculations['last100Queue']) {
-            $throughputCalculations['last100Queue'] = new \SplQueue();
+        if (!isset($this->last100Queues[$throughputCalculations['last100Queue']])) {
+            $this->last100Queues[$throughputCalculations['last100Queue']] = new \SplQueue();
         }
         /** @var \SplQueue $q */
-        $q = $throughputCalculations['last100Queue'];
+        $q = $this->last100Queues[$throughputCalculations['last100Queue']];
         $throughputCalculations['last100'] += $time;
         $q->enqueue($time);
         if ($q->count() > 100) {
@@ -142,7 +149,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
                     'lastTime' => 0,
                     'averageTime' => 0,
                     'last100' => 0,
-                    'last100Queue' => null,
+                    'last100Queue' => count($this->last100Queues),
                     'throughput' => [
                         'count' => 0,
                         'time' => 0,
