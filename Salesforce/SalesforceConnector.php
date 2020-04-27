@@ -262,7 +262,7 @@ class SalesforceConnector implements LoggerAwareInterface
                 }
             }
 
-            $this->logger->info('{intent} entity of type {type}', ['intent' => $intent, 'type' => $class]);
+            $this->logger->info('{intent} {entity}', ['intent' => $intent, 'entity' => $entity->__toString()]);
         }
 
 
