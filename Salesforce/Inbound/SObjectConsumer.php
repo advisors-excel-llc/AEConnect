@@ -38,7 +38,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
         'averageTime' => 0,
         'averageTimeBySObject' => [],
         'last100' => 0,
-        'last100Queue' => null,
+        'last100Queue' => 0,
         'throughput' => [
             'count' => 0,
             'time' => 0,
@@ -46,6 +46,8 @@ class SObjectConsumer implements SalesforceConsumerInterface
             'perHour' => 0,
         ],
     ];
+
+    private $last100Queues = [];
 
     public function __construct(SalesforceConnector $connector, ?LoggerInterface $logger = null)
     {
@@ -128,11 +130,11 @@ class SObjectConsumer implements SalesforceConsumerInterface
         $throughputCalculations['averageTime'] = $throughputCalculations['throughput']['count'] / $throughputCalculations['throughput']['time'];
 
         // last 100 average
-        if (!$throughputCalculations['last100Queue']) {
-            $throughputCalculations['last100Queue'] = new \SplQueue();
+        if (!isset($this->last100Queues[$throughputCalculations['last100Queue']])) {
+            $this->last100Queues[$throughputCalculations['last100Queue']] = new \SplQueue();
         }
         /** @var \SplQueue $q */
-        $q = $throughputCalculations['last100Queue'];
+        $q = $this->last100Queues[$throughputCalculations['last100Queue']];
         $throughputCalculations['last100'] += $time;
         $q->enqueue($time);
         if ($q->count() > 100) {
@@ -147,7 +149,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
                     'lastTime' => 0,
                     'averageTime' => 0,
                     'last100' => 0,
-                    'last100Queue' => null,
+                    'last100Queue' => count($this->last100Queues),
                     'throughput' => [
                         'count' => 0,
                         'time' => 0,
