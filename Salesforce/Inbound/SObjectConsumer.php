@@ -66,8 +66,10 @@ class SObjectConsumer implements SalesforceConsumerInterface
         $data = $message->getData();
         $replayId = $data->getEvent()->getReplayId();
 
+        $sObject = substr($this->getSfidFromData($data), 0, 3);
+
         $this->logger->debug(
-            "LISTENER RECEIVED $replayId: Channel `{channel}` | {data}",
+            "#LISTENER RECEIVED #$sObject $replayId: Channel `{channel}` | {data}",
             [
                 'channel' => $channel->getChannelId(),
                 'data' => $message->getData(),
@@ -84,7 +86,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
             }
         }
 
-        $this->logger->debug("LISTENER COMPLETE $replayId");
+        $this->logger->debug("#LISTENER COMPLETE #$sObject $replayId");
 
         $stop = microtime(true);
         $this->throughputCalculations = $this->throughPut($this->throughputCalculations, $stop - $start, $this->getSfidFromData($data));
@@ -154,14 +156,17 @@ class SObjectConsumer implements SalesforceConsumerInterface
         return $throughputCalculations;
     }
 
-    private function getSfidFromData(StreamingData $data): ?string
+    private function getSfidFromData(?StreamingData $data): string
     {
+        if (!$data) {
+            return 'N/A';
+        }
         if (null !== $data->getSobject()) {
             return $data->getSobject()->getId();
         } elseif (null !== $data->getPayload() && is_array($data->getPayload())) {
             return $data->getPayload()['ChangeEventHeader']['recordIds'][0];
         }
-        return null;
+        return 'N/A';
     }
 
     public function setMemoryLimit(int $limit)
