@@ -16,6 +16,7 @@ class PullRecords implements SyncTargetHandler
      * E.G., [Product2 => true] indicates that Product2 has ran and has returned all of its results.
      *       [Account => false] indicates that an Account query has ran but has not yet returned all of its results.
      *       Absent key means there has never been a query which has ran.
+     *
      * @var array
      */
     private $done = [];
@@ -28,17 +29,24 @@ class PullRecords implements SyncTargetHandler
     /** @var \Generator */
     private $csv;
 
-
     /**
-     * @param SyncTargetEvent $event
      * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function process(SyncTargetEvent $event): void
     {
-        if ($event->getTarget()->count > $event->getConnection()->getBulkApiMinCount())
-        {
-            $records = $this->bulk($event);
+        if ($event->getTarget()->count > $event->getConnection()->getBulkApiMinCount()) {
+            //Apply our OFFSET by just skipping records
+            do {
+                $records = $this->bulk($event);
+                if ($event->getTarget()->bulkOffset) {
+                    $event->getTarget()->bulkOffset -= count($records);
+                }
+                if ($event->getTarget()->bulkOffset < 0) {
+                    $records = array_slice($records, 0, count($records) + $event->getTarget()->bulkOffset);
+                    $event->getTarget()->bulkOffset = 0;
+                }
+            } while ($event->getTarget()->bulkOffset);
         } else {
             $records = $this->composite($event);
         }
@@ -52,9 +60,10 @@ class PullRecords implements SyncTargetHandler
      * In composite, we want to first add a initial query as a string to the object if there isn't one already.
      * If there is a query but we have no results to splice off the array, we will get the next query results from the client
      * and put those results on the object.
-     * Finally, we will splice the current result set we are working with
-     * @param SyncTargetEvent $event
+     * Finally, we will splice the current result set we are working with.
+     *
      * @return array
+     *
      * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
@@ -79,6 +88,7 @@ class PullRecords implements SyncTargetHandler
             //If we are out of results and we are done with this query completely, free this object from memory so the next
             //incoming query can run.
             $this->query = null;
+
             return [];
         }
 
@@ -88,8 +98,9 @@ class PullRecords implements SyncTargetHandler
     /**
      * In Bulk, we want to first run the job for getting a .csv dump of all the results from salesforce into our results set on the object
      * and then as long as we have results, we will splice off BATchSize and supply that to the event every time we pull more records.
-     * @param SyncTargetEvent $event
+     *
      * @return array
+     *
      * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
@@ -98,30 +109,30 @@ class PullRecords implements SyncTargetHandler
         $client = $event->getConnection()->getBulkClient();
 
         if (
-            empty($this->batchResults) && ($this->csv === null || $this->csv->current() === null) &&
+            empty($this->batchResults) && (null === $this->csv || null === $this->csv->current()) &&
             (!isset($this->done[$event->getTarget()->name]) || !$this->done[$event->getTarget()->name])
         ) {
-            $this->job     = $client->createJob($event->getTarget()->name, JobInfo::QUERY, JobInfo::TYPE_CSV);
-            $batch         = $client->addBatch($this->job, $event->getTarget()->query);
+            $this->job = $client->createJob($event->getTarget()->name, JobInfo::QUERY, JobInfo::TYPE_CSV);
+            $batch = $client->addBatch($this->job, $event->getTarget()->query);
             $this->batchId = $batch->getId();
             $this->batchResults = $this->getBatchResults($client, $this->job, $batch);
             $this->done[$event->getTarget()->name] = true;
         }
 
-        if (!empty($this->batchResults) && ($this->csv === null || $this->csv->current() === null)) {
+        if (!empty($this->batchResults) && (null === $this->csv || null === $this->csv->current())) {
             $nextBatch = array_shift($this->batchResults);
             $result = $client->getResult($this->job, $this->batchId, $nextBatch);
             $this->csv = $result->getContents(true);
         }
 
-        if ($this->csv->current() === null) {
+        if (null === $this->csv->current()) {
             //all done!
             return [];
         }
 
         $i = 0;
         $results = [];
-        do  {
+        do {
             $row = $this->csv->current();
             $object = new CompositeSObject($event->getTarget()->name);
             foreach ($row as $field => $value) {
@@ -129,7 +140,7 @@ class PullRecords implements SyncTargetHandler
             }
             $object->__SOBJECT_TYPE__ = $event->getTarget()->name;
             $results[] = $object;
-            $i++;
+            ++$i;
             $this->csv->next();
         } while (($this->csv->current() && $i < $event->getTarget()->batchSize));
 
@@ -137,11 +148,8 @@ class PullRecords implements SyncTargetHandler
     }
 
     /**
-     * @param Client $client
-     * @param JobInfo $job
-     * @param BatchInfo $batch
-     *
      * @return array
+     *
      * @throws \AE\SalesforceRestSdk\AuthProvider\SessionExpiredOrInvalidException
      * @throws \GuzzleHttp\Exception\GuzzleException
      */

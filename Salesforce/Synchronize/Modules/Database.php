@@ -102,9 +102,9 @@ class Database implements SQLLogger
             $rows[] = [
                 $step,
                 $stats['count'],
-                $stats['count'] / $stats['iterations'],
+                $stats['count'] / ($stats['iterations'] ? $stats['iterations'] : 1),
                 $stats['time'],
-                $stats['time'] / $stats['iterations']
+                $stats['time'] / ($stats['iterations'] ? $stats['iterations'] : 1),
             ];
         }
         $rows[] = new TableSeparator();

@@ -18,7 +18,7 @@ services:
         arguments:
             $registry: '@Doctrine\Persistence\ManagerRegistry'
             $reader: '@Doctrine\Common\Annotations\Reader'
-            $logger: '@?Psr\Log\LoggerInterface'
+            $logger: '@Psr\Log\SyncLogger'
         public: true
     AE\ConnectBundle\Salesforce\Transformer\Plugins\CompoundFieldTransformerPlugin: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\StringLengthTransformer: ~
@@ -27,7 +27,7 @@ services:
         $managerRegistry: '@Doctrine\Persistence\ManagerRegistry'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
         $sfidFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder'
-        $logger: '@?Psr\Log\LoggerInterface'
+        $logger: '@Psr\Log\SyncLogger'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\DateTimeTransformer:
         $registry: '@Doctrine\Persistence\ManagerRegistry'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\MultiValuePickListTransformer:
@@ -36,11 +36,11 @@ services:
     AE\ConnectBundle\Salesforce\Transformer\Plugins\UuidTransformerPlugin: ~
     AE\ConnectBundle\Salesforce\Transformer\Plugins\ConnectionEntityTransformer:
         $connectionFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\ConnectionFinder'
-        $logger: '@?Psr\Log\LoggerInterface'
+        $logger: '@Psr\Log\SyncLogger'
     AE\ConnectBundle\Salesforce\Transformer\Plugins\SfidTransformer:
         arguments:
             $registry: '@Doctrine\Persistence\ManagerRegistry'
             $reader: '@Doctrine\Common\Annotations\Reader'
             $sfidFinder: '@AE\ConnectBundle\Salesforce\Transformer\Util\SfidFinder'
         calls:
-            - ['setLogger', ['@Psr\Log\LoggerInterface']]
+            - ['setLogger', ['@Psr\Log\SyncLogger']]

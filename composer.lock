@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "ae/salesforce-rest-sdk",
-            "version": "2.0.0",
+            "version": "v2.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/advisors-excel-llc/salesforce-rest-sdk.git",
-                "reference": "20c71573172a4cdb51982ed5c322aeaad2e39888"
+                "reference": "52b8a9b3b18f284445c0295a9eef676f2379e751"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/advisors-excel-llc/salesforce-rest-sdk/zipball/20c71573172a4cdb51982ed5c322aeaad2e39888",
-                "reference": "20c71573172a4cdb51982ed5c322aeaad2e39888",
+                "url": "https://api.github.com/repos/advisors-excel-llc/salesforce-rest-sdk/zipball/52b8a9b3b18f284445c0295a9eef676f2379e751",
+                "reference": "52b8a9b3b18f284445c0295a9eef676f2379e751",
                 "shasum": ""
             },
             "require": {
@@ -60,10 +60,10 @@
             ],
             "description": "An SDK for the Salesforce Rest API",
             "support": {
-                "source": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/tree/2.0.0",
+                "source": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/tree/v2.0.1",
                 "issues": "https://github.com/advisors-excel-llc/salesforce-rest-sdk/issues"
             },
-            "time": "2020-04-07T18:46:47+00:00"
+            "time": "2020-04-27T23:16:54+00:00"
         },
         {
             "name": "doctrine/annotations",

@@ -93,9 +93,9 @@ class ModifyQueries implements SyncHandler
         $recordTypePredicate = "WHERE RecordTypeId IN ('".implode("', '", $recordTypes)."')";
         //We need to carefully modify the query to include only the record types we need.
         //First lets see if there is already a where clause
-        if ($wherePosition = false === strpos($query, 'WHERE')) {
+        if (($wherePosition = strpos($query, 'WHERE')) === false) {
             //There isn't, so we just need to return our where clause appended to the query.
-            return implode($target.' '.$recordTypePredicate.' ', explode($target, $query, 2));
+            return implode($target . ' ' . $recordTypePredicate . ' ', explode($target, $query, 2));
         }
 
         // Check if the where clause includes RECORDTYPE already or not.
