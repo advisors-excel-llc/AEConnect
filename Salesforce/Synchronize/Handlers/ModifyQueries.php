@@ -4,6 +4,7 @@ namespace AE\ConnectBundle\Salesforce\Synchronize\Handlers;
 
 use AE\ConnectBundle\Metadata\Metadata;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncEvent;
+use AE\ConnectBundle\Util\DestructuredQuery;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -24,52 +25,34 @@ class ModifyQueries implements SyncHandler
     {
         $queries = $event->getConfig()->getQueries();
         $event->getConfig()->clearQueries();
-        foreach ($queries as $target => $query) {
+        foreach ($queries as $target => $queryString) {
+            $query = new DestructuredQuery($queryString);
             $classMetas = $event->getConnection()->getMetadataRegistry()->findMetadataBySObjectType($target);
-            $query = $this->handleUpperCasing($query);
-            $query = $this->handleAsterik($classMetas, $query);
-            $query = $this->handleRecordTypeWhereClause($classMetas, strtoupper($target), $query);
-            $this->activateFields($classMetas, strtoupper($target), $query);
-            if ($this->isQueryable($classMetas, $query)) {
-                $event->getConfig()->addQuery($target, $query);
+            $this->handleAsterik($classMetas, $query);
+            $this->handleRecordTypeWhereClause($classMetas, $query);
+            $this->activateFields($classMetas, $query);
+            if ($this->isQueryable($classMetas)) {
+                $event->getConfig()->addQuery($target, $query->__toString());
             }
         }
     }
 
     /**
-     * Upper cases a query, but does not upper case parameters of a query like SFIDs.
-     */
-    private function handleUpperCasing(string $query): string
-    {
-        $queryParts = explode("'", $query);
-        // This capitalizes every other string, and since we exploded on ',
-        // we are capitalizing everything that is not surrounded in quotes.
-        $cappedParts = array_map(
-            function (string $part, int $idx) { return (bool) ($idx % 2) ? $part : strtoupper($part); },
-            $queryParts,
-            array_keys($queryParts)
-        );
-
-        return implode("'", $cappedParts);
-    }
-
-    /**
      * Changes out a * in a query for all of the fields that AEConnect is listening on.
      */
-    private function handleAsterik(array $metadatas, string $query): string
+    private function handleAsterik(array $metadatas, DestructuredQuery $query)
     {
-        if (false === strpos($query, '*')) {
-            return $query;
+        if ('*' !== $query->getSelect()) {
+            return;
         }
         $fields = [];
         foreach ($metadatas as $metadata) {
             $fields = array_merge($fields, $metadata->getPropertyMap());
         }
-
-        return str_replace('*', strtoupper(implode(',', $fields)), $query);
+        $query->setSelect(implode(', ', $fields));
     }
 
-    private function handleRecordTypeWhereClause(array $metadatas, string $target, string $query): string
+    private function handleRecordTypeWhereClause(array $metadatas, DestructuredQuery $query)
     {
         $recordTypes = [];
         foreach ($metadatas as $metadata) {
@@ -86,32 +69,26 @@ class ModifyQueries implements SyncHandler
 
         // There were no record type limitations given for this target so we don't wanna touch the query.
         if (empty($recordTypes)) {
-            return $query;
+            return;
         }
 
         //Lets construct our record type query in case we need it
-        $recordTypePredicate = "WHERE RecordTypeId IN ('".implode("', '", $recordTypes)."')";
+        $recordTypePredicate = "RecordTypeId IN ('".implode("', '", $recordTypes)."')";
         //We need to carefully modify the query to include only the record types we need.
         //First lets see if there is already a where clause
-        if (($wherePosition = strpos($query, 'WHERE')) === false) {
+        if (!$query->where) {
             //There isn't, so we just need to return our where clause appended to the query.
-            return implode($target . ' ' . $recordTypePredicate . ' ', explode($target, $query, 2));
+            $query->where = $recordTypePredicate;
+
+            return;
         }
 
-        // Check if the where clause includes RECORDTYPE already or not.
-        $whereClause = substr($query, $wherePosition);
-        //A user could be using a record type as an order by field or something, so lets make sure that is cut out as well
-        // for when we want to check if record type truly exists as a user submitted query or not.
-        if ($orderByPosition = strpos($query, 'ORDER BY')) {
-            $whereClause = substr($whereClause, 0, $orderByPosition);
-        }
-
-        if (false !== strpos($whereClause, 'RECORDTYPE')) {
+        if (false !== stripos($query->where, 'RECORDTYPE')) {
             //The query already includes a record type filter, best to leave the query alone.
-            return $query;
+            return;
         }
-
-        return str_replace('WHERE', $recordTypePredicate.' AND ', $query);
+        // concat the record type prediacte onto the current where clause then.
+        $query->where = "$recordTypePredicate AND ($query->where)";
     }
 
     /**
@@ -121,10 +98,10 @@ class ModifyQueries implements SyncHandler
      *
      * @return string
      */
-    private function activateFields(array $metadatas, string $target, string $query)
+    private function activateFields(array $metadatas, DestructuredQuery $query)
     {
-        $fieldListStr = str_replace(' ', '', substr($query, strpos($query, 'SELECT') + 7, strpos($query, 'FROM '.$target) - 7));
-        //These are all the fields we want active from our SELECT.  Anything outside of that we want to pretend they don't exist.
+        $fieldListStr = str_replace(' ', '', $query->getSelect());
+        //These are all the fields we want active from our SELECT.
         $fields = explode(',', $fieldListStr);
         foreach ($metadatas as $metadata) {
             foreach ($metadata->getFieldMetadata() as $fieldMetadata) {
@@ -135,7 +112,7 @@ class ModifyQueries implements SyncHandler
         }
     }
 
-    private function isQueryable(array $metadatas, string $query): bool
+    private function isQueryable(array $metadatas): bool
     {
         foreach ($metadatas as $metadata) {
             if (!$metadata->getDescribe()->isQueryable()) {
