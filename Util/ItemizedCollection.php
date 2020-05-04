@@ -10,10 +10,9 @@ namespace AE\ConnectBundle\Util;
 
 use Closure;
 use Doctrine\Common\Collections\Collection;
-use PhpCollection\SortableInterface;
 use Ramsey\Uuid\Uuid;
 
-class ItemizedCollection implements Collection, SortableInterface
+class ItemizedCollection implements Collection
 {
     /**
      * @var array<string, array>
@@ -594,15 +593,5 @@ class ItemizedCollection implements Collection, SortableInterface
         }
 
         return $count;
-    }
-
-    public function sort(int $sort_flags = SORT_ASC): bool
-    {
-        return ksort($this->elements, $sort_flags);
-    }
-
-    public function sortWith($callable)
-    {
-        uasort($this->elements, $callable);
     }
 }

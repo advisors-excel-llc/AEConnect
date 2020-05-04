@@ -5,6 +5,10 @@ services:
         AE\ConnectBundle\Salesforce\Inbound\SalesforceConsumerInterface:
             tags: ['ae_connect.consumer']
 
+    Psr\Log\SyncLogger: '@Psr\Log\LoggerInterface'
+    Psr\Log\InboundLogger: '@Psr\Log\LoggerInterface'
+    Psr\Log\OutboundLogger: '@Psr\Log\LoggerInterface'
+
     AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport: ~
     AE\SalesforceRestSdk\Bayeux\Transport\AbstractClientTransport: '@AE\SalesforceRestSdk\Bayeux\Transport\LongPollingTransport'
     AE\ConnectBundle\Manager\ConnectionManager:
@@ -34,14 +38,14 @@ services:
         $registry: '@Doctrine\Persistence\ManagerRegistry'
         $fieldCompiler: '@AE\ConnectBundle\Salesforce\Compiler\FieldCompiler'
         $validator: '@Symfony\Component\Validator\Validator\ValidatorInterface'
-        $logger: '@Psr\Log\LoggerInterface'
+        $logger: '@Psr\Log\OutboundLogger'
     AE\ConnectBundle\Salesforce\SalesforceConnector:
         $sObjectCompiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
         $entityCompiler: '@AE\ConnectBundle\Salesforce\Inbound\Compiler\EntityCompiler'
         $producer: '@enqueue.client.ae_connect.producer'
         $serializer: '@JMS\Serializer\SerializerInterface'
         $registry: '@Doctrine\Persistence\ManagerRegistry'
-        $logger: '@Psr\Log\LoggerInterface'
+        $logger: '@Psr\Log\OutboundLogger'
     AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor:
         arguments:
             $queue: '@AE\ConnectBundle\Salesforce\Outbound\Queue\OutboundQueue'
@@ -56,7 +60,7 @@ services:
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
         $registry: '@Doctrine\Persistence\ManagerRegistry'
         $fieldCompiler: '@AE\ConnectBundle\Salesforce\Compiler\FieldCompiler'
-        $logger: '@Psr\Log\LoggerInterface'
+        $logger: '@Psr\Log\OutboundLogger'
     AE\ConnectBundle\Doctrine\Subscriber\UuidSubscriber:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
@@ -66,7 +70,7 @@ services:
             $registry: '@Doctrine\Persistence\ManagerRegistry'
             $fieldCompiler: '@AE\ConnectBundle\Salesforce\Compiler\FieldCompiler'
         calls:
-            - ['setLogger', ['@Psr\Log\LoggerInterface']]
+            - ['setLogger', ['@Psr\Log\SyncLogger']]
     AE\ConnectBundle\Salesforce\Compiler\FieldCompiler:
         $registry: '@Doctrine\Persistence\ManagerRegistry'
         $transformer: '@AE\ConnectBundle\Salesforce\Transformer\TransformerInterface'
@@ -81,12 +85,12 @@ services:
         $fieldCompiler: '@AE\ConnectBundle\Salesforce\Compiler\FieldCompiler'
         $entityLocater: '@AE\ConnectBundle\Doctrine\EntityLocater'
         $registry: '@Doctrine\Persistence\ManagerRegistry'
-        $logger: '@Psr\Log\LoggerInterface'
+        $logger: '@Psr\Log\InboundLogger'
     AE\ConnectBundle\Salesforce\Inbound\SObjectConsumer:
         arguments:
             $connector: '@AE\ConnectBundle\Salesforce\SalesforceConnector'
         calls:
-            - ['setLogger', ['@Psr\Log\LoggerInterface']]
+            - ['setLogger', ['@Psr\Log\InboundLogger']]
     AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService:
         $cache: '@doctrine_cache.providers.ae_connect_polling'
         $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
@@ -104,7 +108,7 @@ services:
             $progress: '@AE\ConnectBundle\Salesforce\Bulk\BulkProgress'
             $batchSize: '%ae_connect.db_batch_size%'
         calls:
-            - ['setLogger', ['@Psr\Log\LoggerInterface']]
+            - ['setLogger', ['@Psr\Log\SyncLogger']]
     AE\ConnectBundle\Salesforce\Bulk\CompositeApiProcessor:
         arguments:
             $preprocessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkPreprocessor'
@@ -112,13 +116,13 @@ services:
             $progress: '@AE\ConnectBundle\Salesforce\Bulk\BulkProgress'
             $batchSize: '%ae_connect.db_batch_size%'
         calls:
-            - ['setLogger', ['@Psr\Log\LoggerInterface']]
+            - ['setLogger', ['@Psr\Log\SyncLogger']]
     AE\ConnectBundle\Salesforce\Bulk\InboundBulkQueue:
         $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker'
         $bulkApiProcessor: '@AE\ConnectBundle\Salesforce\Bulk\BulkApiProcessor'
         $compositeApiProcessor: '@AE\ConnectBundle\Salesforce\Bulk\CompositeApiProcessor'
         $progress: '@AE\ConnectBundle\Salesforce\Bulk\BulkProgress'
-        $logger: '@Psr\Log\LoggerInterface'
+        $logger: '@Psr\Log\InboundLogger'
     AE\ConnectBundle\Salesforce\Bulk\OutboundBulkQueue:
         $compiler: '@AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler'
         $registry: '@Doctrine\Persistence\ManagerRegistry'
@@ -127,7 +131,7 @@ services:
         $reader: '@Doctrine\Common\Annotations\Reader'
         $progress: '@AE\ConnectBundle\Salesforce\Bulk\BulkProgress'
         $batchSize: '%ae_connect.db_batch_size%'
-        $logger: '@Psr\Log\LoggerInterface'
+        $logger: '@Psr\Log\OutboundLogger'
     AE\ConnectBundle\Salesforce\Bulk\SfidReset:
         $registry: '@Doctrine\Persistence\ManagerRegistry'
         $treeMaker: '@AE\ConnectBundle\Salesforce\Bulk\SObjectTreeMaker'
@@ -156,7 +160,7 @@ services:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
             $consumer: '@AE\ConnectBundle\Salesforce\Inbound\SObjectConsumer'
-            $logger: '@?Psr\Log\LoggerInterface'
+            $logger: '@Psr\Log\InboundLogger'
         tags: ['console.command']
     AE\ConnectBundle\Command\PollCommand:
         arguments:
@@ -174,7 +178,7 @@ services:
         arguments:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
             $sfdcExtension: '@AE\SalesforceRestSdk\Bayeux\Extension\SfdcExtension'
-            $logger: '@?Psr\Log\LoggerInterface'
+            $logger: '@Psr\Log\SyncLogger'
         calls:
             - ['setContainer', ['@service_container']]
         tags: ['console.command']
@@ -189,7 +193,7 @@ services:
             $connectionManager: '@AE\ConnectBundle\Manager\ConnectionManagerInterface'
             $registry: '@Doctrine\Persistence\ManagerRegistry'
             $pollingService: '@AE\ConnectBundle\Salesforce\Inbound\Polling\PollingService'
-            $logger: '@?Psr\Log\LoggerInterface'
+            $logger: '@Psr\Log\SyncLogger'
         public: true
     AE\ConnectBundle\Salesforce\Bulk\BulkProgress:
         $dispatcher: '@Symfony\Component\EventDispatcher\EventDispatcherInterface'
