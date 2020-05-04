@@ -70,7 +70,7 @@ class ValidateEntities implements SyncTargetHandler
         $recordTypeMeta = $metadata->getRecordType();
         // We don't have a record type meta defined for this entity or we didn't query the record type,
         // so we assume this object is OK.
-        if (!$recordTypeMeta || !isset($record->sObject->getFields()[$recordTypeMeta->getField()])) {
+        if (!$recordTypeMeta || !$recordTypeMeta->getName() || !isset($record->sObject->getFields()[$recordTypeMeta->getField()])) {
             return true;
         }
         $recordType = $metadata->getRecordTypeDeveloperName($record->sObject->getFields()[$recordTypeMeta->getField()]);

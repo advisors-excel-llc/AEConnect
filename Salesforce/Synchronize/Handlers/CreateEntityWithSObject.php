@@ -33,10 +33,11 @@ class CreateEntityWithSObject implements SyncTargetHandler
                         $newRecord->needCreate = true;
                         $records[] = $newRecord;
                     } catch (RuntimeException $e) {
-                        $newRecord->error = '#serialization sObject to entity : '.$e->getMessage();
-                        break;
+                        $record->error = '#serialization sObject to entity : '.$e->getMessage();
+                        $records[] = $record;
                     } catch (\Throwable $e) {
-                        $newRecord->error = $e->getMessage();
+                        $record->error = $e->getMessage();
+                        $records[] = $record;
                     }
                 } else {
                     $records[] = $record;
