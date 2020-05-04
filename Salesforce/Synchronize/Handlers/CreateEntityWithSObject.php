@@ -2,12 +2,10 @@
 
 namespace AE\ConnectBundle\Salesforce\Synchronize\Handlers;
 
-use AE\ConnectBundle\Connection\ConnectionInterface;
 use AE\ConnectBundle\Salesforce\Compiler\ObjectCompiler;
 use AE\ConnectBundle\Salesforce\Synchronize\EventModel\Record;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
 use JMS\Serializer\Exception\RuntimeException;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class CreateEntityWithSObject implements SyncTargetHandler
 {
@@ -16,7 +14,6 @@ class CreateEntityWithSObject implements SyncTargetHandler
 
     /**
      * CreateEntityWithSObject constructor.
-     * @param ObjectCompiler $objectCompiler
      */
     public function __construct(ObjectCompiler $objectCompiler)
     {
@@ -36,10 +33,11 @@ class CreateEntityWithSObject implements SyncTargetHandler
                         $newRecord->needCreate = true;
                         $records[] = $newRecord;
                     } catch (RuntimeException $e) {
-                        $record->error = '#serialization sObject to entity : ' . $e->getMessage();
-                        break;
+                        $record->error = '#serialization sObject to entity : '.$e->getMessage();
+                        $records[] = $record;
                     } catch (\Throwable $e) {
                         $record->error = $e->getMessage();
+                        $records[] = $record;
                     }
                 } else {
                     $records[] = $record;
