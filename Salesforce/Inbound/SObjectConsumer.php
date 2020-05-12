@@ -222,7 +222,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
 
         $sObjects = [];
         foreach ($changeEventHeader['recordIds'] as $sfid) {
-            $sObjects = new SObject(
+            $sObjects[] = new SObject(
                 $payload + [
                     '__SOBJECT_TYPE__' => $changeEventHeader['entityName'],
                     'Id' => $sfid,
