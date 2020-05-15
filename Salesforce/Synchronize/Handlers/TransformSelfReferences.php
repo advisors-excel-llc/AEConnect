@@ -73,7 +73,7 @@ class TransformSelfReferences implements SyncTargetHandler
             return;
         }
 
-        $target->temporaryTables[$classMetadata->getName()]['temp_table'] = 'AEConnect_temp_'.count($target->temporaryTables);
+        $target->temporaryTables[$classMetadata->getName()]['temp_table'] = 'AEConnect_temp_'.mt_rand(1, 999999);
         switch ($target->temporaryTables[$classMetadata->getName()]['uniqueIdType']) {
             case 'uuid':
                 $type = 'uuid';
