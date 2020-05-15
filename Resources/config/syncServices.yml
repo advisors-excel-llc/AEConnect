@@ -86,7 +86,12 @@ services:
         autoconfigure: true
         tags:
             - { name: kernel.event_listener, event: aeconnect.transform_associations, method: process }
-            - { name: kernel.event_listener, event: aeconnect.end, method: processSelfReferencedEntities }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\TransformSelfReferences:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.transform_associations, method: process }
 
     AE\ConnectBundle\Salesforce\Synchronize\Handlers\CustomTransformHandler:
         autowire: true,
@@ -111,6 +116,12 @@ services:
         autoconfigure: true
         tags:
             - { name: kernel.event_listener, event: aeconnect.flush, method: process }
+
+    AE\ConnectBundle\Salesforce\Synchronize\Handlers\SaveSelfReferences:
+        autowire: true
+        autoconfigure: true
+        tags:
+            - { name: kernel.event_listener, event: aeconnect.query_complete, method: process }
 
     AE\ConnectBundle\Salesforce\Synchronize\Handlers\OutboundUpdate:
         autowire: true
