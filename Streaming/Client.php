@@ -3,7 +3,7 @@
  * Created by PhpStorm.
  * User: alex.boyce
  * Date: 9/12/18
- * Time: 5:35 PM
+ * Time: 5:35 PM.
  */
 
 namespace AE\ConnectBundle\Streaming;
@@ -22,7 +22,7 @@ class Client implements ClientInterface
 
     public function __construct(BayeuxClient $client)
     {
-        $this->streamingClient    = $client;
+        $this->streamingClient = $client;
         $this->channelSubscribers = new ArrayCollection();
     }
 
@@ -34,17 +34,12 @@ class Client implements ClientInterface
     public function addSubscriber(ChannelSubscriberInterface $subscriber)
     {
         if (!$this->channelSubscribers->contains($subscriber)) {
-            $name  = $subscriber->getChannelName();
+            $name = $subscriber->getChannelName();
             $parts = explode('?', $name);
             $this->channelSubscribers->set($parts[0], $subscriber);
         }
     }
 
-    /**
-     * @param string $channelName
-     *
-     * @return ChannelSubscriberInterface|null
-     */
     public function getSubscriber(string $channelName): ?ChannelSubscriberInterface
     {
         if ($this->channelSubscribers->containsKey($channelName)) {
@@ -111,23 +106,22 @@ class Client implements ClientInterface
 
     /**
      * @param $channelGroup
-     * @param SalesforceConsumerInterface $consumer
      */
     private function subscribeChannelToTopics($channelGroup, SalesforceConsumerInterface $consumer): void
     {
         $channelNames = [];
 
         foreach ($channelGroup as $name) {
-            if ($name === '*') {
+            if ('*' === $name) {
                 $keys = $this->channelSubscribers->filter(
                     function (ChannelSubscriberInterface $subscriber) {
-                        return substr($subscriber->getChannelName(), 0, 7) === '/topic/';
+                        return '/topic/' === substr($subscriber->getChannelName(), 0, 7);
                     }
                 )->getKeys()
                 ;
 
                 foreach ($keys as $key) {
-                    $parts          = explode('?', $key);
+                    $parts = explode('?', $key);
                     $channelNames[] = $parts[0];
                 }
                 break;
@@ -149,10 +143,10 @@ class Client implements ClientInterface
         $channelNames = [];
 
         foreach ($channelGroup as $name) {
-            if ($name === '*') {
+            if ('*' === $name) {
                 $keys = $this->channelSubscribers->filter(
                     function (ChannelSubscriberInterface $subscriber) {
-                        return substr($subscriber->getChannelName(), 0, 6) === '/data/';
+                        return '/data/' === substr($subscriber->getChannelName(), 0, 6);
                     }
                 )->getKeys()
                 ;
@@ -177,10 +171,10 @@ class Client implements ClientInterface
         $channelNames = [];
 
         foreach ($channelGroup as $name) {
-            if ($name === '*') {
+            if ('*' === $name) {
                 $keys = $this->channelSubscribers->filter(
                     function (ChannelSubscriberInterface $subscriber) {
-                        return substr($subscriber->getChannelName(), 0, 7) === '/event/';
+                        return '/event/' === substr($subscriber->getChannelName(), 0, 7);
                     }
                 )->getKeys()
                 ;
@@ -188,7 +182,7 @@ class Client implements ClientInterface
                 $channelNames = array_merge($channelNames, $keys);
                 break;
             }
-            if (preg_match('/__(e|E)$/', $name) != false) {
+            if (false != preg_match('/__(e|E)$/', $name)) {
                 $channelNames[] = '/event/'.$name;
             }
         }
@@ -207,10 +201,10 @@ class Client implements ClientInterface
         $channelNames = [];
 
         foreach ($channelGroup as $name) {
-            if ($name === '*') {
+            if ('*' === $name) {
                 $keys = $this->channelSubscribers->filter(
                     function (ChannelSubscriberInterface $subscriber) {
-                        return substr($subscriber->getChannelName(), 0, 3) === '/u/';
+                        return '/u/' === substr($subscriber->getChannelName(), 0, 3);
                     }
                 )->getKeys()
                 ;

@@ -3,6 +3,10 @@ services:
         autowire: true
         autoconfigure: true
 
+    AE\ConnectBundle\Salesforce\Synchronize\Consume:
+        autowire: true
+        autoconfigure: true
+
     AE\ConnectBundle\Salesforce\Synchronize\Handlers\FindConnection:
         autowire: true
         autoconfigure: true

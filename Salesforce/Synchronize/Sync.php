@@ -2,7 +2,6 @@
 
 namespace AE\ConnectBundle\Salesforce\Synchronize;
 
-use AE\ConnectBundle\Salesforce\Synchronize\Step\EndStep;
 use AE\ConnectBundle\Salesforce\Synchronize\Step\InitialStep;
 use AE\ConnectBundle\Salesforce\Synchronize\Step\Step;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;

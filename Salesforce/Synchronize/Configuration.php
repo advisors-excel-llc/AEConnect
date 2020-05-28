@@ -3,6 +3,8 @@
 namespace AE\ConnectBundle\Salesforce\Synchronize;
 
 use AE\ConnectBundle\Salesforce\Synchronize\EventModel\Actions;
+use AE\SalesforceRestSdk\Model\SObject;
+use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -20,17 +22,25 @@ class Configuration
      */
     private $queries = [];
 
+    /**
+     * @var ArrayCollection direct sObjects to be worked with in lieu of types/queries
+     */
+    private $sObjects;
+
     private $debugModules = [
-        'count'         => false,
-        'time'          => false,
-        'memory'        => false,
-        'database'      => false,
-        'anaylsis'      => false,
-        'errors'        => false,
+        'count' => false,
+        'time' => false,
+        'memory' => false,
+        'database' => false,
+        'anaylsis' => false,
+        'errors' => false,
     ];
 
     private $batchSize;
 
+    /**
+     * @var OutputInterface|null
+     */
     private $output;
 
     public function __construct(
@@ -40,15 +50,14 @@ class Configuration
         bool $clearSFID,
         Actions $pull,
         Actions $push,
-        OutputInterface $output,
+        ?OutputInterface $output,
         int $batchSize = 100
-    )
-    {
+    ) {
         $this->connectionName = $connectionName;
         $this->sObjectTargets = $sObjectTargets;
         foreach ($queries as $query) {
             $target = trim(substr($query, strpos($query, ' FROM ') + 6));
-            if (strpos( $target, ' ') !== false) {
+            if (false !== strpos($target, ' ')) {
                 $target = substr($target, 0, strpos($target, ' '));
             }
             $this->addQuery(ucwords($target), $query);
@@ -60,25 +69,40 @@ class Configuration
 
         $this->output = $output;
         $this->batchSize = $batchSize;
+
+        $this->sObjects = new ArrayCollection();
     }
-    public function needsSFIDsCleared() : bool
+
+    public function needsSFIDsCleared(): bool
     {
         return $this->clearSFID;
     }
 
-    public function hasQueries() : bool
+    public function hasQueries(): bool
     {
-        return $this->pull->needsDataHydrated() && (bool)count($this->queries);
+        return $this->pull->needsDataHydrated() && (bool) count($this->queries);
     }
 
-    public function needsTargetObjects() : bool
+    public function needsTargetObjects(): bool
     {
-        return $this->pull->needsDataHydrated() && !(bool)(count($this->queries) + count($this->sObjectTargets));
+        return $this->pull->needsDataHydrated() && !(bool) (count($this->queries) + count($this->sObjectTargets));
     }
 
-    public function needsQueriesGenerated() : bool
+    public function needsQueriesGenerated(): bool
     {
-        return $this->pull->needsDataHydrated() && (bool)((!count($this->queries)) && count($this->sObjectTargets));
+        return $this->pull->needsDataHydrated() && (bool) ((!count($this->queries)) && count($this->sObjectTargets));
+    }
+
+    public function hasSObjectsToCRUD(): bool
+    {
+        return !$this->sObjects->isEmpty();
+    }
+
+    public function addsObject(SObject $SObject)
+    {
+        if (!$this->sObjects->contains($SObject)) {
+            $this->sObjects->add($SObject);
+        }
     }
 
     /**
@@ -87,10 +111,10 @@ class Configuration
      * 2) You must have provided a Connection name
      * 3) Updating your local data base with salesforce data and then using your local data base to update salesforce yields nothing.
      */
-    public function validateConfiguration() : bool
+    public function validateConfiguration(): bool
     {
         //1
-        if (count($this->queries) && count($this->sObjectTargets) ) {
+        if (count($this->queries) && count($this->sObjectTargets)) {
             throw new InvalidConfigurationException('You can\'t have queries and sObject targets at the same time');
         }
         //2
@@ -101,6 +125,7 @@ class Configuration
         if ($this->pull->update && $this->push->update) {
             throw new InvalidConfigurationException('You can only update your local database or update salesforce, never both.');
         }
+
         return true;
     }
 
@@ -120,17 +145,11 @@ class Configuration
         $this->connectionName = $connectionName;
     }
 
-    /**
-     * @return array
-     */
     public function getSObjectTargets(): array
     {
         return $this->sObjectTargets;
     }
 
-    /**
-     * @param array $sObjectTargets
-     */
     public function setSObjectTargets(array $sObjectTargets): void
     {
         $this->sObjectTargets = $sObjectTargets;
@@ -138,8 +157,8 @@ class Configuration
 
     public function addQuery(string $target, string $query): void
     {
-        if ($target == '') {
-            $startOfTarget = trim(substr( $query,strpos($query, 'FROM') + 4));
+        if ('' == $target) {
+            $startOfTarget = trim(substr($query, strpos($query, 'FROM') + 4));
             $target = trim(substr($startOfTarget, 0, strpos($startOfTarget, ' ')));
         }
         if (isset($this->queries[$target])) {
@@ -168,7 +187,7 @@ class Configuration
         return $this->push;
     }
 
-    public function getOutput(): OutputInterface
+    public function getOutput(): ?OutputInterface
     {
         return $this->output;
     }
