@@ -242,7 +242,7 @@ class SalesforceConnector implements LoggerAwareInterface
                     $manager->merge($entity);
                     break;
                 case SalesforceConsumerInterface::DELETED:
-                    $manager->remove($entity);
+                    $manager->remove($manager->merge($entity));
                     break;
             }
 
