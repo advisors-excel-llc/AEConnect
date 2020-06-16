@@ -101,7 +101,8 @@ class SObjectConsumer implements SalesforceConsumerInterface
             );
         }
 
-        $memory = memory_get_usage();
+        $memory = memory_get_peak_usage(true);
+
         if (($memory / (1024 * 1024)) > $this->memoryLimit) {
             $trace = debug_backtrace();
             throw new MemoryLimitException('Memory Limit exceeded after '.$this->consumeCount.' polls.  Function call stack is currently at '.count($trace), 0, $memory / (1024 * 1024));
