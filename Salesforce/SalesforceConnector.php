@@ -240,7 +240,7 @@ class SalesforceConnector implements LoggerAwareInterface
         // In a transactional run, run through each of the managers for a class (in case they differ) and flush the
         // contents
         if ($transactional) {
-            foreach ($this->ems as $manager) {
+            foreach ($this->registry->getManagers() as $manager) {
                 try {
                     $manager->transactional(
                         function (EntityManagerInterface $em) {

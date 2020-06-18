@@ -11,6 +11,7 @@ namespace AE\ConnectBundle\Salesforce\Inbound;
 use AE\ConnectBundle\Connection\ConnectionsTrait;
 use AE\ConnectBundle\Salesforce\SalesforceConnector;
 use AE\ConnectBundle\Util\Exceptions\MemoryLimitException;
+use AE\ConnectBundle\Util\MemoryAnalysis;
 use AE\SalesforceRestSdk\Bayeux\ChannelInterface;
 use AE\SalesforceRestSdk\Bayeux\Message;
 use AE\SalesforceRestSdk\Bayeux\Salesforce\Event;
@@ -46,6 +47,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
             'perHour' => 0,
         ],
     ];
+    private $memory = null;
 
     private $last100Queues = [];
 
@@ -69,6 +71,9 @@ class SObjectConsumer implements SalesforceConsumerInterface
         $replayId = $data->getEvent()->getReplayId();
 
         $sObject = substr($this->getSfidFromData($data), 0, 3);
+        if (!$this->memory) {
+            $this->memory = new MemoryAnalysis();
+        }
 
         $this->logger->debug(
             "#LISTENER RECEIVED #$sObject $replayId: Channel `{channel}` | {data}",
@@ -93,14 +98,15 @@ class SObjectConsumer implements SalesforceConsumerInterface
         $this->logger->debug("#LISTENER COMPLETE #$sObject $replayId in $speed s");
 
         $this->throughputCalculations = $this->throughPut($this->throughputCalculations, $speed, $this->getSfidFromData($data));
+        $this->memory->next($sObject);
 
-        if (0 === $this->consumeCount % 50) {
+        if (0 === $this->consumeCount % 100) {
             $this->logger->info(
-                'THROUGHPUT CALCULATIONS {throughput}',
-                ['throughput' => $this->throughputCalculations]
+                'THROUGHPUT CALCULATIONS {throughput} MEMORY CALCULATIONS {memory}',
+                ['throughput' => $this->throughputCalculations,
+                'memory' => $this->memory->__toString(), ]
             );
         }
-
         $memory = memory_get_peak_usage(true);
 
         if (($memory / (1024 * 1024)) > $this->memoryLimit) {
@@ -161,6 +167,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
             }
             $throughputCalculations['averageTimeBySObject'][$sObject] = $this->throughPut($throughputCalculations['averageTimeBySObject'][$sObject], $time);
         }
+
         return $throughputCalculations;
     }
 
@@ -174,6 +181,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
         } elseif (null !== $data->getPayload() && is_array($data->getPayload())) {
             return $data->getPayload()['ChangeEventHeader']['recordIds'][0];
         }
+
         return 'N/A';
     }
 

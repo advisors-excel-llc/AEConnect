@@ -9,7 +9,7 @@ use Doctrine\Persistence\ManagerRegistry;
 trait GetEmTrait
 {
     /** @var EntityManager[] */
-    private $ems;
+    private $ems = [];
     private $keys;
 
     // We actually have to cache EMs as we find them and check if they are still open since these suckers can close at any
