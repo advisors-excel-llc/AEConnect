@@ -160,8 +160,8 @@ class OutboundBulkQueue
         try {
             $qb = $this->createQueryBuilder($manager, $classMetadata, $connection, $offset, $update, $create);
         } catch (MappingException $e) {
-            $this->logger->critical($e->getMessage());
-            $this->logger->debug($e->getTraceAsString());
+            $this->logger->critical('OutboundBulkQueue-001 - '.$e->getMessage());
+            $this->logger->debug('OutboundBulkQueue-002 - '.$e->getTraceAsString());
 
             return;
         }
@@ -183,7 +183,7 @@ class OutboundBulkQueue
                     );
                 } catch (\RuntimeException $e) {
                     $this->logger->warning($e->getMessage());
-                    $this->logger->debug($e->getTraceAsString());
+                    $this->logger->debug('OutboundBulkQueue-003 - '.$e->getTraceAsString());
                 }
             }
 

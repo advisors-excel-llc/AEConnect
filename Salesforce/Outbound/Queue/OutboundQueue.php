@@ -168,7 +168,7 @@ class OutboundQueue implements LoggerAwareInterface
                     'msg' => $e->getMessage()
                 ]
             );
-            $this->logger->debug($e->getTraceAsString());
+            $this->logger->debug('OutboundQueue-001 - '.$e->getTraceAsString());
         } catch (\Exception $e) {
             $this->logger->error(
                 'An exception occurred while trying to send queue: {msg}',
@@ -176,7 +176,7 @@ class OutboundQueue implements LoggerAwareInterface
                     'msg' => $e->getMessage()
                 ]
             );
-            $this->logger->debug($e->getTraceAsString());
+            $this->logger->debug('OutboundQueue-002 - '.$e->getTraceAsString());
         }
     }
 

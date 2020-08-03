@@ -178,10 +178,10 @@ class InboundBulkQueue
             }
         } catch (\Exception $e) {
             $this->logger->warning($e->getMessage());
-            $this->logger->debug($e->getTraceAsString());
+            $this->logger->debug('InboundBulkQueue-001 - '.$e->getTraceAsString());
         } catch (GuzzleException $e) {
             $this->logger->warning($e->getMessage());
-            $this->logger->debug($e->getTraceAsString());
+            $this->logger->debug('InboundBulkQueue-002 - '.$e->getTraceAsString());
         }
     }
 }

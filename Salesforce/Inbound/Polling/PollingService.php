@@ -208,7 +208,7 @@ class PollingService implements LoggerAwareInterface
                     }
                 } catch (\RuntimeException $e) {
                     // A runtime exception is thrown if there are no requests to build.
-                    $this->logger->critical($e->getMessage());
+                    $this->logger->critical('PollingService-001 - '.$e->getMessage());
                 }
             }
 
@@ -226,7 +226,7 @@ class PollingService implements LoggerAwareInterface
                 try {
                     $this->connector->receive($update, SalesforceConsumerInterface::UPDATED, $connectionName);
                 } catch (\Exception $e) {
-                    $this->logger->critical($e->getMessage());
+                    $this->logger->critical('PollingService-002 - '.$e->getMessage());
                 }
             }
 
@@ -235,7 +235,7 @@ class PollingService implements LoggerAwareInterface
                 try {
                     $this->connector->receive($removal, SalesforceConsumerInterface::DELETED, $connectionName);
                 } catch (\Exception $e) {
-                    $this->logger->critical($e->getMessage());
+                    $this->logger->critical('PollingService-003 - '.$e->getMessage());
                 }
             }
         }

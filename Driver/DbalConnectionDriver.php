@@ -130,7 +130,7 @@ class DbalConnectionDriver
                     } catch (\Exception $e) {
                         $entity->setActive(false);
                         $manager->flush();
-                        $this->logger->critical($e->getMessage());
+                        $this->logger->critical('DbalConnectionDriver-001 - '.$e->getMessage());
                         $authProvider    = new NullProvider();
                         $restClient      = $this->createRestClient($authProvider);
                         $bulkClient      = $this->createBulkClient($authProvider);
@@ -212,7 +212,7 @@ class DbalConnectionDriver
                         if (!$entity->isActive()) {
                             $entity->setActive(false);
                             $manager->flush();
-                            $this->logger->critical($e->getMessage());
+                            $this->logger->critical('DbalConnectionDriver-002 - '.$e->getMessage());
                         }
                     }
 
@@ -220,7 +220,7 @@ class DbalConnectionDriver
                 }
             } catch (TableNotFoundException $e) {
                 $this->logger->error($e->getMessage());
-                $this->logger->debug($e->getTraceAsString());
+                $this->logger->debug('DbalConnectionDriver-001 - '.$e->getTraceAsString());
             }
         }
     }

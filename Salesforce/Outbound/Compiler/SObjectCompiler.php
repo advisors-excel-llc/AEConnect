@@ -71,6 +71,7 @@ class SObjectCompiler
      */
     public function compile($entity, string $connectionName = "default"): CompilerResult
     {
+        $this->logger->info('SObjectCompiler->compile()');
         $className = ClassUtils::getRealClass(get_class($entity));
         /** @var EntityManager $manager */
         $manager       = $this->registry->getManagerForClass($className);
