@@ -82,10 +82,10 @@ class SObjectConsumer implements SalesforceConsumerInterface
 
         if (null !== $data) {
             if (null !== $data->getSobject()) {
-                $this->logger->info('SObjectConsumer->consume()-001 This is a Push Topic.');
+                $this->logger->debug('SOCS01 This is a Push Topic.');
                 $this->consumeTopic($data->getSobject(), $data->getEvent());
             } elseif (null !== $data->getPayload() && is_array($data->getPayload())) {
-                $this->logger->info('SObjectConsumer->consume()-002 This is a Change Event.');
+                $this->logger->debug('SOCS02 This is a Change Event.');
                 $this->consumeChangeEvent($data->getPayload());
             }
         }
@@ -97,7 +97,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
         $this->throughputCalculations = $this->throughPut($this->throughputCalculations, $speed, $this->getSfidFromData($data));
 
         if (0 === $this->consumeCount % 50) {
-            $this->logger->info(
+            $this->logger->debug(
                 'THROUGHPUT CALCULATIONS {throughput}',
                 ['throughput' => $this->throughputCalculations]
             );
@@ -202,12 +202,10 @@ class SObjectConsumer implements SalesforceConsumerInterface
 
         $intent = $changeEventHeader['changeType'];
         $origin = $changeEventHeader['changeOrigin'];
-        $this->logger->info('SObjectConsumer->consumeChangeEvent()-001 $intent = '.$intent.' - $origin = '.$origin);
 
         if (false !== ($pos = strpos($origin, ';'))) {
             $origin = substr($origin, $pos + 8); // ;client=$origin
         }
-        $this->logger->info('SObjectConsumer->consumeChangeEvent()-002 $origin = '.$origin);
 
         switch ($intent) {
             case 'CREATE':
@@ -235,8 +233,6 @@ class SObjectConsumer implements SalesforceConsumerInterface
                 ]
             );
         }
-        $this->logger->info('SObjectConsumer->consumeChangeEvent()-003 $sObjects = '.print_r($sObjects, 1));
-        $this->logger->info('SObjectConsumer->consumeChangeEvent()-004 $payload = '.print_r($payload, 1));
 
         // Find Compound Fields in the object and assign their nexted values back to the SObject
         foreach ($payload as $field => $value) {
@@ -250,7 +246,6 @@ class SObjectConsumer implements SalesforceConsumerInterface
                 }
             }
         }
-        $this->logger->info('SObjectConsumer->consumeChangeEvent()-005 $sObjects = '.print_r($sObjects, 1));
 
         foreach ($this->connections as $connection) {
             if ($origin === $connection->getAppName() &&
@@ -259,18 +254,15 @@ class SObjectConsumer implements SalesforceConsumerInterface
                     $connection->getPermittedFilteredObjects()
                 )
             ) {
-                $this->logger->info('SObjectConsumer->consumeChangeEvent()-006 - Continue.');
                 continue;
             }
 
-            $this->logger->info('SObjectConsumer->consumeChangeEvent()-007 Running receive().');
             $this->connector->receive($sObjects, $intent, $connection->getName(), true, $deliveryMethod);
         }
     }
 
     private function consumeTopic(SObject $object, Event $event)
     {
-        $this->logger->info('SObjectConsumer->consumeTopic()-001');
         if (null !== $object->__SOBJECT_TYPE__) {
             $intent = strtoupper($event->getType());
 

@@ -113,7 +113,7 @@ class PollingService implements LoggerAwareInterface
         $objects = $this->getObjects($connectionName);
 
         if (empty($objects)) {
-            $this->logger->debug('No objects to poll for connection, "{conn}"', ['conn' => $connection->getName()]);
+            $this->logger->debug('#PS01 No objects to poll for connection, "{conn}"', ['conn' => $connection->getName()]);
 
             return;
         }
@@ -131,7 +131,7 @@ class PollingService implements LoggerAwareInterface
             }
 
             $this->logger->debug(
-                'Polling for changes to {obj} between {start} and {end}',
+                '#PS02 Polling for changes to {obj} between {start} and {end}',
                 [
                     'obj'   => $object,
                     'start' => $this->lastUpdated,
@@ -198,7 +198,7 @@ class PollingService implements LoggerAwareInterface
                             $updates = array_merge($updates, $body);
                         } else {
                             $this->logger->error(
-                                "Received status code {code}: {msg}",
+                                "#PS03 Received status code {code}: {msg}",
                                 [
                                     'code' => $result->getHttpStatusCode(),
                                     'msg'  => json_encode($result->getBody()),
@@ -208,12 +208,12 @@ class PollingService implements LoggerAwareInterface
                     }
                 } catch (\RuntimeException $e) {
                     // A runtime exception is thrown if there are no requests to build.
-                    $this->logger->critical('PollingService-001 - '.$e->getMessage());
+                    $this->logger->critical('#PS04 Runtime Exception in Poll. '.$e->getMessage());
                 }
             }
 
             if (empty($updates) && empty($removals)) {
-                $this->logger->debug('No objects to update or delete');
+                $this->logger->debug('#PS05 No objects to update or delete in Poll.');
 
                 return;
             }
@@ -226,7 +226,7 @@ class PollingService implements LoggerAwareInterface
                 try {
                     $this->connector->receive($update, SalesforceConsumerInterface::UPDATED, $connectionName);
                 } catch (\Exception $e) {
-                    $this->logger->critical('PollingService-002 - '.$e->getMessage());
+                    $this->logger->critical('#PS06 Exception trying Update Receive in Poll. '.$e->getMessage());
                 }
             }
 
@@ -235,7 +235,7 @@ class PollingService implements LoggerAwareInterface
                 try {
                     $this->connector->receive($removal, SalesforceConsumerInterface::DELETED, $connectionName);
                 } catch (\Exception $e) {
-                    $this->logger->critical('PollingService-003 - '.$e->getMessage());
+                    $this->logger->critical('#PS07 Exception trying Removal Receive in Poll. '.$e->getMessage());
                 }
             }
         }
@@ -243,7 +243,7 @@ class PollingService implements LoggerAwareInterface
         $this->lastUpdated = new \DateTime();
         $this->cache->save(self::CACHE_ID, $this->lastUpdated->format(\DATE_ISO8601));
         $this->logger->debug(
-            'Polling completed at {time} for {conn}',
+            '#PS08 Polling completed at {time} for {conn}',
             [
                 'time' => $this->lastUpdated->format(\DATE_ISO8601),
                 'conn' => $connection->getName(),

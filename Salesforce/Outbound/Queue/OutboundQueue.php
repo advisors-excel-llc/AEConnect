@@ -127,7 +127,7 @@ class OutboundQueue implements LoggerAwareInterface
             );
 
             if (empty($request->getCompositeRequest())) {
-                $this->logger->debug('No more messages in queue.');
+                $this->logger->debug('#OQ01 No more messages in queue.');
 
                 return;
             }
@@ -163,20 +163,20 @@ class OutboundQueue implements LoggerAwareInterface
             }
         } catch (\GuzzleHttp\Exception\GuzzleException $e) {
             $this->logger->error(
-                'An exception occurred while trying to send queue: {msg}',
+                '#OQ02 An exception occurred while trying to send queue: {msg}',
                 [
                     'msg' => $e->getMessage()
                 ]
             );
-            $this->logger->debug('OutboundQueue-001 - '.$e->getTraceAsString());
+            $this->logger->debug('#OQ03 Guzzle Exception in Send Messages. '.$e->getTraceAsString());
         } catch (\Exception $e) {
             $this->logger->error(
-                'An exception occurred while trying to send queue: {msg}',
+                '#OQ04 An exception occurred while trying to send queue: {msg}',
                 [
                     'msg' => $e->getMessage()
                 ]
             );
-            $this->logger->debug('OutboundQueue-002 - '.$e->getTraceAsString());
+            $this->logger->debug('#OQ05 General Exception in Send Messages. '.$e->getTraceAsString());
         }
     }
 
@@ -215,7 +215,7 @@ class OutboundQueue implements LoggerAwareInterface
                 $errors = $result->getBody();
                 foreach ($errors as $error) {
                     $this->logger->error(
-                        'AE_CONNECT error from SalesForce: ({code}) {msg}',
+                        '#OQ06 AE_CONNECT error from SalesForce: ({code}) {msg}',
                         [
                             'code' => $error->getErrorCode(),
                             'msg'  => $error->getMessage(),
@@ -251,7 +251,7 @@ class OutboundQueue implements LoggerAwareInterface
                     } elseif (!$res->isSuccess()) {
                         foreach ($res->getErrors() as $error) {
                             $this->logger->error(
-                                'AE_CONNECT error from SalesForce: {type}|{intent}|{code}|{msg}',
+                                '#OQ07 AE_CONNECT error from SalesForce: {type}|{intent}|{code}|{msg}',
                                 [
                                     'type'   => $item->getSObject()->getType(),
                                     'intent' => $item->getIntent(),

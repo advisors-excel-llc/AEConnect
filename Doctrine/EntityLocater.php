@@ -47,7 +47,6 @@ class EntityLocater implements LoggerAwareInterface
 
     public function __construct(ManagerRegistry $registry, FieldCompiler $fieldCompiler)
     {
-        $this->logger->info('EntityLocater->__construct');
         $this->registry      = $registry;
         $this->logger        = new NullLogger();
         $this->fieldCompiler = $fieldCompiler;
@@ -55,7 +54,6 @@ class EntityLocater implements LoggerAwareInterface
 
     public function locateEntities(Target $target, ConnectionInterface $connection)
     {
-        $this->logger->info('EntityLocater->locateEntities');
         if (!count($target->getLocators()) && !$target->isQBImpossible()) {
             $this->constructLocatorsForGivenTarget($target, $connection);
         }
@@ -82,7 +80,6 @@ class EntityLocater implements LoggerAwareInterface
      */
     public function locateEntitiesBySFID(string $class, array $sfids, ConnectionInterface $connection)
     {
-        $this->logger->info('EntityLocater->locateEntitiesBySFID');
         //If we haven't seen this class before, we need to construct a query for it to use.
         if (!isset($this->cachedDQL[$class])) {
             /** @var EntityManager $manager */
@@ -138,7 +135,6 @@ class EntityLocater implements LoggerAwareInterface
      */
     private function constructLocatorsForGivenTarget(Target $target, ConnectionInterface $connection)
     {
-        $this->logger->info('EntityLocater->constructLocatorsForGivenTarget');
         foreach ($connection->getMetadataRegistry()->findMetadataBySObjectType($target->name) as $metadata) {
             // Lets build some DQL to do a query!
             /** @var EntityManager $manager */
@@ -220,7 +216,6 @@ class EntityLocater implements LoggerAwareInterface
      */
     public function locate(SObject $object, Metadata $metadata)
     {
-        $this->logger->info('EntityLocater->locate');
         $className = $metadata->getClassName();
 
         if (null === $className) {

@@ -207,7 +207,7 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
                     // If the entity isn't able to be sent to Salesforce for any reason,
                     // a RuntimeException is thrown. We don't want that stopping our fun.
                     $this->logger->error($e->getMessage());
-                    $this->logger->debug('AbstractEntitySubscriber-001 - '.$e->getTraceAsString());
+                    $this->logger->debug('#AES01 Exception occurred while flushing upserts. '.$e->getTraceAsString());
                     unset($processing[$oid]);
                 }
                 unset($entities[$oid]);
@@ -250,7 +250,7 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
                     // If the entity isn't able to be sent to Salesforce for any reason,
                     // a RuntimeException is thrown. We don't want that stopping our fun.
                     $this->logger->error($e->getMessage());
-                    $this->logger->debug('AbstractEntityCompiler-001 - '.$e->getTraceAsString());
+                    $this->logger->debug('#AES02 Exception occurred while flushing removals. '.$e->getTraceAsString());
                     unset($processing[$oid]);
                 } finally {
                     unset($entities[$oid]);

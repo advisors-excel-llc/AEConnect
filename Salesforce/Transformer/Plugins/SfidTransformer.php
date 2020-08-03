@@ -116,7 +116,7 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
         }
 
         $this->logger->debug(
-            'Unable to transform the SFID value for {type} with id {id} on {conn}',
+            '#ST01 Unable to transform the SFID value for {type} with id {id} on {conn}',
             [
                 'type' => $payload->getClassMetadata()->getName(),
                 'id'   => $id,
@@ -222,7 +222,7 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
 
             $this->assignPayloadValue($sfid, $payload, $association['type'] & ClassMetadataInfo::TO_MANY);
         } catch (\Exception $e) {
-            $this->logger->debug('SfidTransformer-001 - '.$e->getMessage());
+            $this->logger->debug('#ST02 General Exception in Transform Inbound. '.$e->getMessage());
 
             $this->assignPayloadValue(
                 $sfid,

@@ -212,7 +212,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
             $meta        = $this->getMetadataForClass($payload, $connection->getMetadataRegistry());
         } catch (MappingException $e) {
             $this->logger->error($e->getMessage());
-            $this->logger->debug('AbstractionTransformer-001 - '.$e->getTraceAsString());
+            $this->logger->debug('#AT01 Mapping Exception in Transform Inbound. '.$e->getTraceAsString());
             $payload->setValue(null);
 
             return;
@@ -252,7 +252,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
                     $idField = $targetMetadata->getSingleIdentifierFieldName();
                 } catch (MappingException $e) {
                     $this->logger->error($e->getMessage());
-                    $this->logger->debug('AbstractionTransformer-002 - '.$e->getTraceAsString());
+                    $this->logger->debug('AT02 Mapping Exception in Transform Inbound. '.$e->getTraceAsString());
 
                     continue;
                 }
@@ -270,7 +270,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
                         $entity = $builder->getQuery()->getOneOrNullResult();
                     } catch (ORMException $e) {
                         $this->logger->error($e->getMessage());
-                        $this->logger->debug('AbstractionTransformer-003 - '.$e->getTraceAsString());
+                        $this->logger->debug('#AT03 ORM Exception in Transform Inbound. '.$e->getTraceAsString());
                     }
                 }
             }
@@ -301,7 +301,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
             $metadata = $this->getMetadataForClass($payload, $connection->getMetadataRegistry());
         } catch (MappingException $e) {
             $this->logger->error($e->getMessage());
-            $this->logger->debug('AbstractionTransformer-004 - '.$e->getTraceAsString());
+            $this->logger->debug('#AT04 Mapping Exception in Transform Outbound. '.$e->getTraceAsString());
             $payload->setValue(null);
 
             return;

@@ -95,7 +95,7 @@ class ConnectionFinder implements LoggerAwareInterface
             return $connection;
         } catch (ORMException $e) {
             $this->logger->warning($e->getMessage());
-            $this->logger->debug('ConnectionFinder-001 - '.$e->getTraceAsString());
+            $this->logger->debug('#CF1 ORM Exception in find. '.$e->getTraceAsString());
 
             return null;
         }
