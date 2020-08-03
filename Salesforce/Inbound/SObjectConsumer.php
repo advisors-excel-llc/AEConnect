@@ -82,10 +82,10 @@ class SObjectConsumer implements SalesforceConsumerInterface
 
         if (null !== $data) {
             if (null !== $data->getSobject()) {
-                $this->logger->debug('SOCS01 This is a Push Topic.');
+                $this->logger->debug('This is a Push Topic.');
                 $this->consumeTopic($data->getSobject(), $data->getEvent());
             } elseif (null !== $data->getPayload() && is_array($data->getPayload())) {
-                $this->logger->debug('SOCS02 This is a Change Event.');
+                $this->logger->debug('This is a Change Event.');
                 $this->consumeChangeEvent($data->getPayload());
             }
         }

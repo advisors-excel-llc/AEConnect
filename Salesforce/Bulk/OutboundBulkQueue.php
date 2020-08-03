@@ -160,8 +160,8 @@ class OutboundBulkQueue
         try {
             $qb = $this->createQueryBuilder($manager, $classMetadata, $connection, $offset, $update, $create);
         } catch (MappingException $e) {
-            $this->logger->critical('#OBQ01 Mapping Exception in Start Job. '.$e->getMessage());
-            $this->logger->debug('#OBQ02 Mapping Exception in Start Job. '.$e->getTraceAsString());
+            $this->logger->critical('Mapping Exception in Start Job. '.$e->getMessage());
+            $this->logger->debug('Mapping Exception in Start Job. '.$e->getTraceAsString());
 
             return;
         }
@@ -174,7 +174,7 @@ class OutboundBulkQueue
                     $object = $this->compiler->compile($result, $connection->getName());
                     $this->outboundQueue->add($object);
                     $this->logger->debug(
-                        '#OBQ03 AE_CONNECT: Added {type} object for {intent} to {conn}',
+                        'AE_CONNECT: Added {type} object for {intent} to {conn}',
                         [
                             'type'   => $object->getSObject()->getType(),
                             'intent' => $object->getIntent(),
@@ -182,8 +182,8 @@ class OutboundBulkQueue
                         ]
                     );
                 } catch (\RuntimeException $e) {
-                    $this->logger->warning('#OBQ04 Runtime Exception in Start Job. '.$e->getMessage());
-                    $this->logger->debug('#OBQ05 Runtime Exception in Start Job. '.$e->getTraceAsString());
+                    $this->logger->warning('Runtime Exception in Start Job. '.$e->getMessage());
+                    $this->logger->debug('Runtime Exception in Start Job. '.$e->getTraceAsString());
                 }
             }
 
@@ -200,7 +200,7 @@ class OutboundBulkQueue
 
         $this->progress->setComplete($class);
 
-        $this->logger->debug('#OBQ06 Synced {count} objects of {type} type', ['count' => $offset, 'type' => $class]);
+        $this->logger->debug('Synced {count} objects of {type} type', ['count' => $offset, 'type' => $class]);
     }
 
     /**
@@ -306,7 +306,7 @@ class OutboundBulkQueue
     private function sendEntities(ConnectionInterface $connection, string $class, $results, $offset): void
     {
         $this->logger->debug(
-            '#OBQ07 AE_CONNECT: Sending {count} records to {conn}',
+            'AE_CONNECT: Sending {count} records to {conn}',
             [
                 'count' => count($results),
                 'conn'  => $connection->getName(),

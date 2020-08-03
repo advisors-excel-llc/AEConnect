@@ -178,10 +178,10 @@ class InboundBulkQueue
             }
         } catch (\Exception $e) {
             $this->logger->warning($e->getMessage());
-            $this->logger->debug('IBQ1 General Exception in Start Job. '.$e->getTraceAsString());
+            $this->logger->debug('General Exception in InboundBulkQueue -> StartJob. '.$e->getTraceAsString());
         } catch (GuzzleException $e) {
             $this->logger->warning($e->getMessage());
-            $this->logger->debug('#IBQ2 Guzzle Exception in Start Job. '.$e->getTraceAsString());
+            $this->logger->debug('Guzzle Exception in InboundBulkQueue -> StartJob. '.$e->getTraceAsString());
         }
     }
 }

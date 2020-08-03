@@ -130,7 +130,7 @@ class DbalConnectionDriver
                     } catch (\Exception $e) {
                         $entity->setActive(false);
                         $manager->flush();
-                        $this->logger->critical('#DCD1 General Exception in Load Connections. '.$e->getMessage());
+                        $this->logger->critical('General Exception in Load Connections. '.$e->getMessage());
                         $authProvider    = new NullProvider();
                         $restClient      = $this->createRestClient($authProvider);
                         $bulkClient      = $this->createBulkClient($authProvider);
@@ -212,7 +212,7 @@ class DbalConnectionDriver
                         if (!$entity->isActive()) {
                             $entity->setActive(false);
                             $manager->flush();
-                            $this->logger->critical('#DCD2 General Exception in Load Connections. '.$e->getMessage());
+                            $this->logger->critical('General Exception in Load Connections. '.$e->getMessage());
                         }
                     }
 
@@ -220,7 +220,7 @@ class DbalConnectionDriver
                 }
             } catch (TableNotFoundException $e) {
                 $this->logger->error($e->getMessage());
-                $this->logger->debug('#DCD3 Table Not Found Exception in Load Connections. '.$e->getTraceAsString());
+                $this->logger->debug('Table Not Found Exception in Load Connections. '.$e->getTraceAsString());
             }
         }
     }

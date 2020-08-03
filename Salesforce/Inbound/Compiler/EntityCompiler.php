@@ -90,7 +90,7 @@ class EntityCompiler
 
         foreach ($metas as $metadata) {
             $class = $metadata->getClassName();
-            $this->logger->debug('#EC01 Looking for '.$class);
+            $this->logger->debug('Entity Compiler Looking for '.$class);
             $manager = $this->registry->getManagerForClass($class);
             /** @var ClassMetadata $classMetadata */
             $classMetadata = $manager->getClassMetadata($class);
@@ -105,7 +105,7 @@ class EntityCompiler
 
             // IF we are in a Change Event, we would not have a full payload to create a full record.
             if (null === $entity && $deliveryMethod === 'Change Event') {
-                $this->logger->debug('#EC02 Change Event Entity not found, moving on to the next.');
+                $this->logger->debug('Change Event Entity not found, moving on to the next.');
                 continue;
             } else if (null !== $connectionProp
                 && null !== $connectionProp->getValueFromEntity($entity)
@@ -116,7 +116,7 @@ class EntityCompiler
                 )
             ) {
                 $this->logger->debug(
-                    "#EC03 Entity {type} with Id {id} and meant for {conn}",
+                    "Entity {type} with Id {id} and meant for {conn}",
                     [
                         'type' => $class,
                         'id'   => $classMetadata->getFieldValue(
@@ -129,7 +129,7 @@ class EntityCompiler
                 continue;
             }
 
-            $this->logger->debug('#EC04 Attempting to Map the Fields to the Entity.');
+            $this->logger->debug('Attempting to Map the Fields to the Entity.');
             $this->mapFieldsToEntity($object, $entity, $metadata);
 
             try {
@@ -143,7 +143,7 @@ class EntityCompiler
                 ) {
                     $manager->detach($entity);
                     $this->logger->debug(
-                        "#EC05 The record type given, {given}, does not match that of the entity, {match}.",
+                        "The record type given, {given}, does not match that of the entity, {match}.",
                         [
                             'given' => $recordTypeName,
                             'match' => $recordType->getValueFromEntity($entity),
@@ -157,7 +157,7 @@ class EntityCompiler
                 // Validate against entity assertions to ensure that entity can be written to the database
                 // Always validate if entity is new or if the validation flag is true
                 if (null !== $entityId && $deliveryMethod === 'Change Event') {
-                    $this->logger->debug('#EC06 Change Event and Entity Found: ID = '.$entityId);
+                    $this->logger->debug('Change Event and Entity Found: ID = '.$entityId);
                     $this->validate($entity, $connection);
                     $entities[] = $entity;
                     break;
@@ -168,11 +168,11 @@ class EntityCompiler
                 $entities[] = $entity;
             } catch (\RuntimeException $e) {
                 $manager->detach($entity);
-                $this->logger->notice('#EC07 Runtime Exception for Compile. '.$e->getMessage());
+                $this->logger->notice('Runtime Exception for Compile. '.$e->getMessage());
             }
         }
 
-        $this->logger->debug('#EC08 Returning '.count($entities).' Entit'.(count($entities) === 1 ? 'y' : 'ies').'.');
+        $this->logger->debug('Returning '.count($entities).' Entit'.(count($entities) === 1 ? 'y' : 'ies').'.');
         return $entities;
     }
 
@@ -256,13 +256,12 @@ class EntityCompiler
     {
         $class  = $metadata->getClassName();
         $entity = null;
-        $this->logger->debug('#EC10 '.$deliveryMethod.' Convert to Entity of '.$class);
 
         try {
             $entity = $this->entityLocater->locate($object, $metadata);
         } catch (\Exception $e) {
             $this->logger->debug(
-                '#EC11 No existing entity found for {type} with Salesforce Id of {id}.',
+                'No existing entity found for {type} with Salesforce Id of {id}.',
                 [
                     'type' => $object->__SOBJECT_TYPE__,
                     'id'   => $object->Id,
@@ -274,10 +273,10 @@ class EntityCompiler
 
         // If the entity doesn't exist, and we are not dealing with a Change Event, return false
         if (null === $entity && $deliveryMethod === 'Change Event') {
-            $this->logger->debug('#EC12 Entity is null for Change Event. Exiting.');
+            $this->logger->debug('Entity is null for Change Event. Exiting.');
             return null;
         } else if (null === $entity) { // If the entity doesn't exist, create a new one
-            $this->logger->debug('#EC13 Entity is null, attempting to create it.');
+            $this->logger->debug('Entity is null, attempting to create it.');
             $entity = new $class();
 
             // If the entity supports a connection name, set it
