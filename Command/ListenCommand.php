@@ -105,12 +105,12 @@ class ListenCommand extends Command implements LoggerAwareInterface
             $connection->getStreamingClient()->start();
         }
         catch (MemoryLimitException $e) {
-            $this->logger->critical('Memory limit Exception in ListenCommand -> Start. '.$e->getMessage());
+            $this->logger->critical('Memory limit Exception in ListenCommand->Start. '.$e->getMessage());
             $connection->getStreamingClient()->stop();
             return false;
         }
         catch (\Exception $e) {
-            $this->logger->critical('Unhandled Exception in ListenCommand -> Start. '.$e->getMessage());
+            $this->logger->critical('Unhandled Exception in ListenCommand->Start. '.$e->getMessage());
             $connection->getStreamingClient()->stop();
         }
 

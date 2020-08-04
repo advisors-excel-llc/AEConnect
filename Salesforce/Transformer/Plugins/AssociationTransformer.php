@@ -102,18 +102,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
                 || null === $fieldName
                 || 'Id' === $fieldName);
         } catch (MappingException $e) {
-            $this->logger->error(
-                '{msg}',
-                [
-                    'msg' => $e->getMessage(),
-                ]
-            );
-            $this->logger->debug(
-                '{trace}',
-                [
-                    'trace' => $e->getTraceAsString(),
-                ]
-            );
+            $this->logger->error('Mapping Exception for ActionTransformer->Supports. '.$e->getTraceAsString());
 
             return false;
         }
@@ -211,8 +200,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
             $className   = $association['targetEntity'];
             $meta        = $this->getMetadataForClass($payload, $connection->getMetadataRegistry());
         } catch (MappingException $e) {
-            $this->logger->error($e->getMessage());
-            $this->logger->debug('Mapping Exception in AssociationTransformer -> TransformInbound. '.$e->getTraceAsString());
+            $this->logger->error('Mapping Exception in AssociationTransformer->TransformInbound. '.$e->getTraceAsString());
             $payload->setValue(null);
 
             return;
@@ -251,8 +239,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
                 try {
                     $idField = $targetMetadata->getSingleIdentifierFieldName();
                 } catch (MappingException $e) {
-                    $this->logger->error($e->getMessage());
-                    $this->logger->debug('Mapping Exception in AssociationTransformer -> TransformInbound. '.$e->getTraceAsString());
+                    $this->logger->error('Mapping Exception in AssociationTransformer->TransformInbound. '.$e->getTraceAsString());
 
                     continue;
                 }
@@ -269,8 +256,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
                     try {
                         $entity = $builder->getQuery()->getOneOrNullResult();
                     } catch (ORMException $e) {
-                        $this->logger->error($e->getMessage());
-                        $this->logger->debug('ORM Exception in AssociationTransformer -> TransformInbound. '.$e->getTraceAsString());
+                        $this->logger->error('ORM Exception in AssociationTransformer->TransformInbound. '.$e->getTraceAsString());
                     }
                 }
             }
@@ -300,8 +286,7 @@ class AssociationTransformer extends AbstractTransformerPlugin
         try {
             $metadata = $this->getMetadataForClass($payload, $connection->getMetadataRegistry());
         } catch (MappingException $e) {
-            $this->logger->error($e->getMessage());
-            $this->logger->debug('Mapping Exception in AssociationTransformer -> TransformOutbound. '.$e->getTraceAsString());
+            $this->logger->debug('Mapping Exception in AssociationTransformer->TransformOutbound. '.$e->getTraceAsString());
             $payload->setValue(null);
 
             return;

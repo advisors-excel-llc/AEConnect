@@ -162,20 +162,8 @@ class OutboundQueue implements LoggerAwareInterface
                 $manager->clear($class);
             }
         } catch (\GuzzleHttp\Exception\GuzzleException $e) {
-            $this->logger->error(
-                'An exception occurred while trying to send queue: {msg}',
-                [
-                    'msg' => $e->getMessage()
-                ]
-            );
             $this->logger->debug('Guzzle Exception in Send Messages. '.$e->getTraceAsString());
         } catch (\Exception $e) {
-            $this->logger->error(
-                'An exception occurred while trying to send queue: {msg}',
-                [
-                    'msg' => $e->getMessage()
-                ]
-            );
             $this->logger->debug('General Exception in Send Messages. '.$e->getTraceAsString());
         }
     }

@@ -219,7 +219,6 @@ class DbalConnectionDriver
                     $this->connectionManager->registerConnection($connection);
                 }
             } catch (TableNotFoundException $e) {
-                $this->logger->error($e->getMessage());
                 $this->logger->debug('Table Not Found Exception in Load Connections. '.$e->getTraceAsString());
             }
         }

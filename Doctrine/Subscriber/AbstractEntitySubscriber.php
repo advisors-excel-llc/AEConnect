@@ -206,8 +206,7 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
                 } catch (\RuntimeException $e) {
                     // If the entity isn't able to be sent to Salesforce for any reason,
                     // a RuntimeException is thrown. We don't want that stopping our fun.
-                    $this->logger->error('Exception occurred while flushing upserts. '.$e->getMessage());
-                    $this->logger->debug('Exception occurred while flushing upserts. '.$e->getTraceAsString());
+                    $this->logger->error('Exception occurred while flushing upserts. '.$e->getTraceAsString());
                     unset($processing[$oid]);
                 }
                 unset($entities[$oid]);
@@ -249,8 +248,7 @@ abstract class AbstractEntitySubscriber implements EntitySubscriberInterface, Lo
                 } catch (\RuntimeException $e) {
                     // If the entity isn't able to be sent to Salesforce for any reason,
                     // a RuntimeException is thrown. We don't want that stopping our fun.
-                    $this->logger->error('Exception occurred while flushing removals. '.$e->getMessage());
-                    $this->logger->debug('Exception occurred while flushing removals. '.$e->getTraceAsString());
+                    $this->logger->error('Exception occurred while flushing removals. '.$e->getTraceAsString());
                     unset($processing[$oid]);
                 } finally {
                     unset($entities[$oid]);

@@ -92,7 +92,7 @@ class SalesforceConnector implements LoggerAwareInterface
         try {
             $result = $this->sObjectCompiler->compile($entity, $connectionName);
         } catch (\RuntimeException $e) {
-            $this->logger->warning('Runtime Exception for SalesforceConnector -> Send. '.$e->getMessage());
+            $this->logger->warning('Runtime Exception for SalesforceConnector->Send. '.$e->getMessage());
             return false;
         }
 
@@ -152,17 +152,16 @@ class SalesforceConnector implements LoggerAwareInterface
         try {
             $entities = [];
             foreach ($object as $obj) {
-                $this->logger->debug('SalesforceConnector -> Receive $deliveryMethod = '.$deliveryMethod);
+                $this->logger->debug('SalesforceConnector->Receive $deliveryMethod = '.$deliveryMethod);
                 $entities = array_merge($entities, $this->entityCompiler->compile($obj, $connectionName, $validate, $deliveryMethod));
             }
         } catch (\RuntimeException $e) {
-            $this->logger->warning('Runtime Exception for SalesforceConnector -> Receive. '.$e->getMessage());
-            $this->logger->debug('Runtime Exception for SalesforceConnector -> Receive. '.$e->getTraceAsString());
+            $this->logger->debug('Runtime Exception for SalesforceConnector->Receive. '.$e->getTraceAsString());
             return false;
         }
 
         // Attempt to save all entities in as few transactions as possible
-        $this->logger->debug('SalesforceConnector -> Receive complete for: $intent = '.$intent.' - count($entities) = '.count($entities));
+        $this->logger->debug('SalesforceConnector->Receive complete for: $intent = '.$intent.' - count($entities) = '.count($entities));
         $this->saveEntitiesToDB($intent, $entities);
 
         return true;
