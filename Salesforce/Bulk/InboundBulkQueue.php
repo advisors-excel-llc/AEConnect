@@ -177,11 +177,9 @@ class InboundBulkQueue
                 );
             }
         } catch (\Exception $e) {
-            $this->logger->warning($e->getMessage());
-            $this->logger->debug($e->getTraceAsString());
+            $this->logger->debug('General Exception in InboundBulkQueue->StartJob. '.$e->getTraceAsString());
         } catch (GuzzleException $e) {
-            $this->logger->warning($e->getMessage());
-            $this->logger->debug($e->getTraceAsString());
+            $this->logger->debug('Guzzle Exception in InboundBulkQueue->StartJob. '.$e->getTraceAsString());
         }
     }
 }

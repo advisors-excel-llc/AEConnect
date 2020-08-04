@@ -74,7 +74,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
             "#LISTENER RECEIVED #$sObject $replayId: Channel `{channel}` | {data}",
             [
                 'channel' => $channel->getChannelId(),
-                'data' => $message->getData()->getSobject() ?? $message->getData()->getPayload(),
+                'data' => $data->getSobject() ?? $data->getPayload(),
             ]
         );
 
@@ -82,8 +82,10 @@ class SObjectConsumer implements SalesforceConsumerInterface
 
         if (null !== $data) {
             if (null !== $data->getSobject()) {
+                $this->logger->debug('This is a Push Topic.');
                 $this->consumeTopic($data->getSobject(), $data->getEvent());
             } elseif (null !== $data->getPayload() && is_array($data->getPayload())) {
+                $this->logger->debug('This is a Change Event.');
                 $this->consumeChangeEvent($data->getPayload());
             }
         }
@@ -95,7 +97,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
         $this->throughputCalculations = $this->throughPut($this->throughputCalculations, $speed, $this->getSfidFromData($data));
 
         if (0 === $this->consumeCount % 50) {
-            $this->logger->info(
+            $this->logger->debug(
                 'THROUGHPUT CALCULATIONS {throughput}',
                 ['throughput' => $this->throughputCalculations]
             );
@@ -194,6 +196,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
 
     private function consumeChangeEvent(array $payload)
     {
+        $deliveryMethod = 'Change Event';
         $changeEventHeader = $payload['ChangeEventHeader'];
         unset($payload['ChangeEventHeader']);
 
@@ -254,7 +257,7 @@ class SObjectConsumer implements SalesforceConsumerInterface
                 continue;
             }
 
-            $this->connector->receive($sObjects, $intent, $connection->getName());
+            $this->connector->receive($sObjects, $intent, $connection->getName(), true, $deliveryMethod);
         }
     }
 
