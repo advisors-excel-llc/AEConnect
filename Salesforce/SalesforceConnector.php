@@ -86,15 +86,13 @@ class SalesforceConnector implements LoggerAwareInterface
     {
         if (!$this->enabled) {
             $this->logger->debug('Connector is disabled for {conn}', ['conn' => $connectionName]);
-
             return false;
         }
 
         try {
             $result = $this->sObjectCompiler->compile($entity, $connectionName);
         } catch (\RuntimeException $e) {
-            $this->logger->warning($e->getMessage());
-
+            $this->logger->warning('Runtime Exception for SalesforceConnector->Send. '.$e->getMessage());
             return false;
         }
 
@@ -141,7 +139,7 @@ class SalesforceConnector implements LoggerAwareInterface
      * @throws ORMException
      * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      */
-    public function receive($object, string $intent, string $connectionName = 'default', $validate = true): bool
+    public function receive($object, string $intent, string $connectionName = 'default', $validate = true, $deliveryMethod = ''): bool
     {
         if (!$this->enabled) {
             return false;
@@ -154,16 +152,16 @@ class SalesforceConnector implements LoggerAwareInterface
         try {
             $entities = [];
             foreach ($object as $obj) {
-                $entities = array_merge($entities, $this->entityCompiler->compile($obj, $connectionName, $validate));
+                $this->logger->debug('SalesforceConnector->Receive $deliveryMethod = '.$deliveryMethod);
+                $entities = array_merge($entities, $this->entityCompiler->compile($obj, $connectionName, $validate, $deliveryMethod));
             }
         } catch (\RuntimeException $e) {
-            $this->logger->warning($e->getMessage());
-            $this->logger->debug($e->getTraceAsString());
-
+            $this->logger->debug('Runtime Exception for SalesforceConnector->Receive. '.$e->getTraceAsString());
             return false;
         }
 
         // Attempt to save all entities in as few transactions as possible
+        $this->logger->debug('SalesforceConnector->Receive complete for: $intent = '.$intent.' - count($entities) = '.count($entities));
         $this->saveEntitiesToDB($intent, $entities);
 
         return true;
@@ -197,6 +195,7 @@ class SalesforceConnector implements LoggerAwareInterface
      */
     private function saveEntitiesToDB(string $intent, $entities, bool $transactional = true): void
     {
+        $this->logger->debug('SalesforceConnector Attempting '.$intent.', to Save Entities to DB.');
         if (!is_array($entities)) {
             $entities = [$entities];
         }
@@ -209,37 +208,45 @@ class SalesforceConnector implements LoggerAwareInterface
 
             switch ($intent) {
                 case SalesforceConsumerInterface::CREATED:
+                    $this->logger->debug('Doing a CREATED merge().');
+                    $manager->merge($entity);
+                    break;
                 case SalesforceConsumerInterface::UPDATED:
                 case SalesforceConsumerInterface::UNDELETED:
+                    $this->logger->debug('Doing an UPDATED merge().');
                     $manager->merge($entity);
                     break;
                 case SalesforceConsumerInterface::DELETED:
+                    $this->logger->debug('Doing a DELETED remove().');
                     $manager->remove($manager->merge($entity));
                     break;
             }
 
             if ($transactional) {
-                // When running transactionally, we need to keep track of things in case of an error
+                // When running as transactional, we need to keep track of things in case of an error
                 $entityMap[$intent][] = $entity;
             } else {
                 // If not running transactional, flush the entity now
                 try {
+                    $this->logger->debug('Trying to flush the entity, which is a persist to the database.');
                     $manager->flush();
                 } catch (\Throwable $t) {
                     // If an error occurs, log it and carry on
-                    $this->logger->warning($t->getMessage());
+                    $this->logger->warning('SalesforceConnector Throwable error: '.$t->getMessage());
                 } finally {
                     // Clear memory to prevent buildup
+                    $this->logger->debug('Clear memory.');
                     $manager->clear($class);
                 }
             }
 
-            $this->logger->info('{intent} {entity}', ['intent' => $intent, 'entity' => $entity->__toString()]);
+            $this->logger->debug('SalesforceConnector {intent} {entity}', ['intent' => $intent, 'entity' => $entity->__toString()]);
         }
 
         // In a transactional run, run through each of the managers for a class (in case they differ) and flush the
         // contents
-        if ($transactional) {
+        if ($transactional && isset($this->ems) && is_array($this->ems)) {
+            $this->logger->debug('This is a transactional run.');
             foreach ($this->ems as $manager) {
                 try {
                     $manager->transactional(
@@ -249,11 +256,12 @@ class SalesforceConnector implements LoggerAwareInterface
                         }
                     );
                 } catch (\Throwable $t) {
-                    $this->logger->warning($t->getMessage());
+                    $this->logger->warning('SalesforceConnector Throwable Error for Transaction. '.$t->getMessage());
                     // Clear the current entity manager to save memory
                     $manager->clear();
                     // If a transaction fails, try to save entries one by one
                     foreach ($entityMap as $intent => $ens) {
+                        $this->logger->debug('Transactional, we are trying to save entries one by one.');
                         $this->saveEntitiesToDB($intent, $ens, false);
                     }
                 }

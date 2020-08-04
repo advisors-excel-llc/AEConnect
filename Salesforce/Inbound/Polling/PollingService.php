@@ -198,7 +198,7 @@ class PollingService implements LoggerAwareInterface
                             $updates = array_merge($updates, $body);
                         } else {
                             $this->logger->error(
-                                "Received status code {code}: {msg}",
+                                "Received Polling status code {code}: {msg}",
                                 [
                                     'code' => $result->getHttpStatusCode(),
                                     'msg'  => json_encode($result->getBody()),
@@ -208,12 +208,12 @@ class PollingService implements LoggerAwareInterface
                     }
                 } catch (\RuntimeException $e) {
                     // A runtime exception is thrown if there are no requests to build.
-                    $this->logger->critical($e->getMessage());
+                    $this->logger->critical('Runtime Exception in Poll. '.$e->getMessage());
                 }
             }
 
             if (empty($updates) && empty($removals)) {
-                $this->logger->debug('No objects to update or delete');
+                $this->logger->debug('No objects to update or delete in Poll.');
 
                 return;
             }
@@ -226,7 +226,7 @@ class PollingService implements LoggerAwareInterface
                 try {
                     $this->connector->receive($update, SalesforceConsumerInterface::UPDATED, $connectionName);
                 } catch (\Exception $e) {
-                    $this->logger->critical($e->getMessage());
+                    $this->logger->critical('Exception trying Update Receive in Poll. '.$e->getMessage());
                 }
             }
 
@@ -235,7 +235,7 @@ class PollingService implements LoggerAwareInterface
                 try {
                     $this->connector->receive($removal, SalesforceConsumerInterface::DELETED, $connectionName);
                 } catch (\Exception $e) {
-                    $this->logger->critical($e->getMessage());
+                    $this->logger->critical('Exception trying Removal Receive in Poll. '.$e->getMessage());
                 }
             }
         }

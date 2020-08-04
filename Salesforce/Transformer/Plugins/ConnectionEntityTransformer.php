@@ -75,8 +75,7 @@ class ConnectionEntityTransformer extends AbstractTransformerPlugin implements L
                 $payload->setValue($connection);
             }
         } catch (MappingException $e) {
-            $this->logger->warning($e->getMessage());
-            $this->logger->debug($e->getTraceAsString());
+            $this->logger->debug('Mapping Exception in Transform Inbound. '.$e->getTraceAsString());
         }
     }
 }
