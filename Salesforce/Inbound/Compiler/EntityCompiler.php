@@ -72,12 +72,13 @@ class EntityCompiler
      * @param SObject $object
      * @param string $connectionName
      * @param bool $validate
+     * @param string $intent
      * @param string $deliveryMethod
      *
      * @return array
      * @throws \Doctrine\ORM\Mapping\MappingException
      */
-    public function compile(SObject $object, string $connectionName = 'default', $validate = true, $deliveryMethod = ''): array
+    public function compile(SObject $object, string $connectionName = 'default', $validate = true, $intent = '', $deliveryMethod = ''): array
     {
         $connection = $this->connectionManager->getConnection($connectionName);
 
@@ -249,10 +250,12 @@ class EntityCompiler
     /**
      * @param SObject $object
      * @param Metadata $metadata
+     * @param string $intent
+     * @param string $deliveryMethod
      *
      * @return object
      */
-    private function convertToEntity(SObject $object, Metadata $metadata, $deliveryMethod = '')
+    private function convertToEntity(SObject $object, Metadata $metadata, $intent = '', $deliveryMethod = '')
     {
         $class  = $metadata->getClassName();
         $entity = null;
@@ -271,8 +274,8 @@ class EntityCompiler
 
         $connectionProp = $metadata->getConnectionNameField();
 
-        // If the entity doesn't exist, and we are not dealing with a Change Event, return false
-        if (null === $entity && $deliveryMethod === 'Change Event') {
+        // If the entity doesn't exist, and we are dealing with a Change Event, but not creating, return false
+        if (null === $entity && $intent !== 'CREATED' && $deliveryMethod === 'Change Event') {
             $this->logger->debug('Entity is null for Change Event. Exiting.');
             return null;
         } else if (null === $entity) { // If the entity doesn't exist, create a new one
