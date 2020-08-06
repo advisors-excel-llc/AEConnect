@@ -153,7 +153,7 @@ class SalesforceConnector implements LoggerAwareInterface
             $entities = [];
             foreach ($object as $obj) {
                 $this->logger->debug('SalesforceConnector->Receive $deliveryMethod = '.$deliveryMethod);
-                $entities = array_merge($entities, $this->entityCompiler->compile($obj, $connectionName, $validate, $deliveryMethod));
+                $entities = array_merge($entities, $this->entityCompiler->compile($obj, $connectionName, $validate, $intent, $deliveryMethod));
             }
         } catch (\RuntimeException $e) {
             $this->logger->debug('Runtime Exception for SalesforceConnector->Receive. '.$e->getTraceAsString());
