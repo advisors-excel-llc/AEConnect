@@ -160,8 +160,7 @@ class OutboundBulkQueue
         try {
             $qb = $this->createQueryBuilder($manager, $classMetadata, $connection, $offset, $update, $create);
         } catch (MappingException $e) {
-            $this->logger->critical($e->getMessage());
-            $this->logger->debug($e->getTraceAsString());
+            $this->logger->debug('Mapping Exception in Start Job. '.$e->getTraceAsString());
 
             return;
         }
@@ -182,8 +181,7 @@ class OutboundBulkQueue
                         ]
                     );
                 } catch (\RuntimeException $e) {
-                    $this->logger->warning($e->getMessage());
-                    $this->logger->debug($e->getTraceAsString());
+                    $this->logger->debug('Runtime Exception in Start Job. '.$e->getTraceAsString());
                 }
             }
 

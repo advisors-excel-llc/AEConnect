@@ -222,7 +222,7 @@ class SfidTransformer extends AbstractTransformerPlugin implements LoggerAwareIn
 
             $this->assignPayloadValue($sfid, $payload, $association['type'] & ClassMetadataInfo::TO_MANY);
         } catch (\Exception $e) {
-            $this->logger->debug($e->getMessage());
+            $this->logger->debug('General Exception in Transform Inbound. '.$e->getMessage());
 
             $this->assignPayloadValue(
                 $sfid,

@@ -3,7 +3,7 @@
  * Created by PhpStorm.
  * User: alex.boyce
  * Date: 10/2/18
- * Time: 5:13 PM
+ * Time: 5:13 PM.
  */
 
 namespace AE\ConnectBundle\Salesforce;
@@ -13,11 +13,12 @@ use AE\ConnectBundle\Salesforce\Inbound\SalesforceConsumerInterface;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\CompilerResult;
 use AE\ConnectBundle\Salesforce\Outbound\Compiler\SObjectCompiler;
 use AE\ConnectBundle\Salesforce\Outbound\Enqueue\OutboundProcessor;
+use AE\ConnectBundle\Util\GetEmTrait;
 use Doctrine\Common\Util\ClassUtils;
-use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\MappingException;
 use Doctrine\ORM\ORMException;
+use Doctrine\Persistence\ManagerRegistry;
 use Enqueue\Client\Message;
 use Enqueue\Client\ProducerInterface;
 use JMS\Serializer\SerializerInterface;
@@ -25,11 +26,11 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Doctrine\Persistence\ManagerRegistry;
 
 class SalesforceConnector implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
+    use GetEmTrait;
 
     /**
      * @var SObjectCompiler
@@ -69,34 +70,29 @@ class SalesforceConnector implements LoggerAwareInterface
         ManagerRegistry $registry,
         ?LoggerInterface $logger = null
     ) {
-        $this->producer        = $producer;
+        $this->producer = $producer;
         $this->sObjectCompiler = $sObjectCompiler;
-        $this->entityCompiler  = $entityCompiler;
-        $this->serializer      = $serializer;
-        $this->registry        = $registry;
+        $this->entityCompiler = $entityCompiler;
+        $this->serializer = $serializer;
+        $this->registry = $registry;
 
         $this->setLogger($logger ?: new NullLogger());
     }
 
     /**
      * @param $entity
-     * @param string $connectionName
-     *
-     * @return bool
      */
     public function send($entity, string $connectionName = 'default'): bool
     {
         if (!$this->enabled) {
             $this->logger->debug('Connector is disabled for {conn}', ['conn' => $connectionName]);
-
             return false;
         }
 
         try {
             $result = $this->sObjectCompiler->compile($entity, $connectionName);
         } catch (\RuntimeException $e) {
-            $this->logger->warning($e->getMessage());
-
+            $this->logger->warning('Runtime Exception for SalesforceConnector->Send. '.$e->getMessage());
             return false;
         }
 
@@ -104,14 +100,11 @@ class SalesforceConnector implements LoggerAwareInterface
     }
 
     /**
-     * @param CompilerResult $result
      * @param string $connectionName
-     *
-     * @return bool
      */
     public function sendCompilerResult(CompilerResult $result): bool
     {
-        $intent  = $result->getIntent();
+        $intent = $result->getIntent();
         $sObject = $result->getSObject();
 
         if (CompilerResult::DELETE !== $intent) {
@@ -140,16 +133,13 @@ class SalesforceConnector implements LoggerAwareInterface
 
     /**
      * @param $object
-     * @param string $intent
-     * @param string $connectionName
      * @param bool $validate
      *
-     * @return bool
      * @throws MappingException
      * @throws ORMException
      * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      */
-    public function receive($object, string $intent, string $connectionName = 'default', $validate = true): bool
+    public function receive($object, string $intent, string $connectionName = 'default', $validate = true, $deliveryMethod = ''): bool
     {
         if (!$this->enabled) {
             return false;
@@ -162,16 +152,16 @@ class SalesforceConnector implements LoggerAwareInterface
         try {
             $entities = [];
             foreach ($object as $obj) {
-                $entities = array_merge($entities, $this->entityCompiler->compile($obj, $connectionName, $validate));
+                $this->logger->debug('SalesforceConnector->Receive $deliveryMethod = '.$deliveryMethod);
+                $entities = array_merge($entities, $this->entityCompiler->compile($obj, $connectionName, $validate, $intent, $deliveryMethod));
             }
         } catch (\RuntimeException $e) {
-            $this->logger->warning($e->getMessage());
-            $this->logger->debug($e->getTraceAsString());
-
+            $this->logger->debug('Runtime Exception for SalesforceConnector->Receive. '.$e->getTraceAsString());
             return false;
         }
 
         // Attempt to save all entities in as few transactions as possible
+        $this->logger->debug('SalesforceConnector->Receive complete for: $intent = '.$intent.' - count($entities) = '.count($entities));
         $this->saveEntitiesToDB($intent, $entities);
 
         return true;
@@ -198,18 +188,14 @@ class SalesforceConnector implements LoggerAwareInterface
     }
 
     /**
-     * @param string $intent
      * @param $entities
-     * @param bool $transactional
      *
      * @throws ORMException
      * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      */
     private function saveEntitiesToDB(string $intent, $entities, bool $transactional = true): void
     {
-        /** @var EntityManagerInterface[] $managers */
-        $managers = [];
-
+        $this->logger->debug('SalesforceConnector Attempting '.$intent.', to Save Entities to DB.');
         if (!is_array($entities)) {
             $entities = [$entities];
         }
@@ -218,82 +204,65 @@ class SalesforceConnector implements LoggerAwareInterface
 
         foreach ($entities as $entity) {
             $class = ClassUtils::getClass($entity);
-
-            if (!array_key_exists($class, $managers)) {
-                $managers[$class] = $this->registry->getManagerForClass($class);
-            }
-
-            $manager = $managers[$class];
-
-            // If an exception is thrown by the entity manager, it can force it to close
-            // This is how we can reopen it for future transactions
-            if (!$manager->isOpen()) {
-                $manager = $managers[$class] = EntityManager::create(
-                    $manager->getConnection(),
-                    $manager->getConfiguration(),
-                    $manager->getEventManager()
-                );
-            }
+            $manager = $this->getEm($class, $this->registry, true);
 
             switch ($intent) {
                 case SalesforceConsumerInterface::CREATED:
+                    $this->logger->debug('Doing a CREATED merge().');
+                    $manager->merge($entity);
+                    break;
                 case SalesforceConsumerInterface::UPDATED:
                 case SalesforceConsumerInterface::UNDELETED:
+                    $this->logger->debug('Doing an UPDATED merge().');
                     $manager->merge($entity);
                     break;
                 case SalesforceConsumerInterface::DELETED:
-                    $manager->remove($entity);
+                    $this->logger->debug('Doing a DELETED remove().');
+                    $manager->remove($manager->merge($entity));
                     break;
             }
 
             if ($transactional) {
-                // When running transactionally, we need to keep track of things in case of an error
-                $entityMap[$class][$intent][] = $entity;
+                // When running as transactional, we need to keep track of things in case of an error
+                $entityMap[$intent][] = $entity;
             } else {
                 // If not running transactional, flush the entity now
                 try {
+                    $this->logger->debug('Trying to flush the entity, which is a persist to the database.');
                     $manager->flush();
                 } catch (\Throwable $t) {
                     // If an error occurs, log it and carry on
-                    $this->logger->warning($t->getMessage());
+                    $this->logger->warning('SalesforceConnector Throwable error: '.$t->getMessage());
                 } finally {
                     // Clear memory to prevent buildup
+                    $this->logger->debug('Clear memory.');
                     $manager->clear($class);
                 }
             }
 
-            $this->logger->info('{intent} {entity}', ['intent' => $intent, 'entity' => $entity->__toString()]);
+            $this->logger->debug('SalesforceConnector {intent} {entity}', ['intent' => $intent, 'entity' => $entity->__toString()]);
         }
-
 
         // In a transactional run, run through each of the managers for a class (in case they differ) and flush the
         // contents
-        if ($transactional) {
-            foreach ($managers as $class => $manager) {// Again, another check to make sure the manager is open
-                if (!$manager->isOpen()) {
-                    continue;
-                }
+        if ($transactional && isset($this->ems) && is_array($this->ems)) {
+            $this->logger->debug('This is a transactional run.');
+            foreach ($this->ems as $manager) {
                 try {
                     $manager->transactional(
-                        function (EntityManagerInterface $em) use ($class) {
+                        function (EntityManagerInterface $em) {
                             $em->flush();
-                            $em->clear($class);
+                            $em->clear();
                         }
                     );
                 } catch (\Throwable $t) {
-                    $this->logger->warning($t->getMessage());
+                    $this->logger->warning('SalesforceConnector Throwable Error for Transaction. '.$t->getMessage());
                     // Clear the current entity manager to save memory
-                    $manager->clear($class);
+                    $manager->clear();
                     // If a transaction fails, try to save entries one by one
-                    if (array_key_exists($class, $entityMap)) {
-                        foreach ($entityMap[$class] as $intent => $ens) {
-                            $this->saveEntitiesToDB($intent, $ens, false);
-                        }
-                    }
-                } finally {
-                    if (array_key_exists($class, $entityMap)) {
-                        // Clear entity map to save memory
-                        unset($entityMap[$class]);
+                    foreach ($entityMap as $intent => $ens) {
+                        $this->logger->debug('Transactional, we are trying to save entries one by one.');
+                        $this->saveEntitiesToDB($intent, $ens, false);
                     }
                 }
             }

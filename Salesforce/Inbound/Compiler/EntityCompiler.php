@@ -72,11 +72,13 @@ class EntityCompiler
      * @param SObject $object
      * @param string $connectionName
      * @param bool $validate
+     * @param string $intent
+     * @param string $deliveryMethod
      *
      * @return array
      * @throws \Doctrine\ORM\Mapping\MappingException
      */
-    public function compile(SObject $object, string $connectionName = 'default', $validate = true): array
+    public function compile(SObject $object, string $connectionName = 'default', $validate = true, $intent = '', $deliveryMethod = ''): array
     {
         $connection = $this->connectionManager->getConnection($connectionName);
 
@@ -88,20 +90,25 @@ class EntityCompiler
         $metas    = $connection->getMetadataRegistry()->findMetadataBySObject($object);
 
         foreach ($metas as $metadata) {
-            $class   = $metadata->getClassName();
+            $class = $metadata->getClassName();
+            $this->logger->debug('Entity Compiler Looking for '.$class);
             $manager = $this->registry->getManagerForClass($class);
             /** @var ClassMetadata $classMetadata */
             $classMetadata = $manager->getClassMetadata($class);
             $entity        = $this->convertToEntity(
                 $object,
-                $metadata
+                $metadata,
+                $deliveryMethod
             );
 
-            // Check if the entity is meant for this connection, if the connection value for the entity is null,
-            // don't check, allow the entity to be created, given that validation passes
+            // Check if the entity is not meant for this connection, allow the entity to be created, given that validation passes
             $connectionProp = $metadata->getConnectionNameField();
 
-            if (null !== $connectionProp
+            // IF we are in a Change Event, we would not have a full payload to create a full record.
+            if (null === $entity && $deliveryMethod === 'Change Event') {
+                $this->logger->debug('Change Event Entity not found, moving on to the next.');
+                continue;
+            } else if (null !== $connectionProp
                 && null !== $connectionProp->getValueFromEntity($entity)
                 && !$this->hasConnection(
                     $entity,
@@ -123,6 +130,7 @@ class EntityCompiler
                 continue;
             }
 
+            $this->logger->debug('Attempting to Map the Fields to the Entity.');
             $this->mapFieldsToEntity($object, $entity, $metadata);
 
             try {
@@ -135,7 +143,7 @@ class EntityCompiler
                     && $recordType->getValueFromEntity($entity) !== $recordTypeName
                 ) {
                     $manager->detach($entity);
-                    $this->logger->info(
+                    $this->logger->debug(
                         "The record type given, {given}, does not match that of the entity, {match}.",
                         [
                             'given' => $recordTypeName,
@@ -149,18 +157,23 @@ class EntityCompiler
 
                 // Validate against entity assertions to ensure that entity can be written to the database
                 // Always validate if entity is new or if the validation flag is true
-                if (null === $entityId || $validate) {
+                if (null !== $entityId && $deliveryMethod === 'Change Event') {
+                    $this->logger->debug('Change Event and Entity Found: ID = '.$entityId);
+                    $this->validate($entity, $connection);
+                    $entities[] = $entity;
+                    break;
+                } else if (null === $entityId || $validate) {
                     $this->validate($entity, $connection);
                 }
 
                 $entities[] = $entity;
             } catch (\RuntimeException $e) {
                 $manager->detach($entity);
-
-                $this->logger->notice($e->getMessage());
+                $this->logger->notice('Runtime Exception for Compile. '.$e->getMessage());
             }
         }
 
+        $this->logger->debug('Returning '.count($entities).' Entit'.(count($entities) === 1 ? 'y' : 'ies').'.');
         return $entities;
     }
 
@@ -237,10 +250,12 @@ class EntityCompiler
     /**
      * @param SObject $object
      * @param Metadata $metadata
+     * @param string $intent
+     * @param string $deliveryMethod
      *
      * @return object
      */
-    private function convertToEntity(SObject $object, Metadata $metadata)
+    private function convertToEntity(SObject $object, Metadata $metadata, $intent = '', $deliveryMethod = '')
     {
         $class  = $metadata->getClassName();
         $entity = null;
@@ -248,20 +263,23 @@ class EntityCompiler
         try {
             $entity = $this->entityLocater->locate($object, $metadata);
         } catch (\Exception $e) {
-            $this->logger->info(
+            $this->logger->debug(
                 'No existing entity found for {type} with Salesforce Id of {id}.',
                 [
                     'type' => $object->__SOBJECT_TYPE__,
                     'id'   => $object->Id,
                 ]
             );
-            $this->logger->debug($e->getMessage());
         }
 
         $connectionProp = $metadata->getConnectionNameField();
 
-        // If the entity doesn't exist, create a new one
-        if (null === $entity) {
+        // If the entity doesn't exist, and we are dealing with a Change Event, but not creating, return false
+        if (null === $entity && $intent !== 'CREATED' && $deliveryMethod === 'Change Event') {
+            $this->logger->debug('Entity is null for Change Event. Exiting.');
+            return null;
+        } else if (null === $entity) { // If the entity doesn't exist, create a new one
+            $this->logger->debug('Entity is null, attempting to create it.');
             $entity = new $class();
 
             // If the entity supports a connection name, set it

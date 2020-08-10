@@ -131,7 +131,6 @@ class SalesforceOutboundExtension implements ExtensionInterface
      */
     public function onProcessorException(ProcessorException $context): void
     {
-        $this->logger->error($context->getMessage());
-        $this->logger->debug($context->getException()->getTraceAsString());
+        $this->logger->debug('SalesforceOutboundExtension->ProcessorException. '.$context->getException()->getTraceAsString());
     }
 }
