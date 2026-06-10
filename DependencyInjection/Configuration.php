@@ -99,12 +99,26 @@ class Configuration implements ConfigurationInterface
                     ->scalarNode('password')->end()
                     ->scalarNode('url')->defaultValue('https://login.salesforce.com')->end()
                     ->scalarNode('entity')->end()
+                    ->enumNode('grant_type')
+                        ->values(['password', 'client_credentials'])
+                        ->defaultValue('password')
+                    ->end()
                 ->end()
                 ->validate()
                     ->ifTrue(function ($value) {
-                        return empty($value['entity']) && (empty($value['username']) || empty($value['password']));
+                        if (!empty($value['entity'])) {
+                            return false;
+                        }
+                        if (isset($value['grant_type']) && $value['grant_type'] === 'client_credentials') {
+                            return empty($value['key']) || empty($value['secret']);
+                        }
+                        return empty($value['username']) || empty($value['password']);
                     })
-                    ->thenInvalid('Either a database entity or a username and password must be provided')
+                    ->thenInvalid(
+                        'For client_credentials grant, key and secret are required. '
+                        .'For password grant, username and password are required. '
+                        .'Alternatively, provide a database entity.'
+                    )
                 ->end()
         ;
     }
