@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Command;
 
+use AE\ConnectBundle\AuthProvider\ClientCredentialsProvider;
 use AE\ConnectBundle\AuthProvider\OAuthProvider;
 use AE\ConnectBundle\AuthProvider\SoapProvider;
 use AE\ConnectBundle\Connection\ConnectionInterface;
@@ -113,7 +114,14 @@ class DebugConnectionsCommand extends Command
     private function renderConnection(OutputInterface $output, ConnectionInterface $connection)
     {
         $authProvider = $connection->getRestClient()->getAuthProvider();
-        $providerType = $authProvider instanceof SoapProvider ? 'SOAP' : 'OAuth';
+        $providerType = 'Unknown';
+        if ($authProvider instanceof ClientCredentialsProvider) {
+            $providerType = 'Client Credentials';
+        } elseif ($authProvider instanceof SoapProvider) {
+            $providerType = 'SOAP';
+        } elseif ($authProvider instanceof OAuthProvider) {
+            $providerType = 'OAuth';
+        }
         $username     = '';
 
         if (($identity = $authProvider->getIdentity()) && array_key_exists('username', $identity)) {
@@ -139,6 +147,8 @@ class DebugConnectionsCommand extends Command
             $rows[] = ['Client Id', $authProvider->getClientId()];
             $rows[] = ['Client Secret', $authProvider->getClientSecret()];
             $rows[] = ['Grant Type', $authProvider->getGrantType()];
+        } elseif ($authProvider instanceof ClientCredentialsProvider) {
+            $rows[] = ['Client Id', $authProvider->getClientId()];
         }
 
 

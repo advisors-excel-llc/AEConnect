@@ -16,6 +16,7 @@ use AE\ConnectBundle\Metadata\MetadataRegistryFactory;
 use AE\ConnectBundle\Streaming\ChangeEvent;
 use AE\ConnectBundle\Streaming\GenericEvent;
 use AE\ConnectBundle\Streaming\PlatformEvent;
+use AE\ConnectBundle\AuthProvider\ClientCredentialsProvider;
 use AE\ConnectBundle\AuthProvider\OAuthProvider;
 use AE\ConnectBundle\AuthProvider\SoapProvider;
 use AE\SalesforceRestSdk\Bayeux\BayeuxClient;
@@ -233,7 +234,21 @@ class AEConnectExtension extends Extension implements PrependExtensionInterface
         ContainerBuilder $container,
         ?string $logger = null
     ) {
-        if (array_key_exists('key', $config) && array_key_exists('secret', $config)) {
+        $grantType = $config['grant_type'] ?? 'password';
+
+        if ($grantType === 'client_credentials') {
+            $proxy = $container->register("ae_connect.connection.$connectionName.auth_provider", ClientCredentialsProvider::class)
+                               ->setArguments(
+                                   [
+                                       new Reference("ae_connect.connection.$connectionName.cache.auth_provider"),
+                                       $config['key'],
+                                       $config['secret'],
+                                       $config['url'],
+                                   ]
+                               )
+                               ->setPublic(true)
+            ;
+        } elseif (array_key_exists('key', $config) && array_key_exists('secret', $config)) {
             $proxy = $container->register("ae_connect.connection.$connectionName.auth_provider", OAuthProvider::class)
                                ->setArguments(
                                    [

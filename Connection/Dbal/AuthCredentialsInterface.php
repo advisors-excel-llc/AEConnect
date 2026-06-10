@@ -11,8 +11,9 @@ interface AuthCredentialsInterface extends ConnectionEntityInterface
 {
     public const SOAP = 'SOAP';
     public const OAUTH = 'OAUTH';
+    public const CLIENT_CREDENTIALS = 'CLIENT_CREDENTIALS';
 
-    /** getType should return "SOAP" or "OAUTH" or "OATH" */
+    /** getType should return "SOAP", "OAUTH", or "CLIENT_CREDENTIALS" */
     public function getType(): string;
     public function getUsername(): string;
     public function getPassword(): ?string;

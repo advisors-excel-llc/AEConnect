@@ -8,6 +8,7 @@
 
 namespace AE\ConnectBundle\Driver;
 
+use AE\ConnectBundle\AuthProvider\ClientCredentialsProvider;
 use AE\ConnectBundle\AuthProvider\NullProvider;
 use AE\ConnectBundle\Connection\Connection;
 use AE\ConnectBundle\Connection\Dbal\AuthCredentialsInterface;
@@ -238,6 +239,21 @@ class DbalConnectionDriver
     ): AuthProviderInterface {
         if ($entity->getType() === AuthCredentialsInterface::SOAP) {
             return new SoapProvider($cache, $entity->getUsername(), $entity->getPassword(), $entity->getLoginUrl());
+        }
+
+        if ($entity->getType() === AuthCredentialsInterface::CLIENT_CREDENTIALS) {
+            $provider = new ClientCredentialsProvider(
+                $cache,
+                $entity->getClientKey(),
+                $entity->getClientSecret(),
+                $entity->getLoginUrl()
+            );
+
+            if ($logger) {
+                $provider->setLogger($logger);
+            }
+
+            return $provider;
         }
 
         if ($entity->getType() === AuthCredentialsInterface::OAUTH) {
