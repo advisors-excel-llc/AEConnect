@@ -8,8 +8,7 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 class PullRecords extends Step
 {
     const NAME = 'aeconnect.pull_records';
-
-    public function execute(EventDispatcherInterface $dispatcher): void
+    function execute(EventDispatcherInterface $dispatcher): void
     {
         $target = $this->syncEvent->getCurrentTarget();
         if ($target && !$target->queryComplete) {
@@ -19,17 +18,25 @@ class PullRecords extends Step
             // and we can mark it as such here.
             if (empty($event->getTarget()->records)) {
                 $target->queryComplete = true;
+                $this->syncEvent->nextTarget();
             }
         }
     }
 
-    public function nextStep(): Step
+    function nextStep(): Step
     {
         if ($this->syncEvent->hasRecordsToProcess()) {
             // OK, now Locate em!
             return new LocateEntities();
+        } else if($this->syncEvent->hasUnprocessedQueries()) {
+            //We are moving on to the next sobject for processing
+            return $this;
         } else {
-            return new QueryComplete();
+            if ($this->syncEvent->getConfig()->getPushConfiguration()->update || $this->syncEvent->getConfig()->getPushConfiguration()->create) {
+                return new OutboundUpdate();
+            }
+            //All done!
+            return new EndStep();
         }
     }
 }

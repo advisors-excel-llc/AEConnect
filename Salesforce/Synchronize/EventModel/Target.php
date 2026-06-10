@@ -21,8 +21,6 @@ class Target
     private $QBImpossible = false;
     private $QBImpossibleReason = '';
 
-    public $temporaryTables = [];
-
     /**
      * @return LocationQuery[]
      */

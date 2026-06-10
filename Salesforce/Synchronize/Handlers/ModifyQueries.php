@@ -115,7 +115,7 @@ class ModifyQueries implements SyncHandler
     private function isQueryable(array $metadatas): bool
     {
         foreach ($metadatas as $metadata) {
-            if (!$metadata->getDescribe()->isQueryable()) {
+            if (!$metadata->getDescribe() || !$metadata->getDescribe()->isQueryable()) {
                 $this->logger->debug(
                     '#AECONNECT #generateQueries -> #process {obj} is not queryable',
                     ['obj' => $metadata->getClassName()]

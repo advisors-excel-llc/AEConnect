@@ -1,6 +1,6 @@
 {
     "name": "ae/connect-bundle",
-    "version": "v2.1.3",
+    "version": "v2.0.3",
     "description": "Synchronize Doctrine Entities to and from one or more Salesforce Orgs",
     "type": "symfony-bundle",
     "minimum-stability": "stable",

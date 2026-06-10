@@ -2,7 +2,6 @@
 
 namespace AE\ConnectBundle\Salesforce\Synchronize\Handlers;
 
-use AE\ConnectBundle\Metadata\FieldMetadata;
 use AE\ConnectBundle\Salesforce\Synchronize\SyncTargetEvent;
 use AE\ConnectBundle\Salesforce\Transformer\Util\AssociationCache;
 use AE\ConnectBundle\Util\GetEmTrait;
@@ -14,7 +13,7 @@ class TransformAssociations implements SyncTargetHandler
 
     /** @var AssociationCache $cache */
     protected $cache;
-    /** @var ManagerRegistry */
+    /** @var ManagerRegistry  */
     protected $registry;
 
     public function __construct(AssociationCache $cache, ManagerRegistry $registry)
@@ -34,9 +33,8 @@ class TransformAssociations implements SyncTargetHandler
             $classMeta = $event->getConnection()->getMetadataRegistry()->findMetadataForEntity($record->entity);
             $entityManager = $this->getEm(get_class($record->entity), $this->registry);
 
-            /** @var FieldMetadata $fieldMeta */
             foreach ($classMeta->getActiveFieldMetadata() as $fieldMeta) {
-                if ('association' === $fieldMeta->getTransformer()) {
+                if ($fieldMeta->getTransformer() === 'association') {
                     if (!$record->sObject->getFields()[$fieldMeta->getField()]) {
                         $fieldMeta->setValueForEntity(
                             $record->entity,
@@ -44,9 +42,9 @@ class TransformAssociations implements SyncTargetHandler
                         );
                         continue;
                     }
-
                     $hit = $this->cache->fetch($record->sObject->getFields()[$fieldMeta->getField()]);
-                    if (false !== $hit) {
+                    // TODO : Here we can actually recover from this dreaded issue https://github.com/advisors-excel-llc/AEConnect/issues/213
+                    if ($hit !== false) {
                         $fieldMeta->setValueForEntity(
                             $record->entity,
                             $entityManager->getReference($hit[0], $hit[1])
