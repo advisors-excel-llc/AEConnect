@@ -61,6 +61,13 @@ class ClientCredentialsProvider implements AuthProviderInterface, LoggerAwareInt
      */
     private $identityUrl;
 
+    /**
+     * @var int|null
+     */
+    private $issuedAt;
+
+    private const TOKEN_MAX_AGE = 5400;
+
     public function __construct(
         CacheProvider $cache,
         string $clientId,
@@ -93,13 +100,14 @@ class ClientCredentialsProvider implements AuthProviderInterface, LoggerAwareInt
                     $this->instanceUrl  = $values['instanceUrl'];
                     $this->identityUrl  = $values['identityUrl'];
                     $this->isAuthorized = $values['isAuthorized'];
+                    $this->issuedAt     = $values['issuedAt'] ?? null;
                 }
             } catch (\Exception $e) {
                 $this->logger->error($e->getMessage());
             }
         }
 
-        if (!$reauth && $this->isAuthorized && null !== $this->token) {
+        if (!$reauth && $this->isAuthorized && null !== $this->token && !$this->isTokenExpired()) {
             return "{$this->tokenType} {$this->token}";
         }
 
@@ -137,6 +145,7 @@ class ClientCredentialsProvider implements AuthProviderInterface, LoggerAwareInt
             $this->tokenType    = $parts['token_type'] ?? 'Bearer';
             $this->instanceUrl  = $parts['instance_url'];
             $this->identityUrl  = $parts['id'] ?? null;
+            $this->issuedAt     = time();
             $this->isAuthorized = true;
 
             // Persist to cache
@@ -149,6 +158,7 @@ class ClientCredentialsProvider implements AuthProviderInterface, LoggerAwareInt
                     'instanceUrl'  => $this->instanceUrl,
                     'identityUrl'  => $this->identityUrl,
                     'isAuthorized' => $this->isAuthorized,
+                    'issuedAt'     => $this->issuedAt,
                 ]);
                 $this->cache->save($item);
             } catch (\Exception $e) {
@@ -172,6 +182,46 @@ class ClientCredentialsProvider implements AuthProviderInterface, LoggerAwareInt
         return $this->authorize(true);
     }
 
+    public function refreshToken(): string
+    {
+        if (null === $this->token || $this->isTokenExpired()) {
+            $this->logger->info('Token expired or missing, obtaining new token via client_credentials grant.');
+            return $this->authorize(true);
+        }
+
+        try {
+            $response = $this->httpClient->post(
+                '/services/oauth2/introspect',
+                [
+                    'form_params' => [
+                        'token'           => $this->token,
+                        'client_id'       => $this->clientId,
+                        'client_secret'   => $this->clientSecret,
+                        'token_type_hint' => 'access_token',
+                    ],
+                    'headers' => [
+                        'Content-Type' => 'application/x-www-form-urlencoded',
+                        'Accept'       => 'application/json',
+                    ],
+                    'http_errors' => false,
+                ]
+            );
+
+            $body = json_decode((string) $response->getBody(), true);
+
+            if ($response->getStatusCode() >= 400 || empty($body['active'])) {
+                $this->logger->info('Token is no longer active, obtaining new token via client_credentials grant.');
+                return $this->authorize(true);
+            }
+
+            $this->logger->info('Token is still active, no refresh needed.');
+            return "{$this->tokenType} {$this->token}";
+        } catch (\Exception $e) {
+            $this->logger->warning('Token introspection failed: '.$e->getMessage().'. Falling back to reauth.');
+            return $this->authorize(true);
+        }
+    }
+
     public function revoke(): void
     {
         try {
@@ -186,6 +236,16 @@ class ClientCredentialsProvider implements AuthProviderInterface, LoggerAwareInt
         $this->token        = null;
         $this->isAuthorized = false;
         $this->identityUrl  = null;
+        $this->issuedAt     = null;
+    }
+
+    private function isTokenExpired(): bool
+    {
+        if (null === $this->issuedAt) {
+            return true;
+        }
+
+        return (time() - $this->issuedAt) >= self::TOKEN_MAX_AGE;
     }
 
     public function getIdentity(): array
